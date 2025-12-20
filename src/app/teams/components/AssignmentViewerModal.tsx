@@ -204,6 +204,16 @@ export default function AssignmentViewerModal({
 						className={`mb-4 p-3 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}
 					>
 						<div className="grid grid-cols-2 md:flex md:justify-between items-center py-2 mx-2 md:mx-4 gap-3 md:gap-0">
+							{assignment.eventName && (
+								<div className="flex items-center space-x-2">
+									<FileText className="w-4 h-4 md:w-5 md:h-5" />
+									<span
+										className={`text-xs md:text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+									>
+										{assignment.eventName}
+									</span>
+								</div>
+							)}
 							<div className="flex items-center space-x-2">
 								<Clock className="w-4 h-4 md:w-5 md:h-5" />
 								<span

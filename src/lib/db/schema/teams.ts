@@ -120,6 +120,34 @@ export const teamCacheManifests = cockroachTable("team_cache_manifests", {
 	})
 		.defaultNow()
 		.notNull(),
+	calendarUpdatedAt: timestamp("calendar_updated_at", {
+		mode: "string",
+		withTimezone: true,
+	})
+		.defaultNow()
+		.notNull(),
+	updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+		.defaultNow()
+		.notNull(),
+});
+
+export const userCalendarManifests = cockroachTable("user_calendar_manifests", {
+	userId: uuid("user_id")
+		.notNull()
+		.references(() => users.id, { onDelete: "cascade" })
+		.primaryKey(),
+	personalUpdatedAt: timestamp("personal_updated_at", {
+		mode: "string",
+		withTimezone: true,
+	})
+		.defaultNow()
+		.notNull(),
+	teamsUpdatedAt: timestamp("teams_updated_at", {
+		mode: "string",
+		withTimezone: true,
+	})
+		.defaultNow()
+		.notNull(),
 	updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
 		.defaultNow()
 		.notNull(),
@@ -249,11 +277,67 @@ export const teamPeople = cockroachTable("team_people", {
  * Feature Tables
  */
 
+export const calendarEvents = cockroachTable("calendar_events", {
+	id: uuid().defaultRandom().primaryKey(),
+	ownerUserId: uuid("owner_user_id").references(() => users.id, {
+		onDelete: "cascade",
+	}),
+	teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
+	subteamId: uuid("subteam_id").references(() => teamSubteams.id, {
+		onDelete: "cascade",
+	}),
+	title: varchar({ length: 255 }).notNull(),
+	description: string(),
+	location: varchar({ length: 255 }),
+	startTime: timestamp("start_time", {
+		mode: "string",
+		withTimezone: true,
+	}).notNull(),
+	endTime: timestamp("end_time", {
+		mode: "string",
+		withTimezone: true,
+	}),
+	allDay: bool("all_day").default(false),
+	color: varchar({ length: 50 }),
+	eventType: varchar("event_type", { length: 50 }).default("general"),
+	isRecurring: bool("is_recurring").default(false),
+	recurrencePattern: jsonb("recurrence_pattern"),
+	createdBy: uuid("created_by")
+		.notNull()
+		.references(() => users.id),
+	createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+		.defaultNow()
+		.notNull(),
+	updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+		.defaultNow()
+		.notNull(),
+});
+
+export const calendarEventAttendees = cockroachTable(
+	"calendar_event_attendees",
+	{
+		id: uuid().defaultRandom().primaryKey(),
+		eventId: uuid("event_id")
+			.notNull()
+			.references(() => calendarEvents.id, { onDelete: "cascade" }),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id),
+		status: varchar({ length: 20 }).default("invited"),
+		respondedAt: timestamp("responded_at", {
+			mode: "string",
+			withTimezone: true,
+		}),
+		notes: string(),
+		createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+);
+
 export const teamEvents = cockroachTable("team_events", {
 	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid("team_id")
-		.notNull()
-		.references(() => teams.id, { onDelete: "cascade" }),
+	teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }),
 	subteamId: uuid("subteam_id").references(() => teamSubteams.id, {
 		onDelete: "cascade",
 	}),

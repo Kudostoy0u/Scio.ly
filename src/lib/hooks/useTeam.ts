@@ -9,6 +9,7 @@
 
 import type { TeamFullData } from "@/lib/server/teams";
 import { trpc } from "@/lib/trpc/client";
+import logger from "@/lib/utils/logging/logger";
 import { globalApiCache } from "@/lib/utils/storage/globalApiCache";
 import {
 	INFINITE_TTL,
@@ -117,6 +118,7 @@ type TeamCacheManifest = {
 	rosterUpdatedAt: string;
 	membersUpdatedAt: string;
 	subteamsUpdatedAt: string;
+	calendarUpdatedAt: string;
 	subteams: SubteamCacheManifest[];
 };
 
@@ -142,7 +144,7 @@ export function useTeamCacheInvalidation(teamSlug: string) {
 			return;
 		}
 
-		console.log("[TeamCache] Manifest fetched", {
+		logger.log("[TeamCache] Manifest fetched", {
 			teamSlug,
 			manifest,
 		});
@@ -151,7 +153,7 @@ export function useTeamCacheInvalidation(teamSlug: string) {
 		const cached = LocalStorageCache.get<TeamCacheManifest>(storageKey);
 
 		if (!cached) {
-			console.log("[TeamCache] No cached manifest, bootstrapping refresh", {
+			logger.log("[TeamCache] No cached manifest, bootstrapping refresh", {
 				teamSlug,
 			});
 
@@ -182,7 +184,7 @@ export function useTeamCacheInvalidation(teamSlug: string) {
 			}
 
 			void Promise.all(bootstrapRefreshes).then(() => {
-				console.log("[TeamCache] Bootstrap refresh complete", {
+				logger.log("[TeamCache] Bootstrap refresh complete", {
 					teamSlug,
 					count: bootstrapRefreshes.length,
 				});
@@ -307,19 +309,19 @@ export function useTeamCacheInvalidation(teamSlug: string) {
 		}
 
 		if (invalidations.length > 0) {
-			console.log("[TeamCache] Stale cache detected", {
+			logger.log("[TeamCache] Stale cache detected", {
 				teamSlug,
 				entries: staleFlags,
 			});
 			void Promise.all(invalidations);
 			void Promise.all(refreshes).then(() => {
-				console.log("[TeamCache] Cache refresh complete", {
+				logger.log("[TeamCache] Cache refresh complete", {
 					teamSlug,
 					count: refreshes.length,
 				});
 			});
 		} else {
-			console.log("[TeamCache] Cache up to date", { teamSlug });
+			logger.log("[TeamCache] Cache up to date", { teamSlug });
 		}
 
 		LocalStorageCache.set(storageKey, manifest, INFINITE_TTL);

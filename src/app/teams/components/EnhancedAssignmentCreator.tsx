@@ -1,5 +1,7 @@
 "use client";
 
+import { useQuestionGeneration } from "@/app/codebusters/hooks/useQuestionGeneration";
+import type { QuoteData } from "@/app/codebusters/types";
 import Modal from "@/app/components/Modal";
 import { useTeamFull } from "@/lib/hooks/useTeam";
 import { trpc } from "@/lib/trpc/client";
@@ -10,7 +12,6 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import AssignmentDetailsStep from "./assignment/AssignmentDetailsStep";
-import CodebustersAssignmentCreator from "./assignment/CodebustersAssignmentCreator";
 import QuestionGenerationStep from "./assignment/QuestionGenerationStep";
 import QuestionPreviewStep from "./assignment/QuestionPreviewStep";
 import RosterSelectionStep from "./assignment/RosterSelectionStep";
@@ -56,6 +57,8 @@ export default function EnhancedAssignmentCreator({
 		pureIdOnly: false,
 		difficulties: ["any"], // Default to any difficulty
 		division: "any",
+		charLengthMin: 50,
+		charLengthMax: 200,
 		subtopics: [],
 		rmTypeFilter: undefined,
 	});
@@ -69,17 +72,22 @@ export default function EnhancedAssignmentCreator({
 	const [generatingQuestions, setGeneratingQuestions] = useState(false);
 	const [selectedRoster, setSelectedRoster] = useState<string[]>([]);
 	const [showAnswers, setShowAnswers] = useState(false);
+	const { generateCodebustersQuestionsFromParams } = useQuestionGeneration();
+	const [codebustersQuotes, setCodebustersQuotes] = useState<QuoteData[]>([]);
 
 	// Get roster and members from tRPC cache
 	const { data: teamData, isLoading: loadingRoster } = useTeamFull(teamId);
 
 	// Transform cached data into RosterMember format
 	const rosterMembers = useMemo<RosterMember[]>(() => {
-		if (!teamData || !subteamId) {
+		if (!teamData) {
 			return [];
 		}
 
 		const members: RosterMember[] = [];
+		const subteamNameById = new Map(
+			teamData.subteams.map((subteam) => [subteam.id, subteam.name || null]),
+		);
 		const memberMap = new Map<
 			string,
 			{
@@ -94,77 +102,74 @@ export default function EnhancedAssignmentCreator({
 
 		// Build member map from team members
 		for (const member of teamData.members) {
-			if (member.subteamId === subteamId) {
-				memberMap.set(member.id, {
-					id: member.id,
-					email: member.email,
-					name: member.name,
-					username: member.username,
-				});
-			}
+			memberMap.set(member.id, {
+				id: member.id,
+				email: member.email,
+				name: member.name,
+				username: member.username,
+			});
 		}
 
 		// Add roster entries, deduplicating by userId (if linked) or roster entry ID (if unlinked)
 		for (const rosterEntry of teamData.rosterEntries) {
-			if (rosterEntry.subteamId === subteamId) {
-				const member = rosterEntry.userId
-					? memberMap.get(rosterEntry.userId)
-					: null;
-				const displayName = rosterEntry.displayName || "";
+			const member = rosterEntry.userId
+				? memberMap.get(rosterEntry.userId)
+				: null;
+			const displayName = rosterEntry.displayName || "";
 
-				// For linked entries, skip if we've already added this user
-				// (one user can have multiple roster entries for different events)
-				if (rosterEntry.userId && seenUserIds.has(rosterEntry.userId)) {
-					continue; // Skip duplicate linked entries - user already added
-				}
-
-				// For unlinked entries, use the roster entry ID to ensure uniqueness
-				const entryKey = rosterEntry.userId
-					? `user_${rosterEntry.userId}`
-					: `roster_${rosterEntry.id}`;
-
-				// Skip if we've already seen this exact entry
-				if (seenRosterEntries.has(entryKey)) {
-					continue;
-				}
-
-				seenRosterEntries.add(entryKey);
-				if (rosterEntry.userId) {
-					seenUserIds.add(rosterEntry.userId);
-				}
-
-				members.push({
-					student_name: displayName,
-					user_id: rosterEntry.userId || undefined,
-					subteam_id: subteamId,
-					isLinked: !!rosterEntry.userId,
-					userEmail: member?.email || undefined,
-					username: member?.username || undefined,
-					roster_entry_id: rosterEntry.id,
-				});
+			if (!rosterEntry.userId) {
+				continue;
 			}
+
+			// For linked entries, skip if we've already added this user
+			// (one user can have multiple roster entries for different events)
+			if (seenUserIds.has(rosterEntry.userId)) {
+				continue;
+			}
+
+			const entryKey = `user_${rosterEntry.userId}`;
+			if (seenRosterEntries.has(entryKey)) {
+				continue;
+			}
+
+			seenRosterEntries.add(entryKey);
+			seenUserIds.add(rosterEntry.userId);
+
+			const subteamName =
+				subteamNameById.get(rosterEntry.subteamId || "") || null;
+
+			members.push({
+				student_name: displayName,
+				user_id: rosterEntry.userId,
+				subteam_id: rosterEntry.subteamId || undefined,
+				subteam_name: subteamName,
+				isLinked: true,
+				userEmail: member?.email || undefined,
+				username: member?.username || undefined,
+				roster_entry_id: rosterEntry.id,
+			});
 		}
 
 		// Add team members who aren't in roster yet
 		for (const member of teamData.members) {
-			if (member.subteamId === subteamId) {
-				// Check if already added from roster (by userId)
-				if (!seenUserIds.has(member.id)) {
-					members.push({
-						student_name: member.name,
-						user_id: member.id,
-						subteam_id: subteamId,
-						isLinked: true,
-						userEmail: member.email || undefined,
-						username: member.username || undefined,
-					});
-					seenUserIds.add(member.id);
-				}
+			// Check if already added from roster (by userId)
+			if (!seenUserIds.has(member.id)) {
+				const subteamName = subteamNameById.get(member.subteamId || "") || null;
+				members.push({
+					student_name: member.name,
+					user_id: member.id,
+					subteam_id: member.subteamId || undefined,
+					subteam_name: subteamName,
+					isLinked: true,
+					userEmail: member.email || undefined,
+					username: member.username || undefined,
+				});
+				seenUserIds.add(member.id);
 			}
 		}
 
 		return members;
-	}, [teamData, subteamId]);
+	}, [teamData]);
 
 	// Get all available events - start with all events from EVENTS_2026, then add any from roster
 	const availableEvents = useMemo(() => {
@@ -220,21 +225,47 @@ export default function EnhancedAssignmentCreator({
 		}
 	}, [details.eventName]);
 
-	// Check if this is a Codebusters assignment and render accordingly
-	if (isCodebustersEvent(details.eventName)) {
-		return (
-			<CodebustersAssignmentCreator
-				teamId={teamId}
-				subteamId={subteamId}
-				onAssignmentCreated={onAssignmentCreated}
-				onCancel={onCancel}
-				darkMode={darkMode}
-				prefillEventName={details.eventName}
-			/>
-		);
-	}
+	const isCodebusters = isCodebustersEvent(details.eventName);
+
+	const mapCodebustersPreview = (
+		quotes: Array<{
+			quote: string;
+			author: string;
+			cipherType: string;
+			difficulty?: number;
+		}>,
+	) => {
+		return quotes.map((quote, index) => ({
+			question_text: quote.quote,
+			question_type: "codebusters" as const,
+			author: quote.author,
+			answers: [],
+			order_index: index,
+			difficulty: quote.difficulty,
+			cipherType: quote.cipherType,
+		}));
+	};
+
+	const generateCodebustersQuotes = async (
+		count: number,
+	): Promise<QuoteData[]> => {
+		const cipherTypes =
+			settings.subtopics && settings.subtopics.length > 0
+				? settings.subtopics
+				: undefined;
+		return generateCodebustersQuestionsFromParams({
+			questionCount: count,
+			charLengthMin: settings.charLengthMin ?? 50,
+			charLengthMax: settings.charLengthMax ?? 200,
+			division: settings.division || "any",
+			cipherTypes,
+		});
+	};
 
 	const handleGenerateQuestions = async () => {
+		if (isCodebusters) {
+			return;
+		}
 		setGeneratingQuestions(true);
 		setError(null);
 
@@ -270,7 +301,45 @@ export default function EnhancedAssignmentCreator({
 		}
 	};
 
+	const handleGenerateCodebustersPreview = async (count: number) => {
+		setGeneratingQuestions(true);
+		setError(null);
+		try {
+			const generated = await generateCodebustersQuotes(count);
+			const mapped = mapCodebustersPreview(generated);
+			if (count === 1) {
+				return mapped[0] || null;
+			}
+			setCodebustersQuotes(generated);
+			setGeneratedQuestions(mapped);
+			toast.success(`Generated ${mapped.length} questions successfully!`);
+			return null;
+		} catch (_error) {
+			setError("Failed to generate questions. Please try again.");
+			return null;
+		} finally {
+			setGeneratingQuestions(false);
+		}
+	};
+
 	const replaceQuestion = async (index: number) => {
+		if (isCodebusters) {
+			const generated = await generateCodebustersQuotes(1);
+			const replacement = generated[0];
+			if (replacement) {
+				const updatedQuotes = [...codebustersQuotes];
+				updatedQuotes[index] = replacement;
+				setCodebustersQuotes(updatedQuotes);
+				const updatedQuestions = [...generatedQuestions];
+				const mappedQuestion = mapCodebustersPreview([replacement])[0];
+				if (mappedQuestion) {
+					updatedQuestions[index] = mappedQuestion;
+					setGeneratedQuestions(updatedQuestions);
+					toast.success("Question replaced successfully!");
+				}
+			}
+			return;
+		}
 		try {
 			// When replacing, use the stored percentage instead of recalculating from raw count
 			// This prevents the percentage from being > 100 when questionCount is 1
@@ -370,6 +439,48 @@ export default function EnhancedAssignmentCreator({
 				};
 			});
 
+			if (isCodebusters) {
+				const codebustersQuestionsPayload =
+					codebustersQuotes.length > 0 ? codebustersQuotes : undefined;
+				const url = subteamId
+					? `/api/teams/${teamId}/subteams/${subteamId}/assignments/codebusters`
+					: `/api/teams/${teamId}/assignments/codebusters`;
+				const response = await fetch(url, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						title: details.title,
+						description: details.description || null,
+						assignment_type: "standard",
+						due_date: details.dueDate || null,
+						points: details.points ?? 100,
+						time_limit_minutes: details.timeLimitMinutes || null,
+						event_name: details.eventName || "Codebusters",
+						questions: [],
+						roster_members: rosterMemberDetails.map((member) => ({
+							user_id: member.userId,
+							student_name: member.studentName,
+							display_name: member.displayName,
+						})),
+						codebusters_params: {
+							questionCount: settings.questionCount,
+							cipherTypes: settings.subtopics || [],
+							division: settings.division || "any",
+							charLengthMin: settings.charLengthMin ?? 50,
+							charLengthMax: settings.charLengthMax ?? 200,
+						},
+						codebusters_questions: codebustersQuestionsPayload,
+					}),
+				});
+				if (!response.ok) {
+					throw new Error("Failed to create Codebusters assignment");
+				}
+				const { assignment } = await response.json();
+				toast.success("Assignment created successfully!");
+				onAssignmentCreated({ id: assignment.id, title: assignment.title });
+				return;
+			}
+
 			const assignment = await createAssignmentMutation.mutateAsync({
 				teamSlug: teamId,
 				title: details.title,
@@ -418,7 +529,11 @@ export default function EnhancedAssignmentCreator({
 	const handleQuestionGenerationNext = async () => {
 		setError(null);
 		try {
-			await handleGenerateQuestions();
+			if (isCodebusters) {
+				await handleGenerateCodebustersPreview(settings.questionCount);
+			} else {
+				await handleGenerateQuestions();
+			}
 			setStep((prev) => prev + 1);
 		} catch {
 			// Error is already handled in handleGenerateQuestions
@@ -431,6 +546,8 @@ export default function EnhancedAssignmentCreator({
 		setStep((prev) => prev - 1);
 	};
 
+	const totalSteps = 4;
+
 	return (
 		<Modal
 			isOpen={true}
@@ -442,32 +559,34 @@ export default function EnhancedAssignmentCreator({
 				{/* Progress indicator */}
 				<div className="mb-6">
 					<div className="flex items-center justify-between">
-						{[1, 2, 3, 4].map((stepNumber) => (
-							<div key={stepNumber} className="flex items-center">
-								<div
-									className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-										step >= stepNumber
-											? "bg-blue-600 text-white"
-											: darkMode
-												? "bg-gray-600 text-gray-300"
-												: "bg-gray-200 text-gray-600"
-									}`}
-								>
-									{stepNumber}
-								</div>
-								{stepNumber < 4 && (
+						{Array.from({ length: totalSteps }, (_, i) => i + 1).map(
+							(stepNumber) => (
+								<div key={stepNumber} className="flex items-center">
 									<div
-										className={`w-12 h-1 mx-2 ${
-											step > stepNumber
-												? "bg-blue-600"
+										className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+											step >= stepNumber
+												? "bg-blue-600 text-white"
 												: darkMode
-													? "bg-gray-600"
-													: "bg-gray-200"
+													? "bg-gray-600 text-gray-300"
+													: "bg-gray-200 text-gray-600"
 										}`}
-									/>
-								)}
-							</div>
-						))}
+									>
+										{stepNumber}
+									</div>
+									{stepNumber < totalSteps && (
+										<div
+											className={`w-12 h-1 mx-2 ${
+												step > stepNumber
+													? "bg-blue-600"
+													: darkMode
+														? "bg-gray-600"
+														: "bg-gray-200"
+											}`}
+										/>
+									)}
+								</div>
+							),
+						)}
 					</div>
 					<div className="flex justify-between mt-2 text-xs">
 						<span className={darkMode ? "text-gray-400" : "text-gray-500"}>

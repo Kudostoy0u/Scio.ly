@@ -48,6 +48,11 @@ export default function CalendarHeader({
 	onShowSettings: _onShowSettings,
 }: CalendarHeaderProps) {
 	const [showActions, setShowActions] = React.useState(false);
+	const [isMounted, setIsMounted] = React.useState(false);
+
+	React.useEffect(() => {
+		setIsMounted(true);
+	}, []);
 
 	// Helper functions to reduce cognitive complexity
 	const renderMonthNavigation = () => (
@@ -149,7 +154,7 @@ export default function CalendarHeader({
 				>
 					Add Event
 				</button>
-				{isCaptain && (
+				{isMounted && isCaptain ? (
 					<button
 						type="button"
 						onClick={onAddRecurring}
@@ -161,7 +166,7 @@ export default function CalendarHeader({
 					>
 						Add Recurring
 					</button>
-				)}
+				) : null}
 			</div>
 		</div>
 	);
@@ -242,7 +247,7 @@ export default function CalendarHeader({
 						Add Event
 					</button>
 
-					{isCaptain && (
+					{isMounted && isCaptain ? (
 						<button
 							type="button"
 							onClick={onAddRecurring}
@@ -254,6 +259,8 @@ export default function CalendarHeader({
 						>
 							Recurring
 						</button>
+					) : (
+						<div />
 					)}
 				</div>
 			</div>

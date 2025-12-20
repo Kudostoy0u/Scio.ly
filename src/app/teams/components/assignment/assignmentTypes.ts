@@ -1,18 +1,21 @@
 export interface Question {
 	question_text: string;
 	question_type: "multiple_choice" | "free_response" | "codebusters";
+	author?: string;
 	options?: Array<{ id: string; text: string; isCorrect: boolean }>;
 	correct_answer?: string;
 	answers?: (string | number)[] | string;
 	order_index: number;
 	imageData?: string;
 	difficulty?: number;
+	cipherType?: string;
 }
 
 export interface RosterMember {
 	student_name: string;
 	user_id?: string;
 	subteam_id?: string;
+	subteam_name?: string | null;
 	isLinked: boolean;
 	userEmail?: string;
 	username?: string;

@@ -1,3 +1,4 @@
+import * as trpcClientModule from "@/lib/trpc/client";
 import TeamCalendar from "@app/teams/components/TeamCalendar";
 import TeamsLanding from "@app/teams/components/TeamsLanding";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -41,6 +42,174 @@ vi.mock("@/app/contexts/AuthContext", () => ({
 		},
 	}),
 }));
+
+vi.mock("@/lib/trpc/client", () => {
+	const utilsMock = {
+		teams: {
+			personalCalendarEvents: {
+				invalidate: vi.fn(),
+				prefetch: vi.fn(),
+			},
+			teamCalendarEvents: {
+				invalidate: vi.fn(),
+				prefetch: vi.fn(),
+			},
+		},
+	};
+
+	const state = {
+		listUserTeamsWithSubteamsReturn: {
+			data: {
+				teams: [
+					{
+						id: "team-123",
+						name: "Test Team",
+						slug: "test-team",
+						school: "Test School",
+						division: "B",
+						role: "captain",
+						subteams: [
+							{ id: "subteam-1", name: "Varsity" },
+							{ id: "subteam-2", name: "JV" },
+						],
+					},
+				],
+			},
+			isLoading: false,
+		} as { data: { teams: unknown[] }; isLoading: boolean; error?: Error },
+		personalEventsReturn: {
+			data: [],
+			isLoading: false,
+		} as { data: unknown[]; isLoading: boolean; error?: Error },
+		teamEventsReturn: {
+			data: [],
+			isLoading: false,
+		} as { data: unknown[]; isLoading: boolean; error?: Error },
+		calendarManifestReturn: {
+			data: {
+				personalUpdatedAt: new Date().toISOString(),
+				teams: [
+					{
+						teamId: "team-123",
+						calendarUpdatedAt: new Date().toISOString(),
+					},
+				],
+			},
+			isLoading: false,
+		} as { data: unknown; isLoading: boolean; error?: Error },
+		createEventMutation: vi.fn(async () => ({ eventId: "new-event-id" })),
+		skipOccurrenceMutation: vi.fn(async () => ({ success: true })),
+	};
+
+	const reset = () => {
+		state.listUserTeamsWithSubteamsReturn = {
+			data: {
+				teams: [
+					{
+						id: "team-123",
+						name: "Test Team",
+						slug: "test-team",
+						school: "Test School",
+						division: "B",
+						role: "captain",
+						subteams: [
+							{ id: "subteam-1", name: "Varsity" },
+							{ id: "subteam-2", name: "JV" },
+						],
+					},
+				],
+			},
+			isLoading: false,
+		};
+		state.personalEventsReturn = { data: [], isLoading: false };
+		state.teamEventsReturn = { data: [], isLoading: false };
+		state.calendarManifestReturn = {
+			data: {
+				personalUpdatedAt: new Date().toISOString(),
+				teams: [
+					{
+						teamId: "team-123",
+						calendarUpdatedAt: new Date().toISOString(),
+					},
+				],
+			},
+			isLoading: false,
+		};
+		state.createEventMutation = vi.fn(async () => ({
+			eventId: "new-event-id",
+		}));
+		state.skipOccurrenceMutation = vi.fn(async () => ({ success: true }));
+	};
+
+	const __mock = {
+		reset,
+		setPersonalEventsReturn: (value: {
+			data: unknown[];
+			isLoading: boolean;
+			error?: Error;
+		}) => {
+			state.personalEventsReturn = value;
+		},
+		setTeamEventsReturn: (value: {
+			data: unknown[];
+			isLoading: boolean;
+			error?: Error;
+		}) => {
+			state.teamEventsReturn = value;
+		},
+		setCalendarManifestReturn: (value: {
+			data: unknown;
+			isLoading: boolean;
+			error?: Error;
+		}) => {
+			state.calendarManifestReturn = value;
+		},
+		getCreateEventMutation: () => state.createEventMutation,
+		getUtils: () => utilsMock,
+	};
+
+	reset();
+
+	return {
+		__esModule: true,
+		trpc: {
+			useUtils: () => utilsMock,
+			teams: {
+				listUserTeamsWithSubteams: {
+					useQuery: vi.fn(() => state.listUserTeamsWithSubteamsReturn),
+				},
+				calendarManifest: {
+					useQuery: vi.fn(() => state.calendarManifestReturn),
+				},
+				personalCalendarEvents: {
+					useQuery: vi.fn(() => state.personalEventsReturn),
+				},
+				teamCalendarEvents: {
+					useQuery: vi.fn(() => state.teamEventsReturn),
+				},
+				createCalendarEvent: {
+					useMutation: () => ({
+						mutateAsync: state.createEventMutation,
+						isLoading: false,
+					}),
+				},
+				deleteCalendarEvent: {
+					useMutation: () => ({
+						mutateAsync: vi.fn(),
+						isLoading: false,
+					}),
+				},
+				skipCalendarOccurrence: {
+					useMutation: () => ({
+						mutateAsync: state.skipOccurrenceMutation,
+						isLoading: false,
+					}),
+				},
+			},
+		},
+		__mock,
+	};
+});
 
 vi.mock("react-toastify", () => ({
 	toast: {
@@ -114,14 +283,37 @@ vi.mock("@/app/contexts/NotificationsContext", () => ({
 	}),
 }));
 
-// Mock fetch
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
-
 describe("Calendar Integration Tests", () => {
+	// Get the mock from the mocked module
+	const trpcMock = (
+		trpcClientModule as unknown as {
+			__mock: {
+				reset: () => void;
+				setListUserTeamsReturn: (value: {
+					data: { teams: unknown[] };
+					isLoading: boolean;
+					error?: Error;
+				}) => void;
+				setCalendarEventsReturn: (value: {
+					data: unknown[];
+					isLoading: boolean;
+					error?: Error;
+				}) => void;
+				setRecurringMeetingsReturn: (value: {
+					data: unknown[];
+					isLoading: boolean;
+					error?: Error;
+				}) => void;
+				getCreateEventMutation: () => ReturnType<typeof vi.fn>;
+				getCreateRecurringMutation: () => ReturnType<typeof vi.fn>;
+				getUtils: () => unknown;
+			};
+		}
+	).__mock;
+
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockFetch.mockClear();
+		trpcMock.reset();
 	});
 
 	afterEach(() => {
@@ -135,7 +327,11 @@ describe("Calendar Integration Tests", () => {
 					id: "team-event-1",
 					title: "Team Practice",
 					start_time: new Date().toISOString(),
+					end_time: null,
 					event_type: "practice",
+					is_all_day: false,
+					is_recurring: false,
+					created_by: "test-user-id",
 					team_id: "team-123",
 				},
 			];
@@ -145,7 +341,11 @@ describe("Calendar Integration Tests", () => {
 					id: "personal-event-1",
 					title: "Personal Study",
 					start_time: new Date().toISOString(),
+					end_time: null,
 					event_type: "personal",
+					is_all_day: false,
+					is_recurring: false,
+					created_by: "test-user-id",
 					team_id: null,
 				},
 			];
@@ -153,30 +353,25 @@ describe("Calendar Integration Tests", () => {
 			const mockRecurringMeetings = [
 				{
 					id: "recurring-1",
+					team_id: "team-123",
 					title: "Weekly Practice",
 					days_of_week: [1, 3], // Monday and Wednesday
 					start_time: "15:00",
 					end_time: "17:00",
+					start_date: "2024-01-01",
+					end_date: "2024-12-31",
 					exceptions: [],
 				},
 			];
 
-			mockFetch
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () =>
-						Promise.resolve({ success: true, events: mockTeamEvents }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () =>
-						Promise.resolve({ success: true, events: mockPersonalEvents }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () =>
-						Promise.resolve({ success: true, meetings: mockRecurringMeetings }),
-				});
+			trpcMock.setCalendarEventsReturn({
+				data: [...mockTeamEvents, ...mockPersonalEvents],
+				isLoading: false,
+			});
+			trpcMock.setRecurringMeetingsReturn({
+				data: mockRecurringMeetings,
+				isLoading: false,
+			});
 
 			render(
 				<TeamCalendar
@@ -190,38 +385,10 @@ describe("Calendar Integration Tests", () => {
 				expect(screen.getByText("Team Practice")).toBeInTheDocument();
 				expect(screen.getByText("Personal Study")).toBeInTheDocument();
 			});
-
-			// Verify all API calls were made
-			expect(mockFetch).toHaveBeenCalledWith(
-				expect.stringContaining("/api/teams/v2/team-123/events"),
-			);
-			expect(mockFetch).toHaveBeenCalledWith(
-				expect.stringContaining("/api/teams/calendar/personal"),
-			);
-			expect(mockFetch).toHaveBeenCalledWith(
-				expect.stringContaining("/api/teams/v2/team-123/recurring-meetings"),
-			);
 		});
 
 		it("creates event and refreshes calendar", async () => {
-			mockFetch
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, events: [] }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, events: [] }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, meetings: [] }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () =>
-						Promise.resolve({ success: true, eventId: "new-event-id" }),
-				});
+			const createEvent = trpcMock.getCreateEventMutation();
 
 			render(
 				<TeamCalendar
@@ -255,36 +422,16 @@ describe("Calendar Integration Tests", () => {
 			fireEvent.click(createButton);
 
 			await waitFor(() => {
-				expect(mockFetch).toHaveBeenCalledWith(
-					"/api/teams/calendar/events",
+				expect(createEvent).toHaveBeenCalledWith(
 					expect.objectContaining({
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: expect.stringContaining("New Team Event"),
+						title: "New Team Event",
 					}),
 				);
 			});
 		});
 
 		it("creates recurring meeting and refreshes calendar", async () => {
-			mockFetch
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, events: [] }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, events: [] }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, meetings: [] }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () =>
-						Promise.resolve({ success: true, meetingId: "new-meeting-id" }),
-				});
+			const createRecurring = trpcMock.getCreateRecurringMutation();
 
 			render(
 				<TeamCalendar
@@ -330,12 +477,9 @@ describe("Calendar Integration Tests", () => {
 			fireEvent.click(createButton);
 
 			await waitFor(() => {
-				expect(mockFetch).toHaveBeenCalledWith(
-					"/api/teams/calendar/recurring-meetings",
+				expect(createRecurring).toHaveBeenCalledWith(
 					expect.objectContaining({
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: expect.stringContaining("Weekly Practice"),
+						title: "Weekly Practice",
 					}),
 				);
 			});
@@ -354,20 +498,6 @@ describe("Calendar Integration Tests", () => {
 					members: [],
 				},
 			];
-
-			mockFetch
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, events: [] }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, events: [] }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, meetings: [] }),
-				});
 
 			render(
 				<TeamsLanding
@@ -437,7 +567,11 @@ describe("Calendar Integration Tests", () => {
 
 	describe("Error Handling Integration", () => {
 		it("handles API errors gracefully", async () => {
-			mockFetch.mockRejectedValue(new Error("Network error"));
+			trpcMock.setCalendarEventsReturn({
+				data: [],
+				isLoading: false,
+				error: new Error("Network error"),
+			});
 
 			render(
 				<TeamCalendar
@@ -454,16 +588,16 @@ describe("Calendar Integration Tests", () => {
 		});
 
 		it("handles partial API failures", async () => {
-			mockFetch
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, events: [] }),
-				})
-				.mockRejectedValueOnce(new Error("Personal events failed"))
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, meetings: [] }),
-				});
+			trpcMock.setCalendarEventsReturn({
+				data: [],
+				isLoading: false,
+				error: new Error("Events failed"),
+			});
+			trpcMock.setRecurringMeetingsReturn({
+				data: [],
+				isLoading: false,
+				error: new Error("Recurring meetings failed"),
+			});
 
 			render(
 				<TeamCalendar
@@ -482,20 +616,6 @@ describe("Calendar Integration Tests", () => {
 
 	describe("Calendar Navigation Integration", () => {
 		it("navigates between months and maintains state", async () => {
-			mockFetch
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, events: [] }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, events: [] }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, meetings: [] }),
-				});
-
 			render(
 				<TeamCalendar
 					teamId="team-123"
@@ -528,20 +648,6 @@ describe("Calendar Integration Tests", () => {
 		});
 
 		it("changes view modes and maintains calendar state", async () => {
-			mockFetch
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, events: [] }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, events: [] }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, meetings: [] }),
-				});
-
 			render(
 				<TeamCalendar
 					teamId="team-123"
@@ -573,24 +679,18 @@ describe("Calendar Integration Tests", () => {
 					title: "Team Practice",
 					start_time: new Date().toISOString(),
 					event_type: "practice",
+					is_all_day: false,
+					is_recurring: false,
+					created_by: "test-user-id",
 					description: "Weekly team practice",
 					location: "Gym",
 				},
 			];
 
-			mockFetch
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, events: mockEvents }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, events: [] }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, meetings: [] }),
-				});
+			trpcMock.setCalendarEventsReturn({
+				data: mockEvents,
+				isLoading: false,
+			});
 
 			render(
 				<TeamCalendar
@@ -613,20 +713,6 @@ describe("Calendar Integration Tests", () => {
 		});
 
 		it("allows adding events to specific dates", async () => {
-			mockFetch
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, events: [] }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, events: [] }),
-				})
-				.mockResolvedValueOnce({
-					ok: true,
-					json: () => Promise.resolve({ success: true, meetings: [] }),
-				});
-
 			render(
 				<TeamCalendar
 					teamId="team-123"

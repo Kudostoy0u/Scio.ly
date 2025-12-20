@@ -14,6 +14,7 @@ interface RecurringForm {
 	exceptions: string[];
 	meeting_type: "personal" | "team";
 	selected_team_id: string;
+	selected_subteam_id: string;
 }
 
 interface UserTeam {
@@ -21,8 +22,13 @@ interface UserTeam {
 	name: string;
 	slug: string;
 	school: string;
+	division?: "B" | "C";
 	user_role: string;
 	team_id: string;
+	subteams?: Array<{
+		id: string;
+		name: string;
+	}>;
 }
 
 interface RecurringMeetingModalProps {
@@ -46,23 +52,26 @@ export default function RecurringMeetingModal({
 	onFormChange,
 	onSubmit,
 }: RecurringMeetingModalProps) {
-	const handleTeamSelection = (value: string) => {
+	const handleMeetingSelection = (value: string) => {
 		if (value === "personal") {
 			onFormChange({
 				meeting_type: "personal",
 				selected_team_id: "",
+				selected_subteam_id: "",
 			});
-		} else if (value.startsWith("all-")) {
-			onFormChange({
-				meeting_type: "team",
-				selected_team_id: value,
-			});
-		} else {
-			onFormChange({
-				meeting_type: "team",
-				selected_team_id: value,
-			});
+			return;
 		}
+
+		const [prefix, teamId, kind, subteamId] = value.split(":");
+		if (prefix !== "team" || !teamId) {
+			return;
+		}
+
+		onFormChange({
+			meeting_type: "team",
+			selected_team_id: teamId,
+			selected_subteam_id: kind === "sub" && subteamId ? subteamId : "",
+		});
 	};
 
 	const handleDayToggle = (dayIndex: number, checked: boolean) => {
@@ -77,30 +86,50 @@ export default function RecurringMeetingModal({
 		}
 	};
 
-	const getTeamOptions = () => {
-		type TeamOption = UserTeam & { isAllTeams?: boolean; team_id?: string };
-		return userTeams.reduce((acc: TeamOption[], team) => {
-			const schoolKey = team.school || "Unknown School";
-			const existingGroup = acc.find((group) => group.school === schoolKey);
+	const teamOptions = userTeams;
 
-			if (existingGroup) {
-				acc.push(team);
-			} else {
-				acc.push({
-					id: `all-${schoolKey}`,
-					school: schoolKey,
-					team_id: "All",
-					isAllTeams: true,
-					name: "",
-					slug: "",
-					user_role: "",
+	const selectedTeam = teamOptions.find(
+		(team) => team.id === recurringForm.selected_team_id,
+	);
+	const isSelectedTeamEligible =
+		!selectedTeam ||
+		selectedTeam.user_role === "captain" ||
+		selectedTeam.user_role === "admin";
+
+	const getMeetingSelectionValue = () => {
+		if (recurringForm.meeting_type === "personal") {
+			return "personal";
+		}
+		if (recurringForm.selected_team_id && recurringForm.selected_subteam_id) {
+			return `team:${recurringForm.selected_team_id}:sub:${recurringForm.selected_subteam_id}`;
+		}
+		if (recurringForm.selected_team_id) {
+			return `team:${recurringForm.selected_team_id}:all`;
+		}
+		return "personal";
+	};
+
+	const meetingTypeOptions = [
+		{ value: "personal", label: "Personal" },
+		...teamOptions.flatMap((team) => {
+			const baseLabel = team.school;
+			const options = [
+				{
+					value: `team:${team.id}:all`,
+					label: `${baseLabel} (All subteams)`,
+				},
+			];
+
+			for (const subteam of team.subteams ?? []) {
+				options.push({
+					value: `team:${team.id}:sub:${subteam.id}`,
+					label: `${baseLabel} (${subteam.name})`,
 				});
-				acc.push(team);
 			}
 
-			return acc;
-		}, []);
-	};
+			return options;
+		}),
+	];
 
 	return (
 		<AnimatePresence>
@@ -275,34 +304,34 @@ export default function RecurringMeetingModal({
 										htmlFor="recurring-meeting-type"
 										className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 									>
-										Meeting Type <span className="text-red-500">*</span>
+										For who? <span className="text-red-500">*</span>
 									</label>
 									<select
 										id="recurring-meeting-type"
-										value={
-											recurringForm.meeting_type === "personal"
-												? "personal"
-												: recurringForm.selected_team_id || "personal"
-										}
-										onChange={(e) => handleTeamSelection(e.target.value)}
+										value={getMeetingSelectionValue()}
+										onChange={(e) => handleMeetingSelection(e.target.value)}
 										className={`w-full px-3 py-2 border rounded-lg ${
 											darkMode
 												? "bg-gray-700 border-gray-600 text-white"
 												: "bg-white border-gray-300 text-gray-900"
 										}`}
 									>
-										<option value="personal">Personal</option>
-										{getTeamOptions().map((team) => (
-											<option
-												key={team.id}
-												value={team.isAllTeams ? `all-${team.school}` : team.id}
-											>
-												{team.isAllTeams
-													? `${team.school} - All Subteams`
-													: `${team.school} - Team ${team.team_id}`}
+										{meetingTypeOptions.map((option) => (
+											<option key={option.value} value={option.value}>
+												{option.label}
 											</option>
 										))}
 									</select>
+									{recurringForm.meeting_type === "team" &&
+										!isSelectedTeamEligible && (
+											<p
+												className={`mt-2 text-xs ${
+													darkMode ? "text-amber-300" : "text-amber-700"
+												}`}
+											>
+												Only captains/admins can create team events.
+											</p>
+										)}
 								</div>
 
 								<div>

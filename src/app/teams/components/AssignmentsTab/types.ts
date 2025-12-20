@@ -12,6 +12,7 @@ export interface Assignment {
 	updated_at: string;
 	creator_email: string;
 	creator_name: string;
+	event_name?: string;
 	questions_count?: number;
 	roster_count?: number;
 	submitted_count?: number;

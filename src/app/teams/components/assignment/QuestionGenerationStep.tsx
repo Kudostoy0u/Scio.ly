@@ -1,5 +1,7 @@
 "use client";
 
+import { getAvailableCipherTypes } from "@/app/codebusters/services/utils/cipherMapping";
+import QuoteLengthSlider from "@/app/practice/components/QuoteLengthSlider";
 import { getEventSubtopics } from "@/lib/constants/subtopics";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
@@ -20,20 +22,25 @@ export default function QuestionGenerationStep({
 }: QuestionGenerationStepProps) {
 	const [availableSubtopics, setAvailableSubtopics] = useState<string[]>([]);
 	const [loadingSubtopics, setLoadingSubtopics] = useState(false);
+	const isCodebusters = eventName === "Codebusters";
 	const isRocksAndMinerals =
 		eventName === "Rocks and Minerals" ||
 		eventName?.split(" - ")[0] === "Rocks and Minerals";
 
 	// Load subtopics when event name changes (now synchronous, no API call)
 	useEffect(() => {
-		if (eventName) {
+		if (eventName && !isCodebusters) {
 			setLoadingSubtopics(false); // No loading needed since it's synchronous
 			const subtopics = getEventSubtopics(eventName);
 			setAvailableSubtopics(subtopics);
-		} else {
-			setAvailableSubtopics([]);
+			return;
 		}
-	}, [eventName]);
+		setAvailableSubtopics([]);
+	}, [eventName, isCodebusters]);
+
+	const availableCipherTypes = isCodebusters
+		? getAvailableCipherTypes([], settings.division || "any")
+		: [];
 	const handleNext = () => {
 		const error = validateSettings();
 		if (error) {
@@ -121,49 +128,51 @@ export default function QuestionGenerationStep({
 				</div>
 			</div>
 
-			{/* Question Type and Difficulty on same row for desktop */}
+			{/* Question Type / Difficulty / Codebusters length */}
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-				<div>
-					<label
-						htmlFor="question-type-mcq"
-						className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-					>
-						Question Type
-					</label>
-					<div className="flex gap-4">
-						{[
-							{ value: "mcq", label: "MCQ" },
-							{ value: "both", label: "Both" },
-							{ value: "frq", label: "FRQ" },
-						].map((type) => (
-							<label key={type.value} className="flex items-center">
-								<input
-									id={type.value === "mcq" ? "question-type-mcq" : undefined}
-									type="radio"
-									name="questionType"
-									value={type.value}
-									checked={settings.questionType === type.value}
-									onChange={(e) => {
-										const value = e.target.value;
-										if (
-											value === "mcq" ||
-											value === "frq" ||
-											value === "both"
-										) {
-											onSettingsChange({
-												questionType: value as "mcq" | "frq" | "both",
-											});
-										}
-									}}
-									className="mr-2"
-								/>
-								<span className={darkMode ? "text-white" : "text-gray-900"}>
-									{type.label}
-								</span>
-							</label>
-						))}
+				{!isCodebusters && (
+					<div>
+						<label
+							htmlFor="question-type-mcq"
+							className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+						>
+							Question Type
+						</label>
+						<div className="flex gap-4">
+							{[
+								{ value: "mcq", label: "MCQ" },
+								{ value: "both", label: "Both" },
+								{ value: "frq", label: "FRQ" },
+							].map((type) => (
+								<label key={type.value} className="flex items-center">
+									<input
+										id={type.value === "mcq" ? "question-type-mcq" : undefined}
+										type="radio"
+										name="questionType"
+										value={type.value}
+										checked={settings.questionType === type.value}
+										onChange={(e) => {
+											const value = e.target.value;
+											if (
+												value === "mcq" ||
+												value === "frq" ||
+												value === "both"
+											) {
+												onSettingsChange({
+													questionType: value as "mcq" | "frq" | "both",
+												});
+											}
+										}}
+										className="mr-2"
+									/>
+									<span className={darkMode ? "text-white" : "text-gray-900"}>
+										{type.label}
+									</span>
+								</label>
+							))}
+						</div>
 					</div>
-				</div>
+				)}
 
 				<div>
 					<label
@@ -222,6 +231,32 @@ export default function QuestionGenerationStep({
 						</p>
 					)}
 				</div>
+
+				{isCodebusters && (
+					<div>
+						<label
+							htmlFor="quote-length-slider"
+							className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+						>
+							Quote Character Length Range
+						</label>
+						<QuoteLengthSlider
+							id="quote-length-slider"
+							min={1}
+							max={200}
+							value={[
+								settings.charLengthMin ?? 1,
+								settings.charLengthMax ?? 100,
+							]}
+							onValueChange={([minValue, maxValue]) => {
+								onSettingsChange({
+									charLengthMin: minValue,
+									charLengthMax: maxValue,
+								});
+							}}
+						/>
+					</div>
+				)}
 			</div>
 
 			{/* Picture Questions slider for events with image ID */}
@@ -308,7 +343,7 @@ export default function QuestionGenerationStep({
 			)}
 
 			{/* Subtopics selection */}
-			{availableSubtopics.length > 0 && (
+			{!isCodebusters && availableSubtopics.length > 0 && (
 				<div>
 					<label
 						htmlFor="subtopics"
@@ -346,6 +381,50 @@ export default function QuestionGenerationStep({
 							</label>
 						))}
 					</div>
+				</div>
+			)}
+
+			{isCodebusters && (
+				<div>
+					<label
+						htmlFor="cipher-types"
+						className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+					>
+						Cipher Types
+					</label>
+					<div className="max-h-40 overflow-y-auto border rounded-lg p-2 space-y-1">
+						{availableCipherTypes.map((cipherType) => (
+							<label key={cipherType} className="flex items-center">
+								<input
+									type="checkbox"
+									checked={settings.subtopics?.includes(cipherType) || false}
+									onChange={(e) => {
+										const current = settings.subtopics || [];
+										if (e.target.checked) {
+											onSettingsChange({
+												subtopics: [...current, cipherType],
+											});
+										} else {
+											onSettingsChange({
+												subtopics: current.filter((c) => c !== cipherType),
+											});
+										}
+									}}
+									className="mr-2"
+								/>
+								<span
+									className={`text-sm ${darkMode ? "text-white" : "text-gray-900"}`}
+								>
+									{cipherType}
+								</span>
+							</label>
+						))}
+					</div>
+					<p
+						className={`text-xs mt-2 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+					>
+						Leave empty to allow all cipher types.
+					</p>
 				</div>
 			)}
 

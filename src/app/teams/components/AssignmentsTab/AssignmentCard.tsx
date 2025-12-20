@@ -108,6 +108,17 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
 							>
 								{assignment.title}
 							</h3>
+							{assignment.event_name && (
+								<span
+									className={`text-xs px-2 py-0.5 rounded-full ${
+										darkMode
+											? "bg-gray-700 text-gray-200"
+											: "bg-gray-100 text-gray-700"
+									}`}
+								>
+									{assignment.event_name}
+								</span>
+							)}
 							{!everyoneDeclined && (
 								<AssignmentStatusBadge
 									assignment={mergedAssignment}

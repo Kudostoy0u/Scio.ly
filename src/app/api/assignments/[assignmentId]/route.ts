@@ -42,6 +42,12 @@ function parseCodebustersQuestion(
 	}
 
 	// Regular Codebusters question
+	const solutionValue =
+		typeof codebustersData?.solution === "object" &&
+		codebustersData?.solution !== null
+			? codebustersData.solution
+			: undefined;
+	const answerFallback = "";
 	const codebustersQuestion = {
 		id: q.id,
 		question: q.questionText,
@@ -56,10 +62,31 @@ function parseCodebustersQuestion(
 		charLength: codebustersData?.charLength || 100,
 		encrypted: codebustersData?.encrypted || "",
 		key: codebustersData?.key || "",
+		kShift: codebustersData?.kShift,
+		plainAlphabet: codebustersData?.plainAlphabet,
+		cipherAlphabet: codebustersData?.cipherAlphabet,
+		matrix: codebustersData?.matrix,
+		decryptionMatrix: codebustersData?.decryptionMatrix,
+		portaKeyword: codebustersData?.portaKeyword,
+		nihilistPolybiusKey: codebustersData?.nihilistPolybiusKey,
+		nihilistCipherKey: codebustersData?.nihilistCipherKey,
+		checkerboardRowKey: codebustersData?.checkerboardRowKey,
+		checkerboardColKey: codebustersData?.checkerboardColKey,
+		checkerboardPolybiusKey: codebustersData?.checkerboardPolybiusKey,
+		checkerboardUsesIJ: codebustersData?.checkerboardUsesIJ,
+		blockSize: codebustersData?.blockSize,
+		columnarKey: codebustersData?.columnarKey,
+		fractionationTable: codebustersData?.fractionationTable,
+		caesarShift: codebustersData?.caesarShift,
+		affineA: codebustersData?.affineA,
+		affineB: codebustersData?.affineB,
+		baconianBinaryType: codebustersData?.baconianBinaryType,
+		cryptarithmData: codebustersData?.cryptarithmData,
+		askForKeyword: codebustersData?.askForKeyword,
 		hint: codebustersData?.hint || "",
-		solution: codebustersData?.solution || q.correctAnswer,
-		answers: [codebustersData?.solution || q.correctAnswer],
-		correctAnswer: codebustersData?.solution || q.correctAnswer,
+		solution: solutionValue,
+		answers: [answerFallback],
+		correctAnswer: answerFallback,
 		points: q.points,
 		order: q.orderIndex,
 		orderIndex: q.orderIndex,
@@ -67,7 +94,7 @@ function parseCodebustersQuestion(
 	};
 
 	try {
-		return FrontendQuestionSchema.parse(codebustersQuestion);
+		return FrontendQuestionSchema.passthrough().parse(codebustersQuestion);
 	} catch (error) {
 		if (error instanceof z.ZodError) {
 			const errorMessages = error.issues?.map(
@@ -249,8 +276,36 @@ interface CodebustersData {
 	charLength?: number;
 	encrypted?: string;
 	key?: string;
+	kShift?: number;
+	plainAlphabet?: string;
+	cipherAlphabet?: string;
+	matrix?: number[][];
+	decryptionMatrix?: number[][];
+	portaKeyword?: string;
+	nihilistPolybiusKey?: string;
+	nihilistCipherKey?: string;
+	checkerboardRowKey?: string;
+	checkerboardColKey?: string;
+	checkerboardPolybiusKey?: string;
+	checkerboardUsesIJ?: boolean;
+	blockSize?: number;
+	columnarKey?: string;
+	fractionationTable?: { [key: string]: string };
+	caesarShift?: number;
+	affineA?: number;
+	affineB?: number;
+	baconianBinaryType?: string;
+	cryptarithmData?: {
+		equation: string;
+		numericExample: string | null;
+		digitGroups: Array<{
+			digits: string;
+			word: string;
+		}>;
+	};
+	askForKeyword?: boolean;
 	hint?: string;
-	solution?: string;
+	solution?: Record<string, string>;
 }
 
 // GET /api/assignments/[assignmentId] - Get assignment details and questions

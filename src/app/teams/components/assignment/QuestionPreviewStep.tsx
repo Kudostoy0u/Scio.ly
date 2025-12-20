@@ -74,6 +74,20 @@ export default function QuestionPreviewStep({
 			>
 				{question.question_text}
 			</p>
+			{question.question_type === "codebusters" && question.author && (
+				<div
+					className={`text-xs mb-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+				>
+					- {question.author}
+				</div>
+			)}
+			{question.question_type === "codebusters" && question.cipherType && (
+				<div
+					className={`text-xs mb-2 ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+				>
+					Cipher: {question.cipherType}
+				</div>
+			)}
 			{question.imageData && (
 				<Image
 					src={question.imageData}

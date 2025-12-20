@@ -2,7 +2,7 @@
 
 import { useTeamFull } from "@/lib/hooks/useTeam";
 import { useMemo } from "react";
-import { type ReactElement, useEffect, useState } from "react";
+import { type ReactElement, useState } from "react";
 import { toast } from "react-toastify";
 import { Step1Details } from "./CodebustersAssignmentCreator/components/Step1Details";
 import { Step2Settings } from "./CodebustersAssignmentCreator/components/Step2Settings";
@@ -130,9 +130,6 @@ export default function CodebustersAssignmentCreator({
 		return members;
 	}, [teamData, subteamId]);
 
-	// Dropdown state
-	const [cipherDropdownOpen, setCipherDropdownOpen] = useState(false);
-
 	// Helper functions for member rendering
 	const getMemberTextColor = (member: RosterMember): string => {
 		return member.isLinked
@@ -161,21 +158,6 @@ export default function CodebustersAssignmentCreator({
 	// Available events
 
 	// Roster members are now loaded from tRPC cache via useTeamFull hook above
-
-	// Close dropdown when clicking outside
-	useEffect(() => {
-		const handleClickOutside = (event: MouseEvent) => {
-			if (cipherDropdownOpen) {
-				const target = event.target as Element;
-				if (!target.closest(".cipher-dropdown")) {
-					setCipherDropdownOpen(false);
-				}
-			}
-		};
-
-		document.addEventListener("mousedown", handleClickOutside);
-		return () => document.removeEventListener("mousedown", handleClickOutside);
-	}, [cipherDropdownOpen]);
 
 	const handleDetailsChange = (newDetails: Partial<AssignmentDetails>) => {
 		setDetails((prev) => ({ ...prev, ...newDetails }));
@@ -212,6 +194,14 @@ export default function CodebustersAssignmentCreator({
 		setError(null);
 
 		try {
+			const rosterMembersPayload = rosterMembers
+				.filter((member) => selectedRoster.includes(member.student_name))
+				.map((member) => ({
+					user_id: member.user_id,
+					student_name: member.student_name,
+					display_name: member.student_name,
+				}));
+
 			const assignment = await createAssignment(teamId, subteamId, {
 				title: details.title,
 				description: details.description,
@@ -220,8 +210,8 @@ export default function CodebustersAssignmentCreator({
 				points: details.points ?? 100,
 				time_limit_minutes: details.timeLimitMinutes,
 				event_name: details.eventName,
-				questions: [], // Empty array - questions will be generated dynamically
-				roster_members: selectedRoster,
+				questions: [], // Questions are generated server-side for Codebusters
+				roster_members: rosterMembersPayload,
 				// Include Codebusters-specific parameters for dynamic generation
 				codebusters_params: {
 					questionCount: settings.questionCount,
@@ -283,14 +273,9 @@ export default function CodebustersAssignmentCreator({
 						details={details}
 						settings={settings}
 						darkMode={darkMode}
-						cipherDropdownOpen={cipherDropdownOpen}
 						onDetailsChange={handleDetailsChange}
 						onSettingsChange={handleSettingsChange}
 						onDivisionChange={handleDivisionChange}
-						onCipherDropdownToggle={() =>
-							setCipherDropdownOpen(!cipherDropdownOpen)
-						}
-						onCipherDropdownClose={() => setCipherDropdownOpen(false)}
 						onBack={() => setStep(1)}
 						onCreateAssignment={handleCreateAssignment}
 						loading={loading}
@@ -346,9 +331,7 @@ export default function CodebustersAssignmentCreator({
 					<button
 						type="button"
 						onClick={onCancel}
-						className={`p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 ${
-							darkMode ? "text-gray-400 hover:text-white" : ""
-						}`}
+						className="p-2 rounded-lg text-transparent hover:text-gray-400 dark:hover:text-gray-400 transition-colors"
 						aria-label="Close modal"
 					>
 						<svg

@@ -12,6 +12,7 @@ import ActiveTimers from "./stream/ActiveTimers";
 import PostCreator from "./stream/PostCreator";
 import StreamPosts from "./stream/StreamPosts";
 import TimerManager from "./stream/TimerManager";
+import { EVENT_TYPES } from "./stream/streamTypes";
 import type { Event, Team } from "./stream/streamTypes";
 
 interface StreamTabProps {
@@ -59,9 +60,9 @@ export default function StreamTab({
 	const [newPostContent, setNewPostContent] = useState("");
 
 	// Event type filter state
-	const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([
-		"tournament",
-	]);
+	const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(
+		EVENT_TYPES.map((eventType) => eventType.value),
+	);
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
 	// Comments state - all posts expanded by default
@@ -399,20 +400,22 @@ export default function StreamTab({
 	);
 
 	// Transform timers to match Event interface
-	const activeTimers = rawTimers.map((timer) => ({
-		id: timer.id,
-		title: timer.title,
-		start_time: timer.start_time,
-		location: timer.location,
-		event_type: timer.event_type as
-			| "practice"
-			| "tournament"
-			| "meeting"
-			| "deadline"
-			| "personal"
-			| "other",
-		has_timer: true,
-	}));
+	const activeTimers = rawTimers
+		.filter((timer): timer is NonNullable<typeof timer> => timer !== null)
+		.map((timer) => ({
+			id: timer.id,
+			title: timer.title,
+			start_time: timer.start_time,
+			location: timer.location,
+			event_type: timer.event_type as
+				| "practice"
+				| "tournament"
+				| "meeting"
+				| "deadline"
+				| "personal"
+				| "other",
+			has_timer: true,
+		}));
 
 	if (rawPosts.length === 0) {
 		// Only show loading if we really have no data yet

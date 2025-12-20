@@ -24,6 +24,7 @@ export type TeamCacheManifest = {
 	rosterUpdatedAt: string;
 	membersUpdatedAt: string;
 	subteamsUpdatedAt: string;
+	calendarUpdatedAt: string;
 	subteams: SubteamCacheManifest[];
 };
 
@@ -53,6 +54,7 @@ export async function touchTeamCacheManifest(
 		roster?: boolean;
 		members?: boolean;
 		subteams?: boolean;
+		calendar?: boolean;
 	},
 	db: TeamCacheDb = dbPg,
 ) {
@@ -73,6 +75,9 @@ export async function touchTeamCacheManifest(
 	}
 	if (updates.subteams) {
 		set.subteamsUpdatedAt = now;
+	}
+	if (updates.calendar) {
+		set.calendarUpdatedAt = now;
 	}
 
 	if (Object.keys(set).length === 0) {
@@ -178,6 +183,7 @@ export async function getTeamCacheManifest(
 			rosterUpdatedAt: teamCacheManifests.rosterUpdatedAt,
 			membersUpdatedAt: teamCacheManifests.membersUpdatedAt,
 			subteamsUpdatedAt: teamCacheManifests.subteamsUpdatedAt,
+			calendarUpdatedAt: teamCacheManifests.calendarUpdatedAt,
 		})
 		.from(teamCacheManifests)
 		.where(eq(teamCacheManifests.teamId, team.id))
@@ -222,6 +228,7 @@ export async function getTeamCacheManifest(
 			rosterUpdatedAt: fallback,
 			membersUpdatedAt: fallback,
 			subteamsUpdatedAt: fallback,
+			calendarUpdatedAt: fallback,
 			subteams: subteamManifests,
 		};
 	}
@@ -233,6 +240,7 @@ export async function getTeamCacheManifest(
 		rosterUpdatedAt: String(manifest.rosterUpdatedAt),
 		membersUpdatedAt: String(manifest.membersUpdatedAt),
 		subteamsUpdatedAt: String(manifest.subteamsUpdatedAt),
+		calendarUpdatedAt: String(manifest.calendarUpdatedAt),
 		subteams: subteamManifests.map((row) => ({
 			subteamId: row.subteamId,
 			streamUpdatedAt: String(row.streamUpdatedAt),

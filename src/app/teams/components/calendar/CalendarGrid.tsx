@@ -31,7 +31,7 @@ interface CalendarEvent {
 
 interface RecurringMeeting {
 	id: string;
-	team_id: string;
+	team_id?: string;
 	days_of_week: number[];
 	start_time: string;
 	end_time: string;
@@ -52,7 +52,6 @@ interface CalendarGridProps {
 	onEventClick: (event: CalendarEvent) => void;
 	onDeleteEvent: (eventId: string) => void;
 	onAddEventForDate: (date: Date) => void;
-	isEventBlacklisted?: (eventId: string) => boolean;
 }
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -65,7 +64,6 @@ export default function CalendarGrid({
 	onEventClick,
 	onDeleteEvent,
 	onAddEventForDate,
-	isEventBlacklisted,
 }: CalendarGridProps) {
 	// Generate calendar days
 	const generateCalendarDays = () => {
@@ -173,11 +171,6 @@ export default function CalendarGrid({
 
 				const eventId = `recurring-${meeting.id}-${dateStr}`;
 
-				// Skip if this event is blacklisted
-				if (isEventBlacklisted?.(eventId)) {
-					return null;
-				}
-
 				return {
 					id: eventId,
 					title: meeting.title,
@@ -259,6 +252,12 @@ export default function CalendarGrid({
 					const dayEvents = getEventsForDate(day.date);
 					const recurringEvents = getRecurringEventsForDate(day.date);
 					const allEvents = [...dayEvents, ...recurringEvents];
+					const uniqueEvents = new Map<string, CalendarEvent>();
+					for (const event of allEvents) {
+						if (!uniqueEvents.has(event.id)) {
+							uniqueEvents.set(event.id, event);
+						}
+					}
 
 					return (
 						<div
@@ -289,10 +288,10 @@ export default function CalendarGrid({
 									<button
 										type="button"
 										onClick={() => onAddEventForDate(day.date)}
-										className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${
+										className={`p-1 rounded ${
 											darkMode
-												? "text-gray-400 hover:text-white"
-												: "text-gray-400 hover:text-gray-600"
+												? "text-gray-400 hover:text-white hover:bg-gray-700"
+												: "text-gray-400 hover:text-gray-600 hover:bg-gray-200"
 										}`}
 									>
 										<Plus className="w-3 h-3" />
@@ -302,14 +301,14 @@ export default function CalendarGrid({
 
 							{/* Events */}
 							<div className="space-y-1 overflow-y-auto flex-1 min-h-0">
-								{allEvents.map((event, eventIndex) => {
+								{Array.from(uniqueEvents.values()).map((event, eventIndex) => {
 									const eventType =
 										"event_type" in event ? event.event_type : "practice";
 
 									return (
 										<button
-											key={`${eventIndex}-${event.title}-${event.start_time || "no-time"}`}
 											type="button"
+											key={`${eventIndex}-${event.title}-${event.start_time || "no-time"}`}
 											className={`text-[10px] md:text-xs p-1 rounded border cursor-pointer transition-colors hover:opacity-80 text-left w-full ${getEventColors(eventType)}`}
 											onClick={() => {
 												if ("event_type" in event) {
@@ -341,12 +340,13 @@ export default function CalendarGrid({
 														e.stopPropagation();
 														onDeleteEvent(event.id);
 													}}
-													className={`flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] md:text-xs font-bold transition-colors ${
+													className={`flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] md:text-xs font-bold transition-colors cursor-pointer ${
 														darkMode
 															? "text-red-400 hover:bg-red-900/30 hover:text-red-300"
 															: "text-red-500 hover:bg-red-100 hover:text-red-700"
 													}`}
 													title="Delete event"
+													aria-label="Delete event"
 												>
 													×
 												</button>

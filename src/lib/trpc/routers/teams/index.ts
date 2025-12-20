@@ -5,11 +5,10 @@ import {
 	addTimer,
 	archiveTeam,
 	cancelLinkInvitation,
-	createCalendarEvent,
 	createAssignment,
+	createCalendarEvent,
 	createInvitation,
 	createLinkInvitation,
-	createRecurringMeeting,
 	createStreamPost,
 	createSubteam,
 	createTeamWithDefaultSubteam,
@@ -17,15 +16,13 @@ import {
 	declineLinkInvitation,
 	deleteAssignment,
 	deleteCalendarEvent,
-	deleteRecurringMeeting,
 	deleteComment,
 	deleteStreamPost,
 	deleteSubteam,
 	getActiveTimers,
 	getAssignmentAnalytics,
 	getAssignmentDetails,
-	listCalendarEvents,
-	listRecurringMeetings,
+	getCalendarManifest,
 	getStreamPosts,
 	getTeamCacheManifest,
 	getTeamFullBySlug,
@@ -37,15 +34,21 @@ import {
 	listAssignments,
 	listPendingInvitesForUser,
 	listPendingLinkInvitesForUser,
+	listPersonalCalendarEvents,
+	listTeamCalendarEvents,
 	listTeamsForUser,
+	listTeamsWithSubteamsForUser,
 	promoteToRole,
 	removeRosterEntry,
 	removeTimer,
 	renameSubteam,
 	replaceRosterEntries,
+	skipCalendarOccurrence,
+	updateCalendarEvent,
 	updateStreamPost,
 	upsertRosterEntry,
 } from "@/lib/server/teams";
+import { ensureSupabaseLink } from "@/lib/server/teams/shared";
 import { protectedProcedure, router } from "@/lib/trpc/server";
 import logger from "@/lib/utils/logging/logger";
 import { TRPCError } from "@trpc/server";
@@ -95,21 +98,8 @@ const calendarEventSchema = z.object({
 	isRecurring: z.boolean().optional().nullable(),
 	recurrencePattern: z.record(z.string(), z.unknown()).optional().nullable(),
 	meetingType: z.enum(["personal", "team"]),
-	selectedTeamId: z.string().optional().nullable(),
-});
-
-const recurringMeetingSchema = z.object({
-	title: z.string().min(1),
-	description: z.string().optional().nullable(),
-	location: z.string().optional().nullable(),
-	daysOfWeek: z.array(z.number().int().min(0).max(6)),
-	startTime: z.string().optional().nullable(),
-	endTime: z.string().optional().nullable(),
-	startDate: z.string().optional().nullable(),
-	endDate: z.string().optional().nullable(),
-	exceptions: z.array(z.string()).optional().nullable(),
-	meetingType: z.enum(["personal", "team"]),
-	selectedTeamId: z.string().optional().nullable(),
+	teamId: z.string().optional().nullable(),
+	subteamId: z.string().optional().nullable(),
 });
 
 export const teamsRouter = router({
@@ -119,31 +109,61 @@ export const teamsRouter = router({
 			return getTeamCacheManifest(input.teamSlug, ctx.user.id);
 		}),
 
-	calendarEvents: protectedProcedure
+	calendarManifest: protectedProcedure.query(async ({ ctx }) => {
+		try {
+			logger.dev.structured("info", "[TRPC calendarManifest] Request", {
+				userId: ctx.user.id,
+				email: ctx.user.email ?? null,
+			});
+			await ensureSupabaseLink(ctx.user);
+			const manifest = await getCalendarManifest(ctx.user.id);
+			logger.dev.structured("info", "[TRPC calendarManifest] Success", {
+				userId: ctx.user.id,
+				teamCount: manifest.teams.length,
+			});
+			return manifest;
+		} catch (error) {
+			logger.dev.error(
+				"[TRPC calendarManifest] Error",
+				error instanceof Error ? error : new Error(String(error)),
+				{ userId: ctx.user.id },
+			);
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to load calendar manifest",
+			});
+		}
+	}),
+
+	personalCalendarEvents: protectedProcedure
 		.input(
 			z.object({
-				teamIds: z.array(z.uuid()).optional(),
-				includePersonal: z.boolean().optional(),
 				startDate: z.string().optional(),
 				endDate: z.string().optional(),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
-			return listCalendarEvents({
+			return listPersonalCalendarEvents({
 				userId: ctx.user.id,
-				teamIds: input.teamIds,
-				includePersonal: input.includePersonal,
 				startDate: input.startDate,
 				endDate: input.endDate,
 			});
 		}),
 
-	recurringMeetings: protectedProcedure
-		.input(z.object({ teamIds: z.array(z.uuid()).optional() }))
+	teamCalendarEvents: protectedProcedure
+		.input(
+			z.object({
+				teamIds: z.array(z.uuid()),
+				startDate: z.string().optional(),
+				endDate: z.string().optional(),
+			}),
+		)
 		.query(async ({ ctx, input }) => {
-			return listRecurringMeetings({
+			return listTeamCalendarEvents({
 				userId: ctx.user.id,
 				teamIds: input.teamIds,
+				startDate: input.startDate,
+				endDate: input.endDate,
 			});
 		}),
 
@@ -153,10 +173,22 @@ export const teamsRouter = router({
 			return createCalendarEvent({ userId: ctx.user.id, ...input });
 		}),
 
-	createRecurringMeeting: protectedProcedure
-		.input(recurringMeetingSchema)
+	updateCalendarEvent: protectedProcedure
+		.input(
+			calendarEventSchema
+				.extend({
+					eventId: z.uuid(),
+				})
+				.partial()
+				.required({ eventId: true }),
+		)
 		.mutation(async ({ ctx, input }) => {
-			return createRecurringMeeting({ userId: ctx.user.id, ...input });
+			const { eventId, ...updateData } = input;
+			return updateCalendarEvent({
+				userId: ctx.user.id,
+				eventId,
+				...updateData,
+			});
 		}),
 
 	deleteCalendarEvent: protectedProcedure
@@ -165,10 +197,10 @@ export const teamsRouter = router({
 			return deleteCalendarEvent({ userId: ctx.user.id, ...input });
 		}),
 
-	deleteRecurringMeeting: protectedProcedure
-		.input(z.object({ meetingId: z.uuid() }))
+	skipCalendarOccurrence: protectedProcedure
+		.input(z.object({ eventId: z.uuid(), occurrenceDate: z.string().min(1) }))
 		.mutation(async ({ ctx, input }) => {
-			return deleteRecurringMeeting({ userId: ctx.user.id, ...input });
+			return skipCalendarOccurrence({ userId: ctx.user.id, ...input });
 		}),
 
 	assignments: protectedProcedure
@@ -253,24 +285,40 @@ export const teamsRouter = router({
 
 	listUserTeams: protectedProcedure.query(async ({ ctx }) => {
 		try {
-			console.log("[TRPC listUserTeams] Request:", { userId: ctx.user.id });
+			logger.log("[TRPC listUserTeams] Request:", { userId: ctx.user.id });
 			const teams = await listTeamsForUser(ctx.user.id);
-			console.log("[TRPC listUserTeams] Success:", { count: teams.length });
+			logger.log("[TRPC listUserTeams] Success:", { count: teams.length });
 			return { teams };
 		} catch (error) {
-			console.error("[TRPC listUserTeams] Error:", error);
+			logger.error("[TRPC listUserTeams] Error:", error);
+			throw error;
+		}
+	}),
+
+	listUserTeamsWithSubteams: protectedProcedure.query(async ({ ctx }) => {
+		try {
+			logger.log("[TRPC listUserTeamsWithSubteams] Request:", {
+				userId: ctx.user.id,
+			});
+			const teams = await listTeamsWithSubteamsForUser(ctx.user.id);
+			logger.log("[TRPC listUserTeamsWithSubteams] Success:", {
+				count: teams.length,
+			});
+			return { teams };
+		} catch (error) {
+			logger.error("[TRPC listUserTeamsWithSubteams] Error:", error);
 			throw error;
 		}
 	}),
 
 	pendingInvites: protectedProcedure.query(async ({ ctx }) => {
 		try {
-			console.log("[TRPC pendingInvites] Request:", { userId: ctx.user.id });
+			logger.log("[TRPC pendingInvites] Request:", { userId: ctx.user.id });
 			const invites = await listPendingInvitesForUser(ctx.user.id);
-			console.log("[TRPC pendingInvites] Success:", { count: invites.length });
+			logger.log("[TRPC pendingInvites] Success:", { count: invites.length });
 			return { invites };
 		} catch (error) {
-			console.error("[TRPC pendingInvites] Error:", error);
+			logger.error("[TRPC pendingInvites] Error:", error);
 			throw error;
 		}
 	}),
@@ -279,15 +327,15 @@ export const teamsRouter = router({
 		.input(z.object({ teamSlug: z.string().min(1) }))
 		.query(async ({ ctx, input }) => {
 			try {
-				console.log("[TRPC meta] Request:", {
+				logger.log("[TRPC meta] Request:", {
 					teamSlug: input.teamSlug,
 					userId: ctx.user.id,
 				});
 				const result = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
-				console.log("[TRPC meta] Success:", { teamId: result.teamId });
+				logger.log("[TRPC meta] Success:", { teamId: result.teamId });
 				return result;
 			} catch (error) {
-				console.error("[TRPC meta] Error:", error);
+				logger.error("[TRPC meta] Error:", error);
 				throw new TRPCError({
 					code: "FORBIDDEN",
 					message:
@@ -300,19 +348,19 @@ export const teamsRouter = router({
 		.input(z.object({ teamSlug: z.string().min(1) }))
 		.query(async ({ ctx, input }) => {
 			try {
-				console.log("[TRPC full] Request:", {
+				logger.log("[TRPC full] Request:", {
 					teamSlug: input.teamSlug,
 					userId: ctx.user.id,
 				});
 				const result = await getTeamFullBySlug(input.teamSlug, ctx.user.id);
-				console.log("[TRPC full] Success:", {
+				logger.log("[TRPC full] Success:", {
 					teamId: result.meta.teamId,
 					memberCount: result.members.length,
 					rosterEntryCount: result.rosterEntries.length,
 				});
 				return result;
 			} catch (error) {
-				console.error("[TRPC full] Error:", error);
+				logger.error("[TRPC full] Error:", error);
 				throw new TRPCError({
 					code: "FORBIDDEN",
 					message:
@@ -476,7 +524,7 @@ export const teamsRouter = router({
 		.input(z.object({ teamSlug: z.string().min(1), userId: z.uuid() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				console.log("[TRPC kickMember] Request:", {
+				logger.log("[TRPC kickMember] Request:", {
 					teamSlug: input.teamSlug,
 					userId: input.userId,
 					actorId: ctx.user.id,
@@ -486,10 +534,10 @@ export const teamsRouter = router({
 					userId: input.userId,
 					actorId: ctx.user.id,
 				});
-				console.log("[TRPC kickMember] Success:", result);
+				logger.log("[TRPC kickMember] Success:", result);
 				return result;
 			} catch (error) {
-				console.error("[TRPC kickMember] Error:", error);
+				logger.error("[TRPC kickMember] Error:", error);
 				throw error;
 			}
 		}),
@@ -510,7 +558,7 @@ export const teamsRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				console.log("[TRPC saveRoster] Request:", {
+				logger.log("[TRPC saveRoster] Request:", {
 					teamSlug: input.teamSlug,
 					subteamId: input.subteamId,
 					entryCount: input.entries.length,
@@ -528,13 +576,13 @@ export const teamsRouter = router({
 					})),
 					ctx.user.id,
 				);
-				console.log("[TRPC saveRoster] Success:", {
+				logger.log("[TRPC saveRoster] Success:", {
 					conflicts: result.conflicts?.length ?? 0,
 					rosterEntries: result.rosterEntries?.length ?? 0,
 				});
 				return { ok: true, updatedAt: new Date().toISOString(), ...result };
 			} catch (error) {
-				console.error("[TRPC saveRoster] Error:", error);
+				logger.error("[TRPC saveRoster] Error:", error);
 				throw error;
 			}
 		}),
@@ -549,7 +597,7 @@ export const teamsRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				console.log("[TRPC upsertRosterEntry] Request:", {
+				logger.log("[TRPC upsertRosterEntry] Request:", {
 					teamSlug: input.teamSlug,
 					subteamId: input.subteamId,
 					entry: input.entry,
@@ -557,7 +605,7 @@ export const teamsRouter = router({
 				});
 
 				const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
-				console.log("[TRPC upsertRosterEntry] Team meta:", meta);
+				logger.log("[TRPC upsertRosterEntry] Team meta:", meta);
 
 				await upsertRosterEntry(
 					meta.teamId,
@@ -571,10 +619,10 @@ export const teamsRouter = router({
 					ctx.user.id,
 				);
 
-				console.log("[TRPC upsertRosterEntry] Success");
+				logger.log("[TRPC upsertRosterEntry] Success");
 				return { ok: true, updatedAt: new Date().toISOString() };
 			} catch (error) {
-				console.error("[TRPC upsertRosterEntry] Error:", {
+				logger.error("[TRPC upsertRosterEntry] Error:", {
 					error,
 					message: error instanceof Error ? error.message : String(error),
 					stack: error instanceof Error ? error.stack : undefined,
@@ -597,7 +645,7 @@ export const teamsRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				console.log("[TRPC removeRosterEntry] Request:", {
+				logger.log("[TRPC removeRosterEntry] Request:", {
 					input,
 					userId: ctx.user.id,
 				});
@@ -624,10 +672,10 @@ export const teamsRouter = router({
 					displayName: input.displayName,
 					userId: input.userId,
 				});
-				console.log("[TRPC removeRosterEntry] Success");
+				logger.log("[TRPC removeRosterEntry] Success");
 				return { ok: true, updatedAt: new Date().toISOString() };
 			} catch (error) {
-				console.error("[TRPC removeRosterEntry] Error:", error);
+				logger.error("[TRPC removeRosterEntry] Error:", error);
 				throw error;
 			}
 		}),
@@ -642,7 +690,7 @@ export const teamsRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				console.log("[TRPC inviteMember] Request:", {
+				logger.log("[TRPC inviteMember] Request:", {
 					input,
 					invitedBy: ctx.user.id,
 				});
@@ -652,10 +700,10 @@ export const teamsRouter = router({
 					role: input.role,
 					invitedBy: ctx.user.id,
 				});
-				console.log("[TRPC inviteMember] Success:", result);
+				logger.log("[TRPC inviteMember] Success:", result);
 				return result;
 			} catch (error) {
-				console.error("[TRPC inviteMember] Error:", error);
+				logger.error("[TRPC inviteMember] Error:", error);
 				throw error;
 			}
 		}),
@@ -670,7 +718,7 @@ export const teamsRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				console.log("[TRPC promoteToRole] Request:", {
+				logger.log("[TRPC promoteToRole] Request:", {
 					input,
 					actorId: ctx.user.id,
 				});
@@ -680,10 +728,10 @@ export const teamsRouter = router({
 					newRole: input.newRole,
 					actorId: ctx.user.id,
 				});
-				console.log("[TRPC promoteToRole] Success:", result);
+				logger.log("[TRPC promoteToRole] Success:", result);
 				return result;
 			} catch (error) {
-				console.error("[TRPC promoteToRole] Error:", error);
+				logger.error("[TRPC promoteToRole] Error:", error);
 				throw error;
 			}
 		}),
@@ -698,7 +746,7 @@ export const teamsRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				console.log("[TRPC createLinkInvitation] Request:", {
+				logger.log("[TRPC createLinkInvitation] Request:", {
 					input,
 					invitedBy: ctx.user.id,
 				});
@@ -708,26 +756,26 @@ export const teamsRouter = router({
 					invitedUsername: input.invitedUsername,
 					invitedBy: ctx.user.id,
 				});
-				console.log("[TRPC createLinkInvitation] Success:", result);
+				logger.log("[TRPC createLinkInvitation] Success:", result);
 				return result;
 			} catch (error) {
-				console.error("[TRPC createLinkInvitation] Error:", error);
+				logger.error("[TRPC createLinkInvitation] Error:", error);
 				throw error;
 			}
 		}),
 
 	pendingLinkInvites: protectedProcedure.query(async ({ ctx }) => {
 		try {
-			console.log("[TRPC pendingLinkInvites] Request:", {
+			logger.log("[TRPC pendingLinkInvites] Request:", {
 				userId: ctx.user.id,
 			});
 			const linkInvites = await listPendingLinkInvitesForUser(ctx.user.id);
-			console.log("[TRPC pendingLinkInvites] Success:", {
+			logger.log("[TRPC pendingLinkInvites] Success:", {
 				count: linkInvites.length,
 			});
 			return { linkInvites };
 		} catch (error) {
-			console.error("[TRPC pendingLinkInvites] Error:", error);
+			logger.error("[TRPC pendingLinkInvites] Error:", error);
 			throw error;
 		}
 	}),
@@ -736,7 +784,7 @@ export const teamsRouter = router({
 		.input(z.object({ linkInviteId: z.uuid() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				console.log("[TRPC acceptLinkInvite] Request:", {
+				logger.log("[TRPC acceptLinkInvite] Request:", {
 					linkInviteId: input.linkInviteId,
 					userId: ctx.user.id,
 				});
@@ -744,10 +792,10 @@ export const teamsRouter = router({
 					input.linkInviteId,
 					ctx.user.id,
 				);
-				console.log("[TRPC acceptLinkInvite] Success:", result);
+				logger.log("[TRPC acceptLinkInvite] Success:", result);
 				return result;
 			} catch (error) {
-				console.error("[TRPC acceptLinkInvite] Error:", error);
+				logger.error("[TRPC acceptLinkInvite] Error:", error);
 				throw error;
 			}
 		}),
@@ -756,7 +804,7 @@ export const teamsRouter = router({
 		.input(z.object({ linkInviteId: z.uuid() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				console.log("[TRPC declineLinkInvite] Request:", {
+				logger.log("[TRPC declineLinkInvite] Request:", {
 					linkInviteId: input.linkInviteId,
 					userId: ctx.user.id,
 				});
@@ -764,10 +812,10 @@ export const teamsRouter = router({
 					input.linkInviteId,
 					ctx.user.id,
 				);
-				console.log("[TRPC declineLinkInvite] Success:", result);
+				logger.log("[TRPC declineLinkInvite] Success:", result);
 				return result;
 			} catch (error) {
-				console.error("[TRPC declineLinkInvite] Error:", error);
+				logger.error("[TRPC declineLinkInvite] Error:", error);
 				throw error;
 			}
 		}),
@@ -781,7 +829,7 @@ export const teamsRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				console.log("[TRPC cancelLinkInvite] Request:", {
+				logger.log("[TRPC cancelLinkInvite] Request:", {
 					teamSlug: input.teamSlug,
 					rosterDisplayName: input.rosterDisplayName,
 					userId: ctx.user.id,
@@ -791,10 +839,10 @@ export const teamsRouter = router({
 					rosterDisplayName: input.rosterDisplayName,
 					userId: ctx.user.id,
 				});
-				console.log("[TRPC cancelLinkInvite] Success:", result);
+				logger.log("[TRPC cancelLinkInvite] Success:", result);
 				return result;
 			} catch (error) {
-				console.error("[TRPC cancelLinkInvite] Error:", error);
+				logger.error("[TRPC cancelLinkInvite] Error:", error);
 				throw error;
 			}
 		}),
@@ -882,7 +930,42 @@ export const teamsRouter = router({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
-			return getActiveTimers(input.teamSlug, input.subteamId, ctx.user.id);
+			const startTime = Date.now();
+			logger.dev.structured("info", "[TRPC getTimers] Request", {
+				userId: ctx.user.id,
+				teamSlug: input.teamSlug,
+				subteamId: input.subteamId,
+			});
+
+			try {
+				const result = await getActiveTimers(
+					input.teamSlug,
+					input.subteamId,
+					ctx.user.id,
+				);
+				const duration = Date.now() - startTime;
+				logger.dev.structured("info", "[TRPC getTimers] Success", {
+					userId: ctx.user.id,
+					teamSlug: input.teamSlug,
+					subteamId: input.subteamId,
+					timerCount: result.length,
+					duration: `${duration}ms`,
+				});
+				return result;
+			} catch (error) {
+				const duration = Date.now() - startTime;
+				logger.dev.error(
+					"[TRPC getTimers] Error",
+					error instanceof Error ? error : new Error(String(error)),
+					{
+						userId: ctx.user.id,
+						teamSlug: input.teamSlug,
+						subteamId: input.subteamId,
+						duration: `${duration}ms`,
+					},
+				);
+				throw error;
+			}
 		}),
 
 	getTournaments: protectedProcedure

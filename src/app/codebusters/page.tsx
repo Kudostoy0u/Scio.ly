@@ -424,7 +424,7 @@ export default function CodeBusters() {
 					) : (
 						<div
 							className={
-								"sticky top-4 z-10 w-full max-w-[90vw] md:max-w-6xl bg-white border-2 border-gray-300 rounded-full h-5 mb-6 shadow-lg"
+								"sticky top-4 z-[9999] w-full max-w-[90vw] md:max-w-6xl bg-white border-2 border-gray-300 rounded-full h-5 mb-6 shadow-lg"
 							}
 						>
 							<div

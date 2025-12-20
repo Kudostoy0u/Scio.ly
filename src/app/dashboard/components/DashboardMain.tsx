@@ -19,6 +19,7 @@ import FavoriteConfigsCard from "./FavoriteConfigsCard";
 // import HylasBanner from "./HylasBanner";
 import MetricsCard from "./MetricsCard";
 import QuestionsThisWeekChart from "./QuestionsThisWeekChart";
+import TeamsFeatureModal from "./TeamsFeatureModal";
 import WelcomeMessage from "./WelcomeMessage";
 
 import { useAuth } from "@/app/contexts/AuthContext";
@@ -121,6 +122,9 @@ function DashboardContent({ initialUser }: { initialUser?: User | null }) {
 				onSubmit={handleContact}
 				darkMode={darkMode}
 			/>
+
+			{/* Teams Feature Modal */}
+			<TeamsFeatureModal />
 		</div>
 	);
 }

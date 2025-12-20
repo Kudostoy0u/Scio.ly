@@ -113,7 +113,14 @@ export const createAssignment = async (
 		time_limit_minutes: number;
 		event_name: string;
 		questions: Question[];
-		roster_members: string[];
+		roster_members: Array<
+			| string
+			| {
+					user_id?: string;
+					student_name?: string;
+					display_name?: string;
+			  }
+		>;
 		codebusters_params?: {
 			questionCount: number;
 			cipherTypes: string[];
@@ -162,7 +169,14 @@ export const createCodebustersAssignment = async (
 		time_limit_minutes: number;
 		event_name: string;
 		questions: Question[];
-		roster_members: string[];
+		roster_members: Array<
+			| string
+			| {
+					user_id?: string;
+					student_name?: string;
+					display_name?: string;
+			  }
+		>;
 		codebusters_params?: {
 			questionCount: number;
 			cipherTypes: string[];

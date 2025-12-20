@@ -36,7 +36,17 @@ interface BeforeInstallPromptEvent extends Event {
 	userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-export default function Header() {
+interface HeaderProps {
+	logoOffsetClassName?: string;
+	leftAddon?: React.ReactNode;
+	hideMobileNav?: boolean;
+}
+
+export default function Header({
+	logoOffsetClassName,
+	leftAddon,
+	hideMobileNav = false,
+}: HeaderProps) {
 	const { darkMode, setDarkMode } = useTheme();
 	const [showInstallModal, setShowInstallModal] = useState(false);
 	const [isSafari, setIsSafari] = useState(false);
@@ -286,11 +296,16 @@ export default function Header() {
 			>
 				<div className="w-full">
 					<div className="container mx-auto flex justify-between items-center h-16 px-4">
-						<Logo
-							darkMode={darkMode}
-							shouldBeTransparent={shouldBeTransparent}
-							isDashboard={isDashboard}
-						/>
+						<div className="flex items-center gap-2">
+							{leftAddon}
+							<div className={logoOffsetClassName ?? ""}>
+								<Logo
+									darkMode={darkMode}
+									shouldBeTransparent={shouldBeTransparent}
+									isDashboard={isDashboard}
+								/>
+							</div>
+						</div>
 
 						{/* Desktop Navigation */}
 						<div className="hidden md:flex items-center space-x-1">
@@ -309,30 +324,32 @@ export default function Header() {
 						</div>
 
 						{/* Mobile menu button */}
-						<div className="md:hidden flex items-center space-x-2">
-							<ThemeToggleButton
-								darkMode={darkMode}
-								shouldBeTransparent={shouldBeTransparent}
-								onThemeToggle={() => setDarkMode(!darkMode)}
-							/>
-							<InstallButton
-								darkMode={darkMode}
-								shouldBeTransparent={shouldBeTransparent}
-								isStandalone={isStandalone}
-								onInstallClick={() => setShowInstallModal(true)}
-							/>
-							<HamburgerButton
-								darkMode={darkMode}
-								shouldBeTransparent={shouldBeTransparent}
-								mobileMenuOpen={mobileMenuOpen}
-								onMenuToggle={() => setMobileMenuOpen((prev) => !prev)}
-							/>
-						</div>
+						{!hideMobileNav && (
+							<div className="md:hidden flex items-center space-x-2">
+								<ThemeToggleButton
+									darkMode={darkMode}
+									shouldBeTransparent={shouldBeTransparent}
+									onThemeToggle={() => setDarkMode(!darkMode)}
+								/>
+								<InstallButton
+									darkMode={darkMode}
+									shouldBeTransparent={shouldBeTransparent}
+									isStandalone={isStandalone}
+									onInstallClick={() => setShowInstallModal(true)}
+								/>
+								<HamburgerButton
+									darkMode={darkMode}
+									shouldBeTransparent={shouldBeTransparent}
+									mobileMenuOpen={mobileMenuOpen}
+									onMenuToggle={() => setMobileMenuOpen((prev) => !prev)}
+								/>
+							</div>
+						)}
 					</div>
 
 					{/* Mobile Navigation */}
 					<AnimatePresence>
-						{mobileMenuOpen && (
+						{!hideMobileNav && mobileMenuOpen && (
 							<motion.div
 								initial={{ opacity: 0, height: 0 }}
 								animate={{ opacity: 1, height: "auto" }}

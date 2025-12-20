@@ -18,7 +18,7 @@ interface CalendarEvent {
 
 interface RecurringMeeting {
 	id: string;
-	team_id: string;
+	team_id?: string;
 	days_of_week: number[];
 	start_time: string;
 	end_time: string;
@@ -38,7 +38,6 @@ interface MobileCalendarProps {
 	recurringMeetings: RecurringMeeting[];
 	selectedDate: Date;
 	onSelectDate: (date: Date) => void;
-	isEventBlacklisted?: (eventId: string) => boolean;
 }
 
 const dayNamesShort = ["S", "M", "T", "W", "T", "F", "S"];
@@ -67,7 +66,6 @@ export default function MobileCalendar({
 	recurringMeetings,
 	selectedDate,
 	onSelectDate,
-	isEventBlacklisted,
 }: MobileCalendarProps) {
 	const year = currentDate.getFullYear();
 	const month = currentDate.getMonth();
@@ -125,11 +123,11 @@ export default function MobileCalendar({
 			{/* Grid */}
 			<div className="grid grid-cols-7 grid-rows-6">
 				{days.map((date, _idx) => {
-					const dateStrParts = date.toISOString().split("T");
-					const dateStr = dateStrParts[0];
-					if (!dateStr) {
-						return null;
-					}
+					// Use local timezone methods consistently to avoid hydration mismatches
+					const year = date.getFullYear();
+					const month = String(date.getMonth() + 1).padStart(2, "0");
+					const day = String(date.getDate()).padStart(2, "0");
+					const dateStr = `${year}-${month}-${day}`;
 					const dayOfWeek = date.getDay();
 
 					// Collect dot types for this date
@@ -156,10 +154,6 @@ export default function MobileCalendar({
 								return false;
 							}
 							if (m.end_date && ds > m.end_date) {
-								return false;
-							}
-							const eventId = `recurring-${m.id}-${ds}`;
-							if (isEventBlacklisted?.(eventId)) {
 								return false;
 							}
 							return true;

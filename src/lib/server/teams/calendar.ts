@@ -1,13 +1,31 @@
 import { dbPg } from "@/lib/db";
 import {
-	teamEventAttendees,
-	teamEvents,
-	teamRecurringMeetings,
+	calendarEventAttendees,
+	calendarEvents,
+	teamCacheManifests,
+	teamSubteams,
+	userCalendarManifests,
 	users,
 } from "@/lib/db/schema";
-import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
-import { assertTeamAccess } from "./shared";
+import logger from "@/lib/utils/logging/logger";
+import {
+	type SQL,
+	and,
+	asc,
+	eq,
+	gte,
+	inArray,
+	isNull,
+	lte,
+	or,
+	sql,
+} from "drizzle-orm";
+import {
+	ensureTeamCacheManifest,
+	touchTeamCacheManifest,
+} from "./cache-manifest";
 import { listTeamsForUser } from "./membership";
+import { assertCaptainAccess, assertTeamAccess } from "./shared";
 
 export type CalendarEventType =
 	| "practice"
@@ -29,7 +47,9 @@ export type CalendarEvent = {
 	is_recurring: boolean;
 	recurrence_pattern: Record<string, unknown> | null;
 	created_by: string;
-	team_id: string | null;
+	owner_user_id: string | null;
+	team_id?: string;
+	subteam_id?: string;
 	creator_email: string | null;
 	creator_name: string | null;
 	attendees?: Array<{
@@ -42,129 +62,271 @@ export type CalendarEvent = {
 	}>;
 };
 
-export type RecurringMeeting = {
-	id: string;
-	team_id: string;
-	created_by: string;
-	title: string;
-	description: string | null;
-	location: string | null;
-	days_of_week: number[];
-	start_time: string | null;
-	end_time: string | null;
-	start_date: string | null;
-	end_date: string | null;
-	exceptions: string[];
-	meeting_type: "personal" | "team";
-	creator_email: string | null;
-	creator_name: string | null;
-	created_at: string | null;
+type RecurrencePattern = {
+	days_of_week?: number[];
+	start_date?: string | null;
+	end_date?: string | null;
+	exceptions?: string[];
+	start_time?: string | null;
+	end_time?: string | null;
 };
 
-function safeJsonParse<T = unknown>(value: unknown, fallback: T): T {
-	if (value === null || value === undefined) {
-		return fallback;
+function normalizePattern(value: unknown): RecurrencePattern {
+	if (!value || typeof value !== "object") {
+		return { exceptions: [] };
 	}
-	if (Array.isArray(value) || typeof value === "object") {
-		return value as T;
-	}
-	if (value === "[]") {
-		return fallback;
-	}
+	const pattern = value as RecurrencePattern;
+	return {
+		...pattern,
+		exceptions: Array.isArray(pattern.exceptions) ? pattern.exceptions : [],
+	};
+}
+
+async function ensureUserCalendarManifest(userId: string) {
 	try {
-		return JSON.parse(String(value)) as T;
-	} catch {
-		return fallback;
+		await dbPg
+			.insert(userCalendarManifests)
+			.values({ userId })
+			.onConflictDoNothing();
+	} catch (error) {
+		logger.dev.error(
+			"[Calendar] Failed to ensure user manifest",
+			error instanceof Error ? error : new Error(String(error)),
+			{ userId },
+		);
+		throw error;
 	}
 }
 
-export async function listCalendarEvents(input: {
-	userId: string;
-	teamIds?: string[];
-	includePersonal?: boolean;
-	startDate?: string;
-	endDate?: string;
-}): Promise<CalendarEvent[]> {
-	const { userId, teamIds, includePersonal, startDate, endDate } = input;
-	const memberships = await listTeamsForUser(userId);
-	const allowedTeamIds = new Set(memberships.map((team) => team.id));
-	const filteredTeamIds = (teamIds ?? memberships.map((team) => team.id)).filter(
-		(teamId) => allowedTeamIds.has(teamId),
-	);
+export async function touchUserCalendarManifest(
+	userId: string,
+	updates?: { personal?: boolean; teams?: boolean },
+) {
+	await ensureUserCalendarManifest(userId);
+	const hasFlags = !!updates?.personal || !!updates?.teams;
+	const shouldUpdatePersonal = updates?.personal ?? !hasFlags;
+	const set: Partial<{
+		personalUpdatedAt: SQL;
+		teamsUpdatedAt: SQL;
+		updatedAt: SQL;
+	}> = {
+		updatedAt: sql`now()`,
+	};
 
-	const teamConditions: ReturnType<typeof and>[] = [];
-	if (filteredTeamIds.length > 0) {
-		teamConditions.push(inArray(teamEvents.teamId, filteredTeamIds));
+	if (shouldUpdatePersonal) {
+		set.personalUpdatedAt = sql`now()`;
 	}
-	if (startDate) {
-		teamConditions.push(gte(teamEvents.startTime, startDate));
-	}
-	if (endDate) {
-		teamConditions.push(lte(teamEvents.startTime, endDate));
+	if (updates?.teams) {
+		set.teamsUpdatedAt = sql`now()`;
 	}
 
-	const personalConditions: ReturnType<typeof and>[] = [
-		eq(teamEvents.createdBy, userId),
-		isNull(teamEvents.teamId),
-	];
-	if (startDate) {
-		personalConditions.push(gte(teamEvents.startTime, startDate));
-	}
-	if (endDate) {
-		personalConditions.push(lte(teamEvents.startTime, endDate));
-	}
+	await dbPg
+		.update(userCalendarManifests)
+		.set(set)
+		.where(eq(userCalendarManifests.userId, userId));
+}
 
-	const baseQuery = dbPg
+export async function getCalendarManifest(userId: string) {
+	try {
+		await ensureUserCalendarManifest(userId);
+		const [personalManifest] = await dbPg
+			.select({
+				personalUpdatedAt: userCalendarManifests.personalUpdatedAt,
+				teamsUpdatedAt: userCalendarManifests.teamsUpdatedAt,
+			})
+			.from(userCalendarManifests)
+			.where(eq(userCalendarManifests.userId, userId))
+			.limit(1);
+
+		const teams = await listTeamsForUser(userId);
+		const teamIds = teams.map((team) => team.id);
+
+		if (teamIds.length > 0) {
+			await Promise.all(
+				teamIds.map((teamId) => ensureTeamCacheManifest(teamId)),
+			);
+		}
+
+		const teamManifests = teamIds.length
+			? await dbPg
+					.select({
+						teamId: teamCacheManifests.teamId,
+						calendarUpdatedAt: teamCacheManifests.calendarUpdatedAt,
+						subteamsUpdatedAt: teamCacheManifests.subteamsUpdatedAt,
+					})
+					.from(teamCacheManifests)
+					.where(inArray(teamCacheManifests.teamId, teamIds))
+			: [];
+
+		const manifest = {
+			personalUpdatedAt: String(
+				personalManifest?.personalUpdatedAt ?? new Date().toISOString(),
+			),
+			teamsUpdatedAt: String(
+				personalManifest?.teamsUpdatedAt ?? new Date().toISOString(),
+			),
+			teams: teamManifests.map((team) => ({
+				teamId: team.teamId,
+				calendarUpdatedAt: String(team.calendarUpdatedAt),
+				subteamsUpdatedAt: String(team.subteamsUpdatedAt),
+			})),
+		};
+
+		logger.dev.structured("info", "[Calendar] Manifest loaded", {
+			userId,
+			teamCount: manifest.teams.length,
+		});
+
+		return manifest;
+	} catch (error) {
+		logger.dev.error(
+			"[Calendar] Failed to load manifest",
+			error instanceof Error ? error : new Error(String(error)),
+			{ userId },
+		);
+		throw error;
+	}
+}
+
+function buildCalendarSelect() {
+	return dbPg
 		.select({
-			id: teamEvents.id,
-			title: teamEvents.title,
-			description: teamEvents.description,
-			start_time: teamEvents.startTime,
-			end_time: teamEvents.endTime,
-			location: teamEvents.location,
-			event_type: teamEvents.eventType,
-			is_all_day: teamEvents.allDay,
-			is_recurring: teamEvents.isRecurring,
-			recurrence_pattern: teamEvents.recurrencePattern,
-			created_by: teamEvents.createdBy,
-			team_id: teamEvents.teamId,
+			id: calendarEvents.id,
+			title: calendarEvents.title,
+			description: calendarEvents.description,
+			start_time: calendarEvents.startTime,
+			end_time: calendarEvents.endTime,
+			location: calendarEvents.location,
+			event_type: calendarEvents.eventType,
+			is_all_day: calendarEvents.allDay,
+			is_recurring: calendarEvents.isRecurring,
+			recurrence_pattern: calendarEvents.recurrencePattern,
+			created_by: calendarEvents.createdBy,
+			owner_user_id: calendarEvents.ownerUserId,
+			team_id: calendarEvents.teamId,
+			subteam_id: calendarEvents.subteamId,
 			creator_email: users.email,
 			creator_name: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}), ${users.email})`,
 		})
-		.from(teamEvents)
-		.leftJoin(users, eq(teamEvents.createdBy, users.id));
+		.from(calendarEvents)
+		.leftJoin(users, eq(calendarEvents.createdBy, users.id));
+}
 
-	const [teamEventsResult, personalEventsResult] = await Promise.all([
-		teamConditions.length > 0
-			? baseQuery
-					.where(and(...teamConditions))
-					.orderBy(asc(teamEvents.startTime))
-			: Promise.resolve([] as CalendarEvent[]),
-		includePersonal
-			? baseQuery
-					.where(and(...personalConditions))
-					.orderBy(asc(teamEvents.startTime))
-			: Promise.resolve([] as CalendarEvent[]),
-	]);
+export async function listPersonalCalendarEvents(input: {
+	userId: string;
+	startDate?: string;
+	endDate?: string;
+}): Promise<CalendarEvent[]> {
+	const { userId, startDate, endDate } = input;
+	const conditions = [
+		eq(calendarEvents.ownerUserId, userId),
+		isNull(calendarEvents.teamId),
+	];
 
-	const eventsResult = [...teamEventsResult, ...personalEventsResult];
+	if (startDate) {
+		conditions.push(gte(calendarEvents.startTime, startDate));
+	}
+	if (endDate) {
+		conditions.push(lte(calendarEvents.startTime, endDate));
+	}
+
+	logger.dev.structured("debug", "[Calendar] List personal events", {
+		userId,
+		startDate: startDate ?? null,
+		endDate: endDate ?? null,
+	});
+
+	const results = await buildCalendarSelect()
+		.where(and(...conditions))
+		.orderBy(asc(calendarEvents.startTime));
+
+	const mapped: CalendarEvent[] = results.map((event) => ({
+		...event,
+		event_type: (event.event_type ?? "personal") as CalendarEventType,
+		is_all_day: event.is_all_day ?? false,
+		is_recurring: event.is_recurring ?? false,
+		team_id: event.team_id === null ? undefined : (event.team_id ?? undefined),
+		subteam_id:
+			event.subteam_id === null ? undefined : (event.subteam_id ?? undefined),
+		recurrence_pattern:
+			event.recurrence_pattern && typeof event.recurrence_pattern === "object"
+				? (event.recurrence_pattern as Record<string, unknown>)
+				: null,
+	}));
+
+	logger.dev.structured("debug", "[Calendar] Personal events loaded", {
+		userId,
+		count: mapped.length,
+	});
+
+	return mapped;
+}
+
+export async function listTeamCalendarEvents(input: {
+	userId: string;
+	teamIds: string[];
+	startDate?: string;
+	endDate?: string;
+}): Promise<CalendarEvent[]> {
+	const { userId, teamIds, startDate, endDate } = input;
+	const memberships = await listTeamsForUser(userId);
+	const allowedTeamIds = new Set(memberships.map((team) => team.id));
+	const filteredTeamIds = teamIds.filter((teamId) =>
+		allowedTeamIds.has(teamId),
+	);
+
+	if (filteredTeamIds.length === 0) {
+		return [];
+	}
+
+	const conditions = [inArray(calendarEvents.teamId, filteredTeamIds)];
+	if (startDate) {
+		conditions.push(gte(calendarEvents.startTime, startDate));
+	}
+	if (endDate) {
+		conditions.push(lte(calendarEvents.startTime, endDate));
+	}
+
+	logger.dev.structured("debug", "[Calendar] List team events", {
+		userId,
+		teamIds: filteredTeamIds,
+		startDate: startDate ?? null,
+		endDate: endDate ?? null,
+	});
+
+	const results = await buildCalendarSelect()
+		.where(and(...conditions))
+		.orderBy(asc(calendarEvents.startTime));
+
 	const eventsWithAttendees = await Promise.all(
-		eventsResult.map(async (event) => {
+		results.map(async (event) => {
 			if (!event.team_id) {
 				return event;
 			}
-			const attendees = await dbPg
+			const attendeesRaw = await dbPg
 				.select({
-					user_id: teamEventAttendees.userId,
-					status: teamEventAttendees.status,
-					responded_at: teamEventAttendees.respondedAt,
-					notes: teamEventAttendees.notes,
+					user_id: calendarEventAttendees.userId,
+					status: calendarEventAttendees.status,
+					responded_at: calendarEventAttendees.respondedAt,
+					notes: calendarEventAttendees.notes,
 					email: users.email,
-					name: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}), ${users.email})`,
+					name: sql<
+						string | null
+					>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}), ${users.email})`,
 				})
-				.from(teamEventAttendees)
-				.leftJoin(users, eq(teamEventAttendees.userId, users.id))
-				.where(eq(teamEventAttendees.eventId, event.id));
+				.from(calendarEventAttendees)
+				.leftJoin(users, eq(calendarEventAttendees.userId, users.id))
+				.where(eq(calendarEventAttendees.eventId, event.id));
+
+			const attendees = attendeesRaw.map((a) => ({
+				...a,
+				status: a.status as
+					| "pending"
+					| "attending"
+					| "declined"
+					| "tentative"
+					| null,
+			}));
 
 			return {
 				...event,
@@ -173,95 +335,50 @@ export async function listCalendarEvents(input: {
 		}),
 	);
 
-	return eventsWithAttendees.sort(
-		(a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
-	);
-}
+	const mapped: CalendarEvent[] = eventsWithAttendees.map((event) => {
+		const baseEvent: CalendarEvent = {
+			id: event.id,
+			title: event.title,
+			description: event.description,
+			start_time: event.start_time,
+			end_time: event.end_time,
+			location: event.location,
+			event_type: (event.event_type ?? "other") as CalendarEventType,
+			is_all_day: event.is_all_day ?? false,
+			is_recurring: event.is_recurring ?? false,
+			recurrence_pattern:
+				event.recurrence_pattern && typeof event.recurrence_pattern === "object"
+					? (event.recurrence_pattern as Record<string, unknown>)
+					: null,
+			created_by: event.created_by,
+			owner_user_id: event.owner_user_id,
+			team_id:
+				event.team_id === null ? undefined : (event.team_id ?? undefined),
+			subteam_id:
+				event.subteam_id === null ? undefined : (event.subteam_id ?? undefined),
+			creator_email: event.creator_email,
+			creator_name: event.creator_name,
+		};
+		if ("attendees" in event && event.attendees) {
+			baseEvent.attendees = event.attendees;
+		}
+		return baseEvent;
+	});
 
-export async function listRecurringMeetings(input: {
-	userId: string;
-	teamIds?: string[];
-}): Promise<RecurringMeeting[]> {
-	const { userId, teamIds } = input;
-	const memberships = await listTeamsForUser(userId);
-	const allowedTeamIds = new Set(memberships.map((team) => team.id));
-	const filteredTeamIds = (teamIds ?? memberships.map((team) => team.id)).filter(
-		(teamId) => allowedTeamIds.has(teamId),
-	);
+	logger.dev.structured("debug", "[Calendar] Team events loaded", {
+		userId,
+		count: mapped.length,
+		teamIds: filteredTeamIds,
+	});
 
-	if (filteredTeamIds.length === 0) {
-		return [];
-	}
-
-	const meetings = await dbPg
-		.select({
-			id: teamRecurringMeetings.id,
-			team_id: teamRecurringMeetings.teamId,
-			created_by: teamRecurringMeetings.createdBy,
-			title: teamRecurringMeetings.title,
-			description: teamRecurringMeetings.description,
-			location: teamRecurringMeetings.location,
-			days_of_week: teamRecurringMeetings.daysOfWeek,
-			start_time: teamRecurringMeetings.startTime,
-			end_time: teamRecurringMeetings.endTime,
-			start_date: teamRecurringMeetings.startDate,
-			end_date: teamRecurringMeetings.endDate,
-			exceptions: teamRecurringMeetings.exceptions,
-			meeting_type: teamRecurringMeetings.meetingType,
-			created_at: teamRecurringMeetings.createdAt,
-			creator_email: users.email,
-			creator_name: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}), ${users.email})`,
-		})
-		.from(teamRecurringMeetings)
-		.leftJoin(users, eq(teamRecurringMeetings.createdBy, users.id))
-		.where(inArray(teamRecurringMeetings.teamId, filteredTeamIds))
-		.orderBy(desc(teamRecurringMeetings.createdAt));
-
-	return meetings
-		.filter((meeting) => {
-			if (meeting.meeting_type === "personal") {
-				return meeting.created_by === userId;
-			}
-			return true;
-		})
-		.map((meeting) => ({
-			...meeting,
-			days_of_week: safeJsonParse<number[]>(meeting.days_of_week, []),
-			exceptions: safeJsonParse<string[]>(meeting.exceptions, []),
-			meeting_type: (meeting.meeting_type ?? "team") as "personal" | "team",
-			start_date: meeting.start_date
-				? new Date(meeting.start_date).toISOString().slice(0, 10)
-				: null,
-			end_date: meeting.end_date
-				? new Date(meeting.end_date).toISOString().slice(0, 10)
-				: null,
-		}));
-}
-
-function getTargetTeamIds(
-	meetingType: "personal" | "team",
-	selectedTeamId: string | null,
-	userTeams: Awaited<ReturnType<typeof listTeamsForUser>>,
-) {
-	if (meetingType === "personal") {
-		return [];
-	}
-	if (!selectedTeamId) {
-		return [];
-	}
-	if (selectedTeamId.startsWith("all-")) {
-		const schoolName = selectedTeamId.replace("all-", "");
-		return userTeams
-			.filter((team) => team.school === schoolName)
-			.map((team) => team.id);
-	}
-	return userTeams.some((team) => team.id === selectedTeamId)
-		? [selectedTeamId]
-		: [];
+	return mapped;
 }
 
 export async function createCalendarEvent(input: {
 	userId: string;
+	meetingType: "personal" | "team";
+	teamId?: string | null;
+	subteamId?: string | null;
 	title: string;
 	description?: string | null;
 	startTime: string;
@@ -271,148 +388,90 @@ export async function createCalendarEvent(input: {
 	isAllDay?: boolean | null;
 	isRecurring?: boolean | null;
 	recurrencePattern?: Record<string, unknown> | null;
-	meetingType: "personal" | "team";
-	selectedTeamId?: string | null;
-}): Promise<{ eventIds: string[] }> {
-	const userTeams = await listTeamsForUser(input.userId);
-	const targetTeamIds = getTargetTeamIds(
-		input.meetingType,
-		input.selectedTeamId ?? null,
-		userTeams,
-	);
-
-	if (input.meetingType === "team" && targetTeamIds.length === 0) {
-		throw new Error("You are not authorized to create events for that team");
-	}
-
-	const eventsToInsert =
-		input.meetingType === "personal"
-			? [
-					{
-						teamId: null,
-					},
-				]
-			: targetTeamIds.map((teamId) => ({ teamId }));
-
-	const createdIds: string[] = [];
-	for (const target of eventsToInsert) {
-		const [result] = await dbPg
-			.insert(teamEvents)
-			.values({
-				teamId: target.teamId,
-				createdBy: input.userId,
-				title: input.title,
-				description: input.description ?? null,
-				eventType: input.eventType ?? "practice",
-				startTime: input.startTime,
-				endTime: input.endTime ?? null,
-				location: input.location ?? null,
-				isAllDay: input.isAllDay ?? false,
-				isRecurring: input.isRecurring ?? false,
-				recurrencePattern: input.recurrencePattern ?? null,
-			})
-			.returning({ id: teamEvents.id });
-
-		if (result?.id) {
-			createdIds.push(result.id);
+}): Promise<{ eventId: string }> {
+	if (input.meetingType === "team") {
+		if (!input.teamId) {
+			throw new Error("Team ID is required for team events");
 		}
-	}
-
-	return { eventIds: createdIds };
-}
-
-export async function createRecurringMeeting(input: {
-	userId: string;
-	title: string;
-	description?: string | null;
-	location?: string | null;
-	daysOfWeek: number[];
-	startTime?: string | null;
-	endTime?: string | null;
-	startDate?: string | null;
-	endDate?: string | null;
-	exceptions?: string[] | null;
-	meetingType: "personal" | "team";
-	selectedTeamId?: string | null;
-}): Promise<{ meetingIds: string[] }> {
-	const userTeams = await listTeamsForUser(input.userId);
-	let targetTeamIds: string[] = [];
-	if (input.meetingType === "personal") {
-		if (
-			input.selectedTeamId &&
-			userTeams.some((team) => team.id === input.selectedTeamId)
-		) {
-			targetTeamIds = [input.selectedTeamId];
-		} else {
-			const fallbackTeam = userTeams[0];
-			if (!fallbackTeam) {
-				throw new Error("No team available for personal recurring meeting");
+		const { team } = await assertCaptainAccess(input.teamId, input.userId);
+		if (input.subteamId) {
+			const [subteam] = await dbPg
+				.select({ id: teamSubteams.id })
+				.from(teamSubteams)
+				.where(
+					and(
+						eq(teamSubteams.id, input.subteamId),
+						eq(teamSubteams.teamId, team.id),
+					),
+				)
+				.limit(1);
+			if (!subteam) {
+				throw new Error("Subteam not found for this team");
 			}
-			targetTeamIds = [fallbackTeam.id];
-		}
-	} else {
-		targetTeamIds = getTargetTeamIds(
-			"team",
-			input.selectedTeamId ?? null,
-			userTeams,
-		);
-	}
-
-	if (targetTeamIds.length === 0) {
-		throw new Error("You are not authorized to create recurring meetings");
-	}
-
-	const normalizeDate = (value?: string | null) => {
-		if (!value) {
-			return null;
-		}
-		const parsed = new Date(value);
-		if (!Number.isNaN(parsed.getTime())) {
-			return parsed.toISOString();
-		}
-		return null;
-	};
-
-	const meetingIds: string[] = [];
-	for (const teamId of targetTeamIds) {
-		const [result] = await dbPg
-			.insert(teamRecurringMeetings)
-			.values({
-				teamId,
-				createdBy: input.userId,
-				title: input.title,
-				description: input.description ?? null,
-				location: input.location ?? null,
-				daysOfWeek: input.daysOfWeek,
-				startTime: input.startTime ?? "00:00:00",
-				endTime: input.endTime ?? "23:59:59",
-				startDate: normalizeDate(input.startDate),
-				endDate: normalizeDate(input.endDate),
-				exceptions: input.exceptions ?? [],
-				meetingType: input.meetingType,
-			})
-			.returning({ id: teamRecurringMeetings.id });
-
-		if (result?.id) {
-			meetingIds.push(result.id);
 		}
 	}
 
-	return { meetingIds };
+	const isPersonal = input.meetingType === "personal";
+	const eventType = isPersonal ? "personal" : (input.eventType ?? "other");
+
+	const [result] = await dbPg
+		.insert(calendarEvents)
+		.values({
+			ownerUserId: isPersonal ? input.userId : null,
+			teamId: isPersonal ? null : (input.teamId ?? null),
+			subteamId: isPersonal ? null : (input.subteamId ?? null),
+			title: input.title,
+			description: input.description ?? null,
+			startTime: input.startTime,
+			endTime: input.endTime ?? null,
+			location: input.location ?? null,
+			eventType,
+			allDay: input.isAllDay ?? false,
+			isRecurring: input.isRecurring ?? false,
+			recurrencePattern: input.recurrencePattern ?? null,
+			createdBy: input.userId,
+		})
+		.returning({ id: calendarEvents.id });
+
+	if (!result?.id) {
+		throw new Error("Failed to create calendar event");
+	}
+
+	if (isPersonal) {
+		await touchUserCalendarManifest(input.userId);
+	} else if (input.teamId) {
+		await touchTeamCacheManifest(input.teamId, { calendar: true });
+	}
+
+	logger.dev.structured("info", "[Calendar] Event created", {
+		eventId: result.id,
+		userId: input.userId,
+		meetingType: input.meetingType,
+		teamId: input.teamId ?? null,
+		subteamId: input.subteamId ?? null,
+		isRecurring: input.isRecurring ?? false,
+	});
+
+	return { eventId: result.id };
 }
 
 export async function deleteCalendarEvent(input: {
 	userId: string;
 	eventId: string;
 }): Promise<{ success: true }> {
+	logger.dev.structured("info", "[Calendar] Delete event request", {
+		userId: input.userId,
+		eventId: input.eventId,
+	});
 	const [event] = await dbPg
 		.select({
-			id: teamEvents.id,
-			teamId: teamEvents.teamId,
-			createdBy: teamEvents.createdBy,
+			id: calendarEvents.id,
+			teamId: calendarEvents.teamId,
+			ownerUserId: calendarEvents.ownerUserId,
+			createdBy: calendarEvents.createdBy,
 		})
-		.from(teamEvents)
-		.where(eq(teamEvents.id, input.eventId))
+		.from(calendarEvents)
+		.where(eq(calendarEvents.id, input.eventId))
 		.limit(1);
 
 	if (!event) {
@@ -421,53 +480,207 @@ export async function deleteCalendarEvent(input: {
 
 	if (event.teamId) {
 		const { membership } = await assertTeamAccess(event.teamId, input.userId);
-		const isCaptain = membership.role === "captain" || membership.role === "admin";
+		const isCaptain =
+			membership.role === "captain" || membership.role === "admin";
 		if (!(event.createdBy === input.userId || isCaptain)) {
 			throw new Error("You do not have permission to delete this event");
 		}
-	} else if (event.createdBy !== input.userId) {
+	} else if (event.ownerUserId !== input.userId) {
 		throw new Error("You do not have permission to delete this event");
 	}
 
-	await dbPg.delete(teamEvents).where(eq(teamEvents.id, input.eventId));
+	await dbPg.delete(calendarEvents).where(eq(calendarEvents.id, input.eventId));
+
+	if (event.teamId) {
+		await touchTeamCacheManifest(event.teamId, { calendar: true });
+	} else {
+		await touchUserCalendarManifest(input.userId);
+	}
+
+	logger.dev.structured("info", "[Calendar] Event deleted", {
+		userId: input.userId,
+		eventId: input.eventId,
+		teamId: event.teamId ?? null,
+	});
+
 	return { success: true };
 }
 
-export async function deleteRecurringMeeting(input: {
+export async function updateCalendarEvent(input: {
 	userId: string;
-	meetingId: string;
+	eventId: string;
+	title?: string;
+	description?: string | null;
+	startTime?: string;
+	endTime?: string | null;
+	location?: string | null;
+	eventType?: CalendarEventType | null;
+	isAllDay?: boolean | null;
+	isRecurring?: boolean | null;
+	recurrencePattern?: Record<string, unknown> | null;
 }): Promise<{ success: true }> {
-	const [meeting] = await dbPg
+	const [event] = await dbPg
 		.select({
-			id: teamRecurringMeetings.id,
-			teamId: teamRecurringMeetings.teamId,
-			createdBy: teamRecurringMeetings.createdBy,
-			meetingType: teamRecurringMeetings.meetingType,
+			id: calendarEvents.id,
+			teamId: calendarEvents.teamId,
+			ownerUserId: calendarEvents.ownerUserId,
+			createdBy: calendarEvents.createdBy,
 		})
-		.from(teamRecurringMeetings)
-		.where(eq(teamRecurringMeetings.id, input.meetingId))
+		.from(calendarEvents)
+		.where(eq(calendarEvents.id, input.eventId))
 		.limit(1);
 
-	if (!meeting) {
-		throw new Error("Recurring meeting not found");
+	if (!event) {
+		throw new Error("Event not found");
 	}
 
-	if (meeting.meetingType === "personal") {
-		if (meeting.createdBy !== input.userId) {
-			throw new Error("You do not have permission to delete this meeting");
-		}
-	} else {
-		const { membership } = await assertTeamAccess(meeting.teamId, input.userId);
+	// Check permissions
+	if (event.teamId) {
+		const { membership } = await assertTeamAccess(event.teamId, input.userId);
 		const isCaptain =
 			membership.role === "captain" || membership.role === "admin";
-		if (!(meeting.createdBy === input.userId || isCaptain)) {
-			throw new Error("You do not have permission to delete this meeting");
+		if (!(event.createdBy === input.userId || isCaptain)) {
+			throw new Error("You do not have permission to edit this event");
 		}
+	} else if (event.ownerUserId !== input.userId) {
+		throw new Error("You do not have permission to edit this event");
+	}
+
+	// Build update object
+	const updateData: {
+		title?: string;
+		description?: string | null;
+		startTime?: string;
+		endTime?: string | null;
+		location?: string | null;
+		eventType?: CalendarEventType | null;
+		allDay?: boolean;
+		isRecurring?: boolean;
+		recurrencePattern?: Record<string, unknown> | null;
+		updatedAt?: ReturnType<typeof sql>;
+	} = {
+		updatedAt: sql`now()`,
+	};
+
+	if (input.title !== undefined) {
+		updateData.title = input.title;
+	}
+	if (input.description !== undefined) {
+		updateData.description = input.description;
+	}
+	if (input.startTime !== undefined) {
+		updateData.startTime = input.startTime;
+	}
+	if (input.endTime !== undefined) {
+		updateData.endTime = input.endTime;
+	}
+	if (input.location !== undefined) {
+		updateData.location = input.location;
+	}
+	if (input.eventType !== undefined) {
+		updateData.eventType = input.eventType;
+	}
+	if (input.isAllDay !== undefined && input.isAllDay !== null) {
+		updateData.allDay = input.isAllDay;
+	}
+	if (input.isRecurring !== undefined && input.isRecurring !== null) {
+		updateData.isRecurring = input.isRecurring;
+	}
+	if (input.recurrencePattern !== undefined) {
+		updateData.recurrencePattern = input.recurrencePattern;
 	}
 
 	await dbPg
-		.delete(teamRecurringMeetings)
-		.where(eq(teamRecurringMeetings.id, input.meetingId));
+		.update(calendarEvents)
+		.set(updateData)
+		.where(eq(calendarEvents.id, input.eventId));
+
+	if (event.teamId) {
+		await touchTeamCacheManifest(event.teamId, { calendar: true });
+	} else {
+		await touchUserCalendarManifest(input.userId);
+	}
+
+	logger.dev.structured("info", "[Calendar] Updated event", {
+		userId: input.userId,
+		eventId: input.eventId,
+		teamId: event.teamId ?? null,
+	});
+
+	return { success: true };
+}
+
+export async function skipCalendarOccurrence(input: {
+	userId: string;
+	eventId: string;
+	occurrenceDate: string;
+}): Promise<{ success: true }> {
+	logger.dev.structured("info", "[Calendar] Skip occurrence request", {
+		userId: input.userId,
+		eventId: input.eventId,
+		occurrenceDate: input.occurrenceDate,
+	});
+	const [event] = await dbPg
+		.select({
+			id: calendarEvents.id,
+			teamId: calendarEvents.teamId,
+			ownerUserId: calendarEvents.ownerUserId,
+			createdBy: calendarEvents.createdBy,
+			isRecurring: calendarEvents.isRecurring,
+			recurrencePattern: calendarEvents.recurrencePattern,
+		})
+		.from(calendarEvents)
+		.where(eq(calendarEvents.id, input.eventId))
+		.limit(1);
+
+	if (!event) {
+		throw new Error("Event not found");
+	}
+
+	if (!event.isRecurring) {
+		throw new Error("Event is not recurring");
+	}
+
+	if (event.teamId) {
+		const { membership } = await assertTeamAccess(event.teamId, input.userId);
+		const isCaptain =
+			membership.role === "captain" || membership.role === "admin";
+		if (!(event.createdBy === input.userId || isCaptain)) {
+			throw new Error("You do not have permission to edit this event");
+		}
+	} else if (event.ownerUserId !== input.userId) {
+		throw new Error("You do not have permission to edit this event");
+	}
+
+	const pattern = normalizePattern(event.recurrencePattern);
+	const exceptions = new Set(pattern.exceptions ?? []);
+	exceptions.add(input.occurrenceDate);
+
+	const nextPattern: RecurrencePattern = {
+		...pattern,
+		exceptions: Array.from(exceptions),
+	};
+
+	await dbPg
+		.update(calendarEvents)
+		.set({
+			recurrencePattern: nextPattern,
+			updatedAt: sql`now()`,
+		})
+		.where(eq(calendarEvents.id, input.eventId));
+
+	if (event.teamId) {
+		await touchTeamCacheManifest(event.teamId, { calendar: true });
+	} else {
+		await touchUserCalendarManifest(input.userId);
+	}
+
+	logger.dev.structured("info", "[Calendar] Occurrence skipped", {
+		userId: input.userId,
+		eventId: input.eventId,
+		occurrenceDate: input.occurrenceDate,
+		teamId: event.teamId ?? null,
+	});
 
 	return { success: true };
 }
@@ -479,30 +692,127 @@ export async function getTeamEventsForTimers(input: {
 }) {
 	const { team } = await assertTeamAccess(input.teamSlug, input.userId);
 
+	const now = new Date();
+	const futureDate = new Date();
+	futureDate.setDate(now.getDate() + 30);
+
 	const upcomingEvents = await dbPg
 		.select({
-			id: teamEvents.id,
-			title: teamEvents.title,
-			start_time: teamEvents.startTime,
-			location: teamEvents.location,
-			event_type: teamEvents.eventType,
-			subteam_id: teamEvents.subteamId,
+			id: calendarEvents.id,
+			title: calendarEvents.title,
+			start_time: calendarEvents.startTime,
+			end_time: calendarEvents.endTime,
+			location: calendarEvents.location,
+			event_type: calendarEvents.eventType,
+			subteam_id: calendarEvents.subteamId,
+			is_recurring: calendarEvents.isRecurring,
+			recurrence_pattern: calendarEvents.recurrencePattern,
 		})
-		.from(teamEvents)
+		.from(calendarEvents)
 		.where(
 			and(
-				eq(teamEvents.teamId, team.id),
-				or(isNull(teamEvents.subteamId), eq(teamEvents.subteamId, input.subteamId)),
-				gte(teamEvents.startTime, sql`now()`),
+				eq(calendarEvents.teamId, team.id),
+				or(
+					isNull(calendarEvents.subteamId),
+					eq(calendarEvents.subteamId, input.subteamId),
+				),
+				or(
+					gte(calendarEvents.startTime, sql`now()`),
+					eq(calendarEvents.isRecurring, true),
+				),
 			),
 		)
-		.orderBy(asc(teamEvents.startTime));
+		.orderBy(asc(calendarEvents.startTime));
 
-	return upcomingEvents.map((event) => ({
-		id: event.id,
-		title: event.title,
-		start_time: event.start_time,
-		location: event.location,
-		event_type: event.event_type ?? "other",
-	}));
+	const toDateString = (date: Date) => {
+		const year = date.getFullYear();
+		const month = String(date.getMonth() + 1).padStart(2, "0");
+		const day = String(date.getDate()).padStart(2, "0");
+		return `${year}-${month}-${day}`;
+	};
+
+	const toTimeString = (value?: string | null) => {
+		if (!value) {
+			return null;
+		}
+		const parsed = new Date(value);
+		if (Number.isNaN(parsed.getTime())) {
+			return null;
+		}
+		const hours = String(parsed.getHours()).padStart(2, "0");
+		const minutes = String(parsed.getMinutes()).padStart(2, "0");
+		const seconds = String(parsed.getSeconds()).padStart(2, "0");
+		return `${hours}:${minutes}:${seconds}`;
+	};
+
+	const events: Array<{
+		id: string;
+		title: string;
+		start_time: string;
+		location: string | null;
+		event_type: CalendarEventType;
+	}> = [];
+
+	for (const event of upcomingEvents) {
+		if (!event.is_recurring) {
+			events.push({
+				id: event.id,
+				title: event.title,
+				start_time: event.start_time,
+				location: event.location,
+				event_type: (event.event_type ?? "other") as CalendarEventType,
+			});
+			continue;
+		}
+
+		const pattern = normalizePattern(event.recurrence_pattern);
+		const daysOfWeek = Array.isArray(pattern.days_of_week)
+			? pattern.days_of_week
+			: [];
+		if (daysOfWeek.length === 0) {
+			continue;
+		}
+
+		const fallbackStartDate = event.start_time
+			? toDateString(new Date(event.start_time))
+			: toDateString(now);
+		const fallbackStartTime =
+			pattern.start_time ?? toTimeString(event.start_time) ?? "00:00:00";
+
+		const startDate = pattern.start_date
+			? new Date(pattern.start_date)
+			: new Date(fallbackStartDate);
+		const endDate = pattern.end_date
+			? new Date(pattern.end_date)
+			: new Date(futureDate);
+
+		for (
+			let date = new Date(Math.max(now.getTime(), startDate.getTime()));
+			date <= futureDate && date <= endDate;
+			date.setDate(date.getDate() + 1)
+		) {
+			const dateStr = toDateString(date);
+			if (!daysOfWeek.includes(date.getDay())) {
+				continue;
+			}
+			if (pattern.exceptions?.includes(dateStr)) {
+				continue;
+			}
+
+			events.push({
+				id: `recurring-${event.id}-${dateStr}`,
+				title: event.title,
+				start_time: `${dateStr}T${fallbackStartTime}`,
+				location: event.location,
+				event_type: (event.event_type ?? "meeting") as CalendarEventType,
+			});
+		}
+	}
+
+	events.sort(
+		(a, b) =>
+			new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
+	);
+
+	return events.slice(0, 50);
 }

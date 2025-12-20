@@ -12,12 +12,9 @@ interface Step2SettingsProps {
 	details: AssignmentDetails;
 	settings: QuestionGenerationSettings;
 	darkMode: boolean;
-	cipherDropdownOpen: boolean;
 	onDetailsChange: (newDetails: Partial<AssignmentDetails>) => void;
 	onSettingsChange: (newSettings: Partial<QuestionGenerationSettings>) => void;
 	onDivisionChange: (division: "B" | "C" | "any") => void;
-	onCipherDropdownToggle: () => void;
-	onCipherDropdownClose: () => void;
 	onBack: () => void;
 	onCreateAssignment: () => void;
 	loading: boolean;
@@ -27,12 +24,9 @@ export function Step2Settings({
 	details,
 	settings,
 	darkMode,
-	cipherDropdownOpen,
 	onDetailsChange,
 	onSettingsChange,
 	onDivisionChange,
-	onCipherDropdownToggle,
-	onCipherDropdownClose,
 	onBack,
 	onCreateAssignment,
 	loading,
@@ -62,9 +56,6 @@ export function Step2Settings({
 					cipherTypes={settings.cipherTypes || []}
 					division={settings.division || "any"}
 					darkMode={darkMode}
-					isOpen={cipherDropdownOpen}
-					onToggle={onCipherDropdownToggle}
-					onClose={onCipherDropdownClose}
 					onCipherTypesChange={(cipherTypes) =>
 						onSettingsChange({ cipherTypes })
 					}

@@ -165,6 +165,7 @@ export async function listAssignments(teamSlug: string, userId: string) {
 			updated_at: a.updatedAt || a.createdAt || "",
 			creator_email: a.creatorEmail || "",
 			creator_name: a.creatorName || "",
+			event_name: a.eventName || "",
 			questions_count: questionCountsMap.get(a.id) || 0,
 			roster_count: rosterCountsMap.get(a.id) || 0,
 			submitted_count: submissionCountsMap.get(a.id) || 0,

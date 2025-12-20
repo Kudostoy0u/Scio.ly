@@ -333,21 +333,6 @@ Team lookup by code.
 - Team code validation
 - Team retrieval
 
-### `/teams/calendar/`
-Team calendar management.
-
-**Subdirectories:**
-- `events/route.ts` - Calendar events
-- `events/[eventId]/route.ts` - Event by ID
-- `personal/route.ts` - Personal calendar
-- `recurring-meetings/route.ts` - Recurring meetings
-
-**Features:**
-- Event creation and management
-- Personal calendar integration
-- Recurring meeting support
-- Comprehensive test suite
-
 ### `/teams/[teamId]/`
 Team operations by ID.
 

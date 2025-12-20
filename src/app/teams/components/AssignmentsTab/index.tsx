@@ -92,10 +92,26 @@ export default function AssignmentsTab({
 	};
 
 	const handleStartAssignment = (assignmentId: string) => {
+		const assignment = assignments.find(
+			(item) => (item as Assignment).id === assignmentId,
+		) as Assignment | undefined;
+		const eventName = assignment?.event_name;
+		if (eventName === "Codebusters") {
+			window.location.href = `/codebusters?assignment=${assignmentId}`;
+			return;
+		}
 		window.location.href = `/test?assignmentId=${assignmentId}`;
 	};
 
 	const handleViewAssignment = (assignmentId: string) => {
+		const assignment = assignments.find(
+			(item) => (item as Assignment).id === assignmentId,
+		) as Assignment | undefined;
+		const eventName = assignment?.event_name;
+		if (eventName === "Codebusters") {
+			window.location.href = `/codebusters?assignment=${assignmentId}`;
+			return;
+		}
 		window.location.href = `/test?assignmentId=${assignmentId}&viewResults=true`;
 	};
 

@@ -9,13 +9,14 @@ import {
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import logger from "@/lib/utils/logging/logger";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import {
 	deleteSubteamCacheManifest,
 	ensureSubteamCacheManifest,
 	ensureTeamCacheManifest,
 	touchTeamCacheManifest,
 } from "./cache-manifest";
+import { touchUserCalendarManifest } from "./calendar";
 import {
 	assertAdminAccess,
 	assertCaptainAccess,
@@ -78,6 +79,8 @@ export async function leaveTeam(teamSlug: string, userId: string) {
 		full: true,
 	});
 
+	await touchUserCalendarManifest(userId, { teams: true });
+
 	return { ok: true };
 }
 
@@ -86,6 +89,7 @@ export async function archiveTeam(teamSlug: string, userId: string) {
 	await dbPg.transaction(async (tx) => {
 		await tx.delete(teams).where(eq(teams.id, team.id));
 	});
+	await touchUserCalendarManifest(userId, { teams: true });
 	return { ok: true, deleted: true };
 }
 
@@ -170,6 +174,8 @@ export async function kickMemberFromTeam(input: {
 		);
 	});
 
+	await touchUserCalendarManifest(input.userId, { teams: true });
+
 	return { ok: true };
 }
 
@@ -202,6 +208,45 @@ export async function listTeamsForUser(userId: string) {
 		status: t.status,
 		role: t.role as "admin" | "captain" | "member",
 	}));
+}
+
+export async function listTeamsWithSubteamsForUser(userId: string) {
+	const teamsResult = await listTeamsForUser(userId);
+	if (teamsResult.length === 0) {
+		return [];
+	}
+
+	const teamIds = teamsResult.map((team) => team.id);
+	const subteams = await dbPg
+		.select({
+			id: teamSubteams.id,
+			teamId: teamSubteams.teamId,
+			name: teamSubteams.name,
+		})
+		.from(teamSubteams)
+		.where(inArray(teamSubteams.teamId, teamIds));
+
+	const byTeam = new Map<string, { id: string; name: string }[]>();
+	for (const subteam of subteams) {
+		const list = byTeam.get(subteam.teamId) ?? [];
+		list.push({ id: subteam.id, name: subteam.name });
+		byTeam.set(subteam.teamId, list);
+	}
+
+	const result = teamsResult.map((team) => ({
+		...team,
+		subteams: byTeam.get(team.id) ?? [],
+	}));
+	logger.dev.structured("debug", "[Membership] Teams with subteams", {
+		userId,
+		teamCount: result.length,
+		subteamCounts: result.map((team) => ({
+			teamId: team.id,
+			subteamCount: team.subteams.length,
+		})),
+	});
+
+	return result;
 }
 
 export async function createTeamWithDefaultSubteam(input: {
@@ -339,6 +384,8 @@ export async function createTeamWithDefaultSubteam(input: {
 			teamId,
 			slug: slugCandidate,
 		});
+
+		await touchUserCalendarManifest(input.createdBy, { teams: true });
 
 		logger.dev.timing("createTeamWithDefaultSubteam", startTime, {
 			teamId,
@@ -551,6 +598,8 @@ export async function joinTeamByCode(
 				await ensureSupabaseLink(supabaseUserData.user);
 			}
 		}
+
+		await touchUserCalendarManifest(userId, { teams: true });
 
 		logger.dev.timing("joinTeamByCode", startTime, {
 			teamId: team.id,
