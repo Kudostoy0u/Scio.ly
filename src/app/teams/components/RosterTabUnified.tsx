@@ -54,6 +54,7 @@ export default function RosterTabUnified({
 }: RosterTabProps) {
 	const { darkMode } = useTheme();
 	const { invalidateTeam, updateTeamData } = useInvalidateTeam();
+	const utils = trpc.useUtils();
 	const saveRosterMutation = trpc.teams.saveRoster.useMutation();
 
 	// Get roster data from shared cache
@@ -429,6 +430,9 @@ export default function RosterTabUnified({
 	}) => {
 		setShowAssignmentCreator(false);
 		setSelectedEvent(null);
+		utils.teams.assignments.invalidate({ teamSlug: team.slug });
+		utils.teams.assignments.prefetch({ teamSlug: team.slug });
+		utils.teams.full.invalidate({ teamSlug: team.slug });
 	};
 
 	const handleCancelAssignment = () => {

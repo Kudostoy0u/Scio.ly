@@ -1,17 +1,20 @@
 "use client";
 
 import ConfirmModal from "@/app/components/ConfirmModal";
+import Modal from "@/app/components/Modal";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { useState } from "react";
-import {
-	createEvent,
-	createRecurringMeeting,
-	deleteEvent,
-} from "./TeamCalendar/handlers/eventHandlers";
+import { toast } from "react-toastify";
 import { useCalendarData } from "./TeamCalendar/hooks/useCalendarData";
-import { getLocalDateString } from "./TeamCalendar/utils/dateUtils";
-import { isEventBlacklisted } from "./TeamCalendar/utils/eventFilters";
+import {
+	createTimezoneAwareDateTime,
+	getLocalDateString,
+} from "./TeamCalendar/utils/dateUtils";
+import {
+	blacklistEventId,
+	isEventBlacklisted,
+} from "./TeamCalendar/utils/eventFilters";
 import CalendarGrid from "./calendar/CalendarGrid";
 import CalendarHeader from "./calendar/CalendarHeader";
 import EventDetailsModal from "./calendar/EventDetailsModal";
@@ -28,6 +31,7 @@ import {
 	getDefaultEventForm,
 	getDefaultRecurringForm,
 } from "./calendar/calendarUtils";
+import { trpc } from "@/lib/trpc/client";
 
 interface TeamCalendarProps {
 	teamId?: string;
@@ -65,18 +69,38 @@ export default function TeamCalendar({
 	const [deleteEventConfirm, setDeleteEventConfirm] = useState<string | null>(
 		null,
 	);
+	const [recurringDeleteTarget, setRecurringDeleteTarget] = useState<{
+		eventId: string;
+		meetingId: string;
+	} | null>(null);
+	const [isDeletingRecurring, setIsDeletingRecurring] = useState(false);
+	const [blacklistVersion, setBlacklistVersion] = useState(0);
 
 	const {
 		events,
-		setEvents,
 		recurringMeetings,
-		setRecurringMeetings,
 		loading,
 		userTeams,
-		loadEvents,
-	} = useCalendarData(user?.id, teamSlug);
+		targetTeamIds,
+	} = useCalendarData(user?.id, teamSlug, blacklistVersion);
+
+	const utils = trpc.useUtils();
+	const createEventMutation = trpc.teams.createCalendarEvent.useMutation();
+	const createRecurringMutation =
+		trpc.teams.createRecurringMeeting.useMutation();
+	const deleteEventMutation = trpc.teams.deleteCalendarEvent.useMutation();
+	const deleteRecurringMutation =
+		trpc.teams.deleteRecurringMeeting.useMutation();
 
 	const handleDeleteEvent = (eventId: string) => {
+		if (eventId.startsWith("recurring-")) {
+			const parts = eventId.split("-");
+			if (parts.length >= 3) {
+				const meetingId = parts.slice(1, 6).join("-");
+				setRecurringDeleteTarget({ eventId, meetingId });
+				return;
+			}
+		}
 		setDeleteEventConfirm(eventId);
 	};
 
@@ -86,16 +110,55 @@ export default function TeamCalendar({
 		const eventId = deleteEventConfirm;
 		setDeleteEventConfirm(null);
 
-		deleteEvent(
-			eventId,
-			user?.id,
-			teamSlug,
-			setEvents,
-			setRecurringMeetings,
-			loadEvents,
-		).catch(() => {
-			// Error handling is done in the deleteEvent function
-		});
+		deleteEventMutation
+			.mutateAsync({ eventId })
+			.then(() => {
+				toast.success("Event deleted successfully");
+				utils.teams.calendarEvents.invalidate({
+					teamIds: targetTeamIds,
+					includePersonal: true,
+				});
+			})
+			.catch((error) => {
+				toast.error(
+					error instanceof Error
+						? error.message
+						: "Failed to delete event",
+				);
+			});
+	};
+
+	const handleDeleteRecurringOccurrence = () => {
+		if (!recurringDeleteTarget) {
+			return;
+		}
+		blacklistEventId(recurringDeleteTarget.eventId, user?.id);
+		setBlacklistVersion((prev) => prev + 1);
+		setRecurringDeleteTarget(null);
+		toast.success("Recurring event occurrence removed");
+	};
+
+	const handleDeleteRecurringSeries = async () => {
+		if (!recurringDeleteTarget) {
+			return;
+		}
+		setIsDeletingRecurring(true);
+		try {
+			await deleteRecurringMutation.mutateAsync({
+				meetingId: recurringDeleteTarget.meetingId,
+			});
+			toast.success("Recurring meeting deleted");
+			setRecurringDeleteTarget(null);
+			utils.teams.recurringMeetings.invalidate({ teamIds: targetTeamIds });
+		} catch (error) {
+			toast.error(
+				error instanceof Error
+					? error.message
+					: "Failed to delete recurring meeting",
+			);
+		} finally {
+			setIsDeletingRecurring(false);
+		}
 	};
 
 	const handleEventClick = (event: CalendarEvent) => {
@@ -146,25 +209,83 @@ export default function TeamCalendar({
 	};
 
 	const handleCreateEvent = async () => {
-		await createEvent(eventForm, user, userTeams, teamSlug, () => {
+		if (!user?.id) {
+			return;
+		}
+
+		const startTime = createTimezoneAwareDateTime(
+			eventForm.date,
+			eventForm.start_time,
+		);
+		const endTime = eventForm.end_time
+			? createTimezoneAwareDateTime(eventForm.date, eventForm.end_time)
+			: null;
+
+		try {
+			const eventType =
+				eventForm.meeting_type === "personal"
+					? "personal"
+					: eventForm.event_type;
+
+			await createEventMutation.mutateAsync({
+				title: eventForm.title,
+				description: eventForm.description || null,
+				startTime,
+				endTime,
+				location: eventForm.location || null,
+				eventType,
+				isAllDay: eventForm.is_all_day,
+				isRecurring: eventForm.is_recurring,
+				recurrencePattern: eventForm.recurrence_pattern,
+				meetingType: eventForm.meeting_type,
+				selectedTeamId: eventForm.selected_team_id || null,
+			});
+
+			toast.success("Event created successfully!");
 			setShowEventModal(false);
 			setEventForm(getDefaultEventForm());
-			loadEvents();
-		});
+			utils.teams.calendarEvents.invalidate({
+				teamIds: targetTeamIds,
+				includePersonal: true,
+			});
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : "Failed to create event",
+			);
+		}
 	};
 
 	const handleCreateRecurringMeeting = async () => {
-		await createRecurringMeeting(
-			recurringForm,
-			user,
-			userTeams,
-			teamSlug,
-			() => {
-				setShowRecurringModal(false);
-				setRecurringForm(getDefaultRecurringForm());
-				loadEvents();
-			},
-		);
+		if (!user?.id) {
+			return;
+		}
+
+		try {
+			await createRecurringMutation.mutateAsync({
+				title: recurringForm.title,
+				description: recurringForm.description || null,
+				location: recurringForm.location || null,
+				daysOfWeek: recurringForm.days_of_week,
+				startTime: recurringForm.start_time || null,
+				endTime: recurringForm.end_time || null,
+				startDate: recurringForm.start_date || null,
+				endDate: recurringForm.end_date || null,
+				exceptions: recurringForm.exceptions,
+				meetingType: recurringForm.meeting_type,
+				selectedTeamId: recurringForm.selected_team_id || null,
+			});
+
+			toast.success("Recurring meeting created successfully!");
+			setShowRecurringModal(false);
+			setRecurringForm(getDefaultRecurringForm());
+			utils.teams.recurringMeetings.invalidate({ teamIds: targetTeamIds });
+		} catch (error) {
+			toast.error(
+				error instanceof Error
+					? error.message
+					: "Failed to create recurring meeting",
+			);
+		}
 	};
 
 	if (loading) {
@@ -307,6 +428,48 @@ export default function TeamCalendar({
 				confirmText="Delete"
 				confirmVariant="danger"
 			/>
+
+			<Modal
+				isOpen={recurringDeleteTarget !== null}
+				onClose={() => {
+					if (!isDeletingRecurring) {
+						setRecurringDeleteTarget(null);
+					}
+				}}
+				title="Delete recurring event"
+				maxWidth="md"
+			>
+				<div className="space-y-4">
+					<p
+						className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+					>
+						Do you want to delete just this occurrence, or the entire recurring
+						series?
+					</p>
+					<div className="flex flex-col sm:flex-row sm:justify-end gap-2">
+						<button
+							type="button"
+							onClick={handleDeleteRecurringOccurrence}
+							disabled={isDeletingRecurring}
+							className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+								darkMode
+									? "bg-gray-700 text-white hover:bg-gray-600"
+									: "bg-gray-100 text-gray-700 hover:bg-gray-200"
+							}`}
+						>
+							Delete occurrence
+						</button>
+						<button
+							type="button"
+							onClick={handleDeleteRecurringSeries}
+							disabled={isDeletingRecurring}
+							className="rounded-lg px-4 py-2 text-sm font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+						>
+							Delete series
+						</button>
+					</div>
+				</div>
+			</Modal>
 		</div>
 	);
 }

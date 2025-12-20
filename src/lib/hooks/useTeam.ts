@@ -151,9 +151,43 @@ export function useTeamCacheInvalidation(teamSlug: string) {
 		const cached = LocalStorageCache.get<TeamCacheManifest>(storageKey);
 
 		if (!cached) {
-			console.log("[TeamCache] No cached manifest, storing current snapshot", {
+			console.log("[TeamCache] No cached manifest, bootstrapping refresh", {
 				teamSlug,
 			});
+
+			const bootstrapRefreshes: Promise<unknown>[] = [
+				utils.teams.full.prefetch({ teamSlug }),
+				utils.teams.assignments.prefetch({ teamSlug }),
+			];
+
+			for (const subteam of manifest.subteams ?? []) {
+				bootstrapRefreshes.push(
+					utils.teams.getStream.prefetch({
+						teamSlug,
+						subteamId: subteam.subteamId,
+					}),
+				);
+				bootstrapRefreshes.push(
+					utils.teams.getTimers.prefetch({
+						teamSlug,
+						subteamId: subteam.subteamId,
+					}),
+				);
+				bootstrapRefreshes.push(
+					utils.teams.getTournaments.prefetch({
+						teamSlug,
+						subteamId: subteam.subteamId,
+					}),
+				);
+			}
+
+			void Promise.all(bootstrapRefreshes).then(() => {
+				console.log("[TeamCache] Bootstrap refresh complete", {
+					teamSlug,
+					count: bootstrapRefreshes.length,
+				});
+			});
+
 			LocalStorageCache.set(storageKey, manifest, INFINITE_TTL);
 			return;
 		}

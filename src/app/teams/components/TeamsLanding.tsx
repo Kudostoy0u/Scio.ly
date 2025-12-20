@@ -371,7 +371,7 @@ export default function TeamsLanding({
 				<TeamCalendar
 					teamId={userTeams[0]?.id}
 					isCaptain={isCaptain}
-					teamSlug={userTeams[0]?.slug}
+					teamSlug={undefined}
 				/>
 			)}
 

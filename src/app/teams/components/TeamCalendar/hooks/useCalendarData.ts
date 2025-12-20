@@ -1,11 +1,9 @@
 /**
- * Hook for loading and managing calendar events data
+ * Hook for loading calendar data via tRPC
  */
 
-import { globalApiCache } from "@/lib/utils/storage/globalApiCache";
-import type React from "react";
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "react-toastify";
+import { trpc } from "@/lib/trpc/client";
+import { useMemo } from "react";
 import type {
 	CalendarEvent,
 	RecurringMeeting,
@@ -16,204 +14,74 @@ import {
 	filterValidRecurringMeetingsWithBlacklist,
 } from "../utils/eventFilters";
 
-function loadCachedData(
-	cacheKey: string,
-	userId: string,
-	setEvents: (events: CalendarEvent[]) => void,
-	setRecurringMeetings: (meetings: RecurringMeeting[]) => void,
-	setUserTeams: (teams: UserTeam[]) => void,
-) {
-	const cachedEvents = globalApiCache.get<CalendarEvent[]>(
-		`${cacheKey}_events`,
-	);
-	const cachedRecurring = globalApiCache.get<RecurringMeeting[]>(
-		`${cacheKey}_recurring`,
-	);
-	const cachedTeams = globalApiCache.get<UserTeam[]>(`user-teams-${userId}`);
-
-	if (cachedEvents) {
-		const validEvents = filterValidEventsWithBlacklist(cachedEvents, userId);
-		setEvents(validEvents);
-		if (validEvents.length !== cachedEvents.length) {
-			globalApiCache.set(`${cacheKey}_events`, validEvents);
-		}
-	}
-	if (cachedRecurring) {
-		const validRecurring = filterValidRecurringMeetingsWithBlacklist(
-			cachedRecurring,
-			userId,
-		);
-		setRecurringMeetings(validRecurring);
-		if (validRecurring.length !== cachedRecurring.length) {
-			globalApiCache.set(`${cacheKey}_recurring`, validRecurring);
-		}
-	}
-	if (cachedTeams) {
-		const captainTeams = cachedTeams.filter(
-			(team) => team.user_role === "captain",
-		);
-		setUserTeams(captainTeams);
-	}
-
-	return { cachedEvents, cachedRecurring, cachedTeams };
-}
-
-async function loadTeamEvents(
-	teamSlug: string,
-	cacheKey: string,
-	userId: string,
-	setEvents: (events: CalendarEvent[]) => void,
-) {
-	const eventsRes = await fetch(
-		`/api/teams/calendar/events?teamId=${teamSlug}`,
-	);
-	if (eventsRes.ok) {
-		const eventsData = await eventsRes.json();
-		const freshEvents = filterValidEventsWithBlacklist(
-			eventsData.events || [],
-			userId,
-		);
-		setEvents(freshEvents);
-		globalApiCache.set(`${cacheKey}_events`, freshEvents);
-	}
-}
-
-async function loadPersonalEvents(
-	userId: string,
-	cacheKey: string,
-	teamSlug: string | undefined,
-	setEvents: React.Dispatch<React.SetStateAction<CalendarEvent[]>>,
-) {
-	const personalRes = await fetch(
-		`/api/teams/calendar/personal?userId=${userId}`,
-	);
-	if (personalRes.ok) {
-		const personalData = await personalRes.json();
-		const personalEvents = personalData.events || [];
-		setEvents((prev) => {
-			const teamEvents = teamSlug ? prev : [];
-			const combined = filterValidEventsWithBlacklist(
-				[...teamEvents, ...personalEvents],
-				userId,
-			);
-			globalApiCache.set(`${cacheKey}_events`, combined);
-			return combined;
-		});
-	}
-}
-
-async function loadRecurringMeetings(
-	teamSlug: string,
-	cacheKey: string,
-	userId: string,
-	setRecurringMeetings: (meetings: RecurringMeeting[]) => void,
-) {
-	const recurringRes = await fetch(
-		`/api/teams/calendar/recurring-meetings?teamSlug=${teamSlug}`,
-	);
-	if (recurringRes.ok) {
-		const recurringData = await recurringRes.json();
-		const freshRecurring = filterValidRecurringMeetingsWithBlacklist(
-			recurringData.meetings || [],
-			userId,
-		);
-		setRecurringMeetings(freshRecurring);
-		globalApiCache.set(`${cacheKey}_recurring`, freshRecurring);
-	}
-}
-
-async function loadUserTeams(
-	userId: string,
-	setUserTeams: (teams: UserTeam[]) => void,
-) {
-	const userTeamsCacheKey = `user-teams-${userId}`;
-	const allTeams = await globalApiCache.fetchWithCache(
-		userTeamsCacheKey,
-		async () => {
-			const response = await fetch("/api/teams/user-teams");
-			if (!response.ok) {
-				throw new Error("Failed to fetch user teams");
-			}
-			const result = await response.json();
-			return result.teams || [];
-		},
-		"user-teams",
-	);
-
-	const captainTeams = allTeams.filter(
-		(team: UserTeam) => team.user_role === "captain",
-	);
-	setUserTeams(captainTeams);
-}
-
 export function useCalendarData(
 	userId: string | undefined,
 	teamSlug: string | undefined,
+	blacklistVersion: number,
 ) {
-	const [events, setEvents] = useState<CalendarEvent[]>([]);
-	const [recurringMeetings, setRecurringMeetings] = useState<
-		RecurringMeeting[]
-	>([]);
-	const [loading, setLoading] = useState(false);
-	const [userTeams, setUserTeams] = useState<UserTeam[]>([]);
+	const { data: teamsData, isLoading: teamsLoading } =
+		trpc.teams.listUserTeams.useQuery(undefined, {
+			enabled: !!userId,
+		});
 
-	const loadEvents = useCallback(async () => {
-		if (!userId) {
-			return;
+	const userTeams = useMemo<UserTeam[]>(
+		() =>
+			teamsData?.teams.map((team) => ({
+				id: team.id,
+				name: team.name || `${team.school} ${team.division}`,
+				slug: team.slug,
+				school: team.school,
+				user_role: team.role ?? "member",
+				team_id: team.id,
+			})) ?? [],
+		[teamsData],
+	);
+
+	const targetTeamIds = useMemo(() => {
+		if (!userTeams.length) {
+			return [];
 		}
+		if (teamSlug) {
+			const match = userTeams.find((team) => team.slug === teamSlug);
+			return match ? [match.id] : [];
+		}
+		return userTeams.map((team) => team.id);
+	}, [teamSlug, userTeams]);
 
-		const cacheKey = teamSlug
-			? `calendar_${teamSlug}`
-			: `calendar_user_${userId}`;
-		const { cachedEvents, cachedRecurring, cachedTeams } = loadCachedData(
-			cacheKey,
-			userId,
-			setEvents,
-			setRecurringMeetings,
-			setUserTeams,
+	const { data: eventsData, isLoading: eventsLoading } =
+		trpc.teams.calendarEvents.useQuery(
+			{
+				teamIds: targetTeamIds,
+				includePersonal: true,
+			},
+			{ enabled: !!userId },
 		);
 
-		try {
-			if (!(cachedEvents || cachedRecurring || cachedTeams)) {
-				setLoading(true);
-			}
+	const { data: recurringData, isLoading: recurringLoading } =
+		trpc.teams.recurringMeetings.useQuery(
+			{ teamIds: targetTeamIds },
+			{ enabled: !!userId && targetTeamIds.length > 0 },
+		);
 
-			if (teamSlug) {
-				await loadTeamEvents(teamSlug, cacheKey, userId, setEvents);
-			}
+	const events = useMemo(() => {
+		return filterValidEventsWithBlacklist(
+			(eventsData as CalendarEvent[] | undefined) ?? [],
+			userId,
+		);
+	}, [eventsData, userId, blacklistVersion]);
 
-			await loadPersonalEvents(userId, cacheKey, teamSlug, setEvents);
-
-			if (teamSlug) {
-				await loadRecurringMeetings(
-					teamSlug,
-					cacheKey,
-					userId,
-					setRecurringMeetings,
-				);
-			}
-
-			await loadUserTeams(userId, setUserTeams);
-		} catch {
-			if (!(cachedEvents || cachedRecurring)) {
-				toast.error("Failed to load calendar events");
-			}
-		} finally {
-			setLoading(false);
-		}
-	}, [userId, teamSlug]);
-
-	useEffect(() => {
-		loadEvents();
-	}, [loadEvents]);
+	const recurringMeetings = useMemo(() => {
+		return filterValidRecurringMeetingsWithBlacklist(
+			(recurringData as RecurringMeeting[] | undefined) ?? [],
+			userId,
+		);
+	}, [recurringData, userId, blacklistVersion]);
 
 	return {
 		events,
-		setEvents,
 		recurringMeetings,
-		setRecurringMeetings,
-		loading,
+		loading: teamsLoading || eventsLoading || recurringLoading,
 		userTeams,
-		loadEvents,
+		targetTeamIds,
 	};
 }

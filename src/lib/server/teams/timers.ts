@@ -2,6 +2,7 @@ import { dbPg } from "@/lib/db";
 import { teamActiveTimers, teamSubteams } from "@/lib/db/schema";
 import { TRPCError } from "@trpc/server";
 import { and, asc, eq, sql } from "drizzle-orm";
+import { getTeamEventsForTimers } from "./calendar";
 import { touchSubteamCacheManifest } from "./cache-manifest";
 import { assertCaptainAccess, assertTeamAccess } from "./shared";
 
@@ -136,17 +137,25 @@ export async function removeTimer(
 }
 
 export async function getUpcomingTournaments(
-	_teamSlug: string,
-	_subteamId: string,
-	_userId: string,
+	teamSlug: string,
+	subteamId: string,
+	userId: string,
 ) {
-	// For now, return empty or implement if tournament table exists in V2
-	return [] as Array<{
-		id: string;
-		title: string;
-		start_time: string;
-		location: string | null;
-		event_type: string;
-		has_timer: boolean;
-	}>;
+	const events = await getTeamEventsForTimers({
+		teamSlug,
+		subteamId,
+		userId,
+	});
+
+	const activeTimers = await dbPg
+		.select({ eventId: teamActiveTimers.eventId })
+		.from(teamActiveTimers)
+		.where(eq(teamActiveTimers.subteamId, subteamId));
+
+	const activeTimerIds = new Set(activeTimers.map((timer) => timer.eventId));
+
+	return events.map((event) => ({
+		...event,
+		has_timer: activeTimerIds.has(event.id),
+	}));
 }

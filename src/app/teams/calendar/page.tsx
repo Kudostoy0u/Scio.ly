@@ -85,7 +85,7 @@ export default function CalendarPage() {
 				<TeamCalendar
 					teamId={undefined}
 					isCaptain={isCaptain}
-					teamSlug={userTeams[0]?.slug || undefined}
+					teamSlug={undefined}
 				/>
 			</div>
 		</TeamLayout>

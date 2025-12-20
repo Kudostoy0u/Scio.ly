@@ -381,6 +381,7 @@ export const teamRecurringMeetings = cockroachTable("team_recurring_meetings", {
 	daysOfWeek: jsonb("days_of_week").notNull(),
 	startTime: string("start_time"),
 	endTime: string("end_time"),
+	meetingType: varchar("meeting_type", { length: 20 }).default("team"),
 	startDate: timestamp("start_date", { mode: "string", withTimezone: true }),
 	endDate: timestamp("end_date", { mode: "string", withTimezone: true }),
 	exceptions: jsonb("exceptions").default([]),

@@ -5,21 +5,27 @@ import {
 	addTimer,
 	archiveTeam,
 	cancelLinkInvitation,
+	createCalendarEvent,
 	createAssignment,
 	createInvitation,
 	createLinkInvitation,
+	createRecurringMeeting,
 	createStreamPost,
 	createSubteam,
 	createTeamWithDefaultSubteam,
 	declineInvite,
 	declineLinkInvitation,
 	deleteAssignment,
+	deleteCalendarEvent,
+	deleteRecurringMeeting,
 	deleteComment,
 	deleteStreamPost,
 	deleteSubteam,
 	getActiveTimers,
 	getAssignmentAnalytics,
 	getAssignmentDetails,
+	listCalendarEvents,
+	listRecurringMeetings,
 	getStreamPosts,
 	getTeamCacheManifest,
 	getTeamFullBySlug,
@@ -68,11 +74,101 @@ const assignmentRosterMemberSchema = z.object({
 	displayName: z.string().min(1),
 });
 
+const calendarEventSchema = z.object({
+	title: z.string().min(1),
+	description: z.string().optional().nullable(),
+	startTime: z.string().min(1),
+	endTime: z.string().optional().nullable(),
+	location: z.string().optional().nullable(),
+	eventType: z
+		.enum([
+			"practice",
+			"tournament",
+			"meeting",
+			"deadline",
+			"other",
+			"personal",
+		])
+		.optional()
+		.nullable(),
+	isAllDay: z.boolean().optional().nullable(),
+	isRecurring: z.boolean().optional().nullable(),
+	recurrencePattern: z.record(z.string(), z.unknown()).optional().nullable(),
+	meetingType: z.enum(["personal", "team"]),
+	selectedTeamId: z.string().optional().nullable(),
+});
+
+const recurringMeetingSchema = z.object({
+	title: z.string().min(1),
+	description: z.string().optional().nullable(),
+	location: z.string().optional().nullable(),
+	daysOfWeek: z.array(z.number().int().min(0).max(6)),
+	startTime: z.string().optional().nullable(),
+	endTime: z.string().optional().nullable(),
+	startDate: z.string().optional().nullable(),
+	endDate: z.string().optional().nullable(),
+	exceptions: z.array(z.string()).optional().nullable(),
+	meetingType: z.enum(["personal", "team"]),
+	selectedTeamId: z.string().optional().nullable(),
+});
+
 export const teamsRouter = router({
 	cacheManifest: protectedProcedure
 		.input(z.object({ teamSlug: z.string().min(1) }))
 		.query(async ({ ctx, input }) => {
 			return getTeamCacheManifest(input.teamSlug, ctx.user.id);
+		}),
+
+	calendarEvents: protectedProcedure
+		.input(
+			z.object({
+				teamIds: z.array(z.uuid()).optional(),
+				includePersonal: z.boolean().optional(),
+				startDate: z.string().optional(),
+				endDate: z.string().optional(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			return listCalendarEvents({
+				userId: ctx.user.id,
+				teamIds: input.teamIds,
+				includePersonal: input.includePersonal,
+				startDate: input.startDate,
+				endDate: input.endDate,
+			});
+		}),
+
+	recurringMeetings: protectedProcedure
+		.input(z.object({ teamIds: z.array(z.uuid()).optional() }))
+		.query(async ({ ctx, input }) => {
+			return listRecurringMeetings({
+				userId: ctx.user.id,
+				teamIds: input.teamIds,
+			});
+		}),
+
+	createCalendarEvent: protectedProcedure
+		.input(calendarEventSchema)
+		.mutation(async ({ ctx, input }) => {
+			return createCalendarEvent({ userId: ctx.user.id, ...input });
+		}),
+
+	createRecurringMeeting: protectedProcedure
+		.input(recurringMeetingSchema)
+		.mutation(async ({ ctx, input }) => {
+			return createRecurringMeeting({ userId: ctx.user.id, ...input });
+		}),
+
+	deleteCalendarEvent: protectedProcedure
+		.input(z.object({ eventId: z.uuid() }))
+		.mutation(async ({ ctx, input }) => {
+			return deleteCalendarEvent({ userId: ctx.user.id, ...input });
+		}),
+
+	deleteRecurringMeeting: protectedProcedure
+		.input(z.object({ meetingId: z.uuid() }))
+		.mutation(async ({ ctx, input }) => {
+			return deleteRecurringMeeting({ userId: ctx.user.id, ...input });
 		}),
 
 	assignments: protectedProcedure
