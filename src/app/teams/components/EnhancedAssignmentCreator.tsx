@@ -294,8 +294,24 @@ export default function EnhancedAssignmentCreator({
 
 			setGeneratedQuestions(questions);
 			toast.success(`Generated ${questions.length} questions successfully!`);
-		} catch (_error) {
-			setError("Failed to generate questions. Please try again.");
+		} catch (error) {
+			const errorMessage =
+				error instanceof Error ? error.message : "Failed to generate questions";
+			
+			// Check if it's a rate limit error
+			if (
+				errorMessage.includes("429") ||
+				errorMessage.includes("Too Many Requests") ||
+				errorMessage.includes("rate limit")
+			) {
+				const rateLimitMessage =
+					"Too many requests. Please wait a moment and try again.";
+				setError(rateLimitMessage);
+				toast.error(rateLimitMessage);
+			} else {
+				setError("Failed to generate questions. Please try again.");
+				toast.error("Failed to generate questions. Please try again.");
+			}
 		} finally {
 			setGeneratingQuestions(false);
 		}

@@ -1,6 +1,7 @@
 import { EVENTS_2026 } from "@/lib/constants/events2026";
 import { getEventSubtopics as getEventSubtopicsFromModule } from "@/lib/constants/subtopics";
 import { getEventCapabilities } from "@/lib/utils/assessments/eventConfig";
+import { getTRPCProxyClient } from "@/lib/trpc/client";
 import type { Question, RosterMember } from "./assignmentTypes";
 
 export const getAvailableEvents = (): string[] => {
@@ -35,7 +36,9 @@ export const generateQuestions = async (
 	const idPercentageValue =
 		questionCount > 0 ? Math.round((idPercentage / questionCount) * 100) : 0;
 
-	const requestBody: Record<string, unknown> = {
+	const trpc = getTRPCProxyClient();
+	const result = await trpc.teams.generateQuestions.mutate({
+		teamSlug: teamId,
 		event_name: eventName,
 		question_count: questionCount,
 		question_types:
@@ -45,40 +48,26 @@ export const generateQuestions = async (
 		id_percentage: idPercentageValue,
 		pure_id_only: pureIdOnly,
 		difficulties: difficulties,
-	};
+		division: division && division !== "any" ? division : undefined,
+		subtopics: subtopics && subtopics.length > 0 ? subtopics : undefined,
+		rm_type_filter: rmTypeFilter,
+	});
 
-	if (division && division !== "any") {
-		requestBody.division = division;
-	}
-
-	if (subtopics && subtopics.length > 0) {
-		requestBody.subtopics = subtopics;
-	}
-
-	if (rmTypeFilter) {
-		requestBody.rm_type_filter = rmTypeFilter;
-	}
-
-	const response = await fetch(
-		`/api/teams/${teamId}/assignments/generate-questions`,
-		{
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(requestBody),
-		},
-	);
-
-	if (!response.ok) {
-		const errorText = await response.text();
-		throw new Error(
-			`Failed to generate questions: ${response.status} ${errorText}`,
-		);
-	}
-
-	const data = await response.json();
-	return data.questions || [];
+	return result.questions.map((q, index) => ({
+		question_text: q.question_text,
+		question_type: q.question_type as "multiple_choice" | "free_response" | "codebusters",
+		options: Array.isArray(q.options)
+			? q.options.map((opt, i) => ({
+					id: String(i),
+					text: opt,
+					isCorrect: false,
+				}))
+			: undefined,
+		answers: q.answers || [],
+		order_index: index,
+		difficulty: q.difficulty || 0.5,
+		imageData: q.imageData || undefined,
+	}));
 };
 
 /**
@@ -138,23 +127,49 @@ export const createAssignment = async (
 		});
 	}
 
-	const url = subteamId
-		? `/api/teams/${teamId}/subteams/${subteamId}/assignments`
-		: `/api/teams/${teamId}/assignments`;
-
-	const response = await fetch(url, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify(assignmentData),
+	const trpc = getTRPCProxyClient();
+	const rosterMembers = assignmentData.roster_members.map((member) => {
+		if (typeof member === "string") {
+			return {
+				studentName: member,
+				displayName: member,
+			};
+		}
+		return {
+			studentName: member.student_name || member.display_name || "",
+			displayName: member.display_name || member.student_name || "",
+			userId: member.user_id || null,
+		};
 	});
 
-	if (!response.ok) {
-		throw new Error("Failed to create assignment");
-	}
+	const questions = assignmentData.questions.map((q) => ({
+		questionText: q.question_text,
+		questionType: q.question_type,
+		options: Array.isArray(q.options)
+			? q.options.map((opt) =>
+					typeof opt === "string" ? opt : opt.text,
+				)
+			: undefined,
+		correctAnswer: Array.isArray(q.answers)
+			? q.answers[0]?.toString()
+			: q.correct_answer || undefined,
+		points: 1,
+		imageData: q.imageData || null,
+		difficulty: q.difficulty,
+	}));
 
-	return await response.json();
+	return await trpc.teams.createAssignment.mutate({
+		teamSlug: teamId,
+		title: assignmentData.title,
+		description: assignmentData.description,
+		dueDate: assignmentData.due_date,
+		points: assignmentData.points,
+		timeLimitMinutes: assignmentData.time_limit_minutes,
+		eventName: assignmentData.event_name,
+		subteamId: subteamId || null,
+		questions,
+		rosterMembers,
+	});
 };
 
 export const createCodebustersAssignment = async (
@@ -186,23 +201,46 @@ export const createCodebustersAssignment = async (
 		};
 	},
 ) => {
-	const url = subteamId
-		? `/api/teams/${teamId}/subteams/${subteamId}/assignments/codebusters`
-		: `/api/teams/${teamId}/assignments/codebusters`;
-
-	const response = await fetch(url, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify(assignmentData),
-	});
-
-	if (!response.ok) {
-		throw new Error("Failed to create Codebusters assignment");
+	if (!assignmentData.codebusters_params) {
+		throw new Error("codebusters_params is required for Codebusters assignments");
 	}
 
-	return await response.json();
+	const trpc = getTRPCProxyClient();
+	const rosterMembers = assignmentData.roster_members.map((member) => {
+		if (typeof member === "string") {
+			return {
+				studentName: member,
+				displayName: member,
+			};
+		}
+		return {
+			studentName: member.student_name || member.display_name || "",
+			displayName: member.display_name || member.student_name || "",
+			userId: member.user_id || null,
+		};
+	});
+
+	return await trpc.teams.createCodebustersAssignment.mutate({
+		teamSlug: teamId,
+		subteamId: subteamId || null,
+		title: assignmentData.title,
+		description: assignmentData.description,
+		due_date: assignmentData.due_date,
+		points: assignmentData.points,
+		time_limit_minutes: assignmentData.time_limit_minutes,
+		event_name: assignmentData.event_name || "Codebusters",
+		roster_members: rosterMembers,
+		codebusters_params: assignmentData.codebusters_params,
+		codebusters_questions: assignmentData.questions.length > 0
+			? assignmentData.questions.map((q) => ({
+					author: q.author || "",
+					quote: q.question_text,
+					cipherType: q.cipherType || "",
+					encrypted: "",
+					...q,
+				}))
+			: undefined,
+	});
 };
 
 export const validateAssignmentDetails = (details: {

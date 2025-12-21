@@ -283,6 +283,165 @@ export const teamsRouter = router({
 			);
 		}),
 
+	generateQuestions: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string(),
+				event_name: z.string().min(1),
+				question_count: z.number().int().min(1).max(100),
+				question_types: z.array(z.enum(["multiple_choice", "free_response"])).min(1),
+				division: z.string().optional(),
+				id_percentage: z.number().int().min(0).max(100).optional(),
+				pure_id_only: z.boolean().optional(),
+				difficulties: z.array(z.string()).optional(),
+				subtopics: z.array(z.string()).optional(),
+				rm_type_filter: z.enum(["rock", "mineral"]).optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { generateQuestionsForAssignment } = await import(
+				"@/lib/server/questions/generate"
+			);
+			const { assertCaptainAccess } = await import(
+				"@/lib/server/teams/shared"
+			);
+
+			await assertCaptainAccess(input.teamSlug, ctx.user.id);
+
+			const questionType: "mcq" | "frq" | "both" =
+				input.question_types.length === 2
+					? "both"
+					: input.question_types[0] === "multiple_choice"
+						? "mcq"
+						: "frq";
+
+			const questions = await generateQuestionsForAssignment({
+				eventName: input.event_name,
+				questionCount: input.question_count,
+				questionType,
+				division: input.division || "any",
+				idPercentage: input.id_percentage || 0,
+				pureIdOnly: input.pure_id_only || false,
+				difficulties: input.difficulties || ["any"],
+				rmTypeFilter: input.rm_type_filter,
+				subtopics: input.subtopics,
+			});
+
+			// Format questions for assignment (convert from practice format to assignment format)
+			const formattedQuestions = questions.map((q, index) => {
+				const isMcq = Array.isArray(q.options) && q.options.length > 0;
+				const answers = Array.isArray(q.answers) ? q.answers : [];
+
+				return {
+					question_text: q.question || "",
+					question_type: isMcq ? "multiple_choice" : "free_response",
+					options: isMcq ? q.options : undefined,
+					answers: answers,
+					points: 1,
+					order_index: index,
+					difficulty: typeof q.difficulty === "number" ? q.difficulty : 0.5,
+					imageData: q.imageData || null,
+				};
+			});
+
+			if (formattedQuestions.length === 0) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "No valid questions found for this event",
+				});
+			}
+
+			return {
+				questions: formattedQuestions,
+				metadata: {
+					eventName: input.event_name,
+					questionCount: formattedQuestions.length,
+				},
+			};
+		}),
+
+	createCodebustersAssignment: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string(),
+				subteamId: z.uuid().optional().nullable(),
+				title: z.string().min(1),
+				description: z.string().optional().nullable(),
+				due_date: z.string().optional().nullable(),
+				points: z.number().int().optional().nullable(),
+				time_limit_minutes: z.number().int().optional().nullable(),
+				event_name: z.string().optional().nullable(),
+				roster_members: z.array(assignmentRosterMemberSchema).optional().default([]),
+				codebusters_params: z.object({
+					questionCount: z.number().int().min(1).max(50),
+					cipherTypes: z.array(z.string()).optional().default([]),
+					division: z.enum(["B", "C", "any"]).optional().default("any"),
+					charLengthMin: z.number().int().min(1).optional(),
+					charLengthMax: z.number().int().min(1).optional(),
+				}),
+				codebusters_questions: z
+					.array(
+						z.object({
+							author: z.string(),
+							quote: z.string(),
+							cipherType: z.string(),
+							division: z.string().optional(),
+							charLength: z.number().int().optional(),
+							encrypted: z.string(),
+							key: z.string().optional().nullable(),
+							kShift: z.number().int().optional(),
+							plainAlphabet: z.string().optional(),
+							cipherAlphabet: z.string().optional(),
+							matrix: z.array(z.array(z.number())).optional(),
+							decryptionMatrix: z.array(z.array(z.number())).optional(),
+							portaKeyword: z.string().optional(),
+							nihilistPolybiusKey: z.string().optional(),
+							nihilistCipherKey: z.string().optional(),
+							checkerboardRowKey: z.string().optional(),
+							checkerboardColKey: z.string().optional(),
+							checkerboardPolybiusKey: z.string().optional(),
+							checkerboardUsesIJ: z.boolean().optional(),
+							blockSize: z.number().int().optional(),
+							columnarKey: z.string().optional(),
+							fractionationTable: z.record(z.string(), z.string()).optional(),
+							caesarShift: z.number().int().optional(),
+							affineA: z.number().int().optional(),
+							affineB: z.number().int().optional(),
+							baconianBinaryType: z.string().optional(),
+							cryptarithmData: z.unknown().optional(),
+							askForKeyword: z.boolean().optional(),
+							points: z.number().optional(),
+							difficulty: z.number().optional(),
+						}),
+					)
+					.optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { createCodebustersAssignment: createCodebustersAssignmentFn } =
+				await import("@/lib/server/teams/codebusters-assignments");
+			return createCodebustersAssignmentFn(
+				input.teamSlug,
+				input.subteamId || null,
+				ctx.user.id,
+				input,
+			);
+		}),
+
+	declineAssignment: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string(),
+				assignmentId: z.uuid(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { declineAssignment: declineAssignmentFn } = await import(
+				"@/lib/server/teams/assignments"
+			);
+			return declineAssignmentFn(input.assignmentId, ctx.user.id);
+		}),
+
 	listUserTeams: protectedProcedure.query(async ({ ctx }) => {
 		try {
 			logger.log("[TRPC listUserTeams] Request:", { userId: ctx.user.id });

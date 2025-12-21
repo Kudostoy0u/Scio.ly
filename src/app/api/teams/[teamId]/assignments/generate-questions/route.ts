@@ -252,6 +252,30 @@ export async function POST(
 			);
 		}
 
+		// Check for rate limit errors (429)
+		if (
+			error instanceof Error &&
+			(error.message.includes("429") ||
+				error.message.includes("Too Many Requests") ||
+				error.message.includes("rate limit"))
+		) {
+			logger.dev.structured(
+				"warn",
+				"[POST /api/teams/[teamId]/assignments/generate-questions] Rate limit error",
+				{
+					error: error.message,
+					duration: `${duration}ms`,
+				},
+			);
+			return NextResponse.json(
+				{
+					error: "Too many requests. Please wait a moment and try again.",
+					details: "The question generation service is currently rate-limited. Please try again in a few moments.",
+				},
+				{ status: 429 },
+			);
+		}
+
 		logger.dev.error(
 			"[POST /api/teams/[teamId]/assignments/generate-questions] Error",
 			error instanceof Error ? error : new Error(String(error)),

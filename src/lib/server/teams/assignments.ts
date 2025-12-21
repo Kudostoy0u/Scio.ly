@@ -1083,3 +1083,27 @@ export async function submitAssignment(
 			: undefined,
 	};
 }
+
+export async function declineAssignment(
+	assignmentId: string,
+	userId: string,
+) {
+	// Mark submission as declined/cancelled
+	await dbPg
+		.insert(teamSubmissions)
+		.values({
+			assignmentId,
+			userId,
+			status: "declined",
+			updatedAt: new Date().toISOString(),
+		})
+		.onConflictDoUpdate({
+			target: [teamSubmissions.assignmentId, teamSubmissions.userId],
+			set: {
+				status: "declined",
+				updatedAt: new Date().toISOString(),
+			},
+		});
+
+	return { message: "Assignment declined successfully" };
+}

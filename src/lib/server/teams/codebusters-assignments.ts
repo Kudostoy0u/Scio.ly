@@ -1,5 +1,14 @@
 import { dbPg } from "@/lib/db";
-import { teamRoster } from "@/lib/db/schema";
+import {
+	teamAssignmentQuestions,
+	teamAssignmentRoster,
+	teamAssignments,
+	teamRoster,
+} from "@/lib/db/schema";
+import { generateCodebustersQuestions } from "@/lib/server/codebusters/generation";
+import { assertCaptainAccess } from "@/lib/server/teams/shared";
+import { touchTeamCacheManifest } from "@/lib/server/teams/cache-manifest";
+import { TRPCError } from "@trpc/server";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { z } from "zod";
 
@@ -246,3 +255,104 @@ export const buildCodebustersOptions = (quote: {
 		difficulty: quote.difficulty,
 	};
 };
+
+export async function createCodebustersAssignment(
+	teamSlug: string,
+	subteamId: string | null,
+	userId: string,
+	input: CodebustersAssignmentInput,
+) {
+	const { team } = await assertCaptainAccess(teamSlug, userId);
+
+	const eventName = input.event_name || "Codebusters";
+	const preGeneratedQuestions = input.codebusters_questions;
+	const generatedQuestions =
+		preGeneratedQuestions && preGeneratedQuestions.length > 0
+			? preGeneratedQuestions
+			: await generateCodebustersQuestions({
+					questionCount: input.codebusters_params.questionCount,
+					cipherTypes: input.codebusters_params.cipherTypes,
+					division: input.codebusters_params.division,
+					charLengthMin: input.codebusters_params.charLengthMin,
+					charLengthMax: input.codebusters_params.charLengthMax,
+				});
+
+	const [assignment] = await dbPg
+		.insert(teamAssignments)
+		.values({
+			teamId: team.id,
+			subteamId: subteamId,
+			title: input.title,
+			description: input.description || null,
+			dueDate: input.due_date || null,
+			createdBy: userId,
+			status: "active",
+			assignmentType: "standard",
+			points: input.points || 0,
+			isRequired: false,
+			maxAttempts: 1,
+			timeLimitMinutes: input.time_limit_minutes || null,
+			eventName,
+		})
+		.returning();
+
+	if (!assignment) {
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Failed to create assignment",
+		});
+	}
+
+	if (generatedQuestions.length > 0) {
+		await dbPg.insert(teamAssignmentQuestions).values(
+			generatedQuestions.map((quote, index) => {
+				const quoteCharLength = quote.charLength ?? quote.quote.length;
+				const storedQuote = {
+					...quote,
+					charLength: quoteCharLength,
+					key: quote.key ?? undefined,
+				};
+				return {
+					assignmentId: assignment.id,
+					questionText: quote.quote,
+					questionType: "codebusters",
+					options: buildCodebustersOptions(storedQuote),
+					correctAnswer: null,
+					points: Math.round(quote.points || 10),
+					orderIndex: index,
+					imageData: null,
+					difficulty:
+						typeof quote.difficulty === "number"
+							? quote.difficulty.toString()
+							: null,
+				};
+			}),
+		);
+	}
+
+	const rosterMembers = await resolveRosterMembers(
+		team.id,
+		subteamId,
+		eventName,
+		input.roster_members || [],
+	);
+	if (rosterMembers.length > 0) {
+		await dbPg.insert(teamAssignmentRoster).values(
+			rosterMembers.map((member) => ({
+				assignmentId: assignment.id,
+				userId: member.userId,
+				subteamId: subteamId,
+				displayName: member.displayName,
+				studentName: member.studentName,
+				status: "assigned",
+			})),
+		);
+	}
+
+	await touchTeamCacheManifest(team.id, {
+		assignments: true,
+		full: true,
+	});
+
+	return { assignment };
+}
