@@ -36,37 +36,37 @@ export default function ProfilePage() {
 		const currentUser = ctxUser || null;
 		setUser(currentUser);
 		(async () => {
-		if (currentUser) {
-			const { data } = await supabase
-				.from("users")
-				.select("display_name, username, photo_url")
-				.eq("id", currentUser.id)
-				.maybeSingle();
-			const profileData = data as {
-				display_name?: string | null;
-				username?: string | null;
-				photo_url?: string | null;
-			} | null;
-			const { name: robustName } = generateDisplayName(
-				{
-					displayName: profileData?.display_name || null,
-					firstName: null,
-					lastName: null,
-					username: profileData?.username || null,
-					email: currentUser.email || null,
-				},
-				currentUser.id,
-			);
-			setDisplayName(robustName || "");
-			setUsername(
-				profileData?.username || currentUser.email?.split("@")[0] || "",
-			);
-			setPhotoUrl(
-				profileData?.photo_url ||
-					currentUser.user_metadata?.avatar_url ||
-					currentUser.user_metadata?.picture ||
-					null,
-			);
+			if (currentUser) {
+				const { data } = await supabase
+					.from("users")
+					.select("display_name, username, photo_url")
+					.eq("id", currentUser.id)
+					.maybeSingle();
+				const profileData = data as {
+					display_name?: string | null;
+					username?: string | null;
+					photo_url?: string | null;
+				} | null;
+				const { name: robustName } = generateDisplayName(
+					{
+						displayName: profileData?.display_name || null,
+						firstName: null,
+						lastName: null,
+						username: profileData?.username || null,
+						email: currentUser.email || null,
+					},
+					currentUser.id,
+				);
+				setDisplayName(robustName || "");
+				setUsername(
+					profileData?.username || currentUser.email?.split("@")[0] || "",
+				);
+				setPhotoUrl(
+					profileData?.photo_url ||
+						currentUser.user_metadata?.avatar_url ||
+						currentUser.user_metadata?.picture ||
+						null,
+				);
 			} else {
 				router.push("/");
 			}
@@ -572,8 +572,8 @@ export default function ProfilePage() {
 						<p
 							className={`mb-4 ${darkMode ? "text-gray-300" : "text-gray-600"}`}
 						>
-							This will permanently delete your account and all associated
-							data, including:
+							This will permanently delete your account and all associated data,
+							including:
 						</p>
 
 						<ul

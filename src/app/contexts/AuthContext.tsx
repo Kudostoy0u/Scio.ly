@@ -133,7 +133,6 @@ function calculateBasicChanges(
 	return changes;
 }
 
-
 // Helper function to calculate display name and photo changes
 function calculateDisplayChanges(
 	existing: {

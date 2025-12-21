@@ -1,8 +1,8 @@
-import { eq } from "drizzle-orm";
 import { dbPg } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import logger from "@/lib/utils/logging/logger";
+import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 
 /**
@@ -19,8 +19,10 @@ import { type NextRequest, NextResponse } from "next/server";
 export async function DELETE(_request: NextRequest) {
 	try {
 		const supabase = await createSupabaseServerClient();
-		const { data: { user } } = await supabase.auth.getUser();
-		
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+
 		if (!user?.id) {
 			return NextResponse.json(
 				{ error: "Authentication required" },
@@ -34,7 +36,10 @@ export async function DELETE(_request: NextRequest) {
 			logger.info("Deleted user from CockroachDB", { userId: user.id });
 		} catch (dbError) {
 			// Log but continue - the user might not exist in CockroachDB
-			logger.warn("Failed to delete from CockroachDB (may not exist):", dbError);
+			logger.warn(
+				"Failed to delete from CockroachDB (may not exist):",
+				dbError,
+			);
 		}
 
 		// 2. Call the RPC function - it handles both public.users and auth.users deletion
@@ -73,4 +78,3 @@ export async function DELETE(_request: NextRequest) {
 		);
 	}
 }
-

@@ -51,18 +51,10 @@ export async function POST(req: NextRequest) {
 		const trimmedDisplayName =
 			typeof displayName === "string" ? displayName.trim() : undefined;
 
-		const name: string | undefined =
-			trimmedDisplayName && trimmedDisplayName.length > 0
-				? trimmedDisplayName
-				: trimmedUsername && trimmedUsername.length > 0
-					? trimmedUsername
-					: undefined;
-
 		try {
 			await upsertUserProfile({
 				id,
 				email,
-				name,
 				username: trimmedUsername || undefined,
 				displayName: trimmedDisplayName || undefined,
 			});

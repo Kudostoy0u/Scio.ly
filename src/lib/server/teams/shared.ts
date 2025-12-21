@@ -375,8 +375,6 @@ export async function ensureSupabaseLink(user: SupabaseUser | null) {
 		email,
 		username,
 		displayName,
-		firstName,
-		lastName,
 		photoUrl,
 	});
 

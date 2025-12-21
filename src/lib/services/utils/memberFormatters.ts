@@ -14,10 +14,7 @@ export function formatMember(
 	userProfile: UserProfile | null,
 ): FormattedMember {
 	const name =
-		userProfile?.display_name ||
-		(userProfile?.first_name && userProfile?.last_name
-			? `${userProfile.first_name} ${userProfile.last_name}`
-			: `User ${membership.user_id.substring(0, 8)}`);
+		userProfile?.display_name || `User ${membership.user_id.substring(0, 8)}`;
 	const email =
 		userProfile?.email ||
 		`user-${membership.user_id.substring(0, 8)}@example.com`;

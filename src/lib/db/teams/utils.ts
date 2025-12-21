@@ -2,10 +2,10 @@
  * Utility functions for team operations
  */
 
-import { eq, and, ne } from "drizzle-orm";
 import { dbPg } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import logger from "@/lib/utils/logging/logger";
+import { and, eq, ne } from "drizzle-orm";
 
 // Removed unused function: generateCode
 
@@ -101,7 +101,9 @@ export async function upsertUserProfile(params: {
 			const wouldConflict = await dbPg
 				.select({ id: users.id })
 				.from(users)
-				.where(and(eq(users.username, params.username.trim()), ne(users.id, id)))
+				.where(
+					and(eq(users.username, params.username.trim()), ne(users.id, id)),
+				)
 				.limit(1);
 			if (wouldConflict.length === 0) {
 				updateSet.username = params.username.trim();
