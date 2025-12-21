@@ -311,9 +311,13 @@ export default function SubteamSelector({
 
 	return (
 		<div
-			className={`mb-6 p-4 rounded-lg ${darkMode ? "bg-gray-800/50" : "bg-gray-100/50"}`}
+			className={`mb-6 py-3 px-4 rounded-lg border-2 flex items-center ${
+				darkMode
+					? "bg-gray-800/50 border-gray-700"
+					: "bg-gray-100/50 border-gray-300"
+			}`}
 		>
-			<div className="flex space-x-2 overflow-x-auto pb-2">
+			<div className="flex items-center space-x-2 overflow-x-auto w-full">
 				{subteams.map((subteam) => (
 					<div
 						key={subteam.id}

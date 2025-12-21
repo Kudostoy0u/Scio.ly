@@ -3,8 +3,8 @@
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { trpc } from "@/lib/trpc/client";
 import { motion } from "framer-motion";
-import { Calendar, Settings, Users } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Calendar, Landmark, Settings, Users } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import NotImplemented from "./NotImplemented";
@@ -48,9 +48,22 @@ export default function TeamsLanding({
 }: TeamsLandingProps) {
 	const { darkMode } = useTheme();
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const [activeTab, setActiveTab] = useState<"home" | "upcoming" | "settings">(
 		"home",
 	);
+
+	// Read tab from URL query parameter
+	useEffect(() => {
+		const tabParam = searchParams.get("tab");
+		if (tabParam === "settings") {
+			setActiveTab("settings");
+		} else if (tabParam === "upcoming") {
+			setActiveTab("upcoming");
+		} else {
+			setActiveTab("home");
+		}
+	}, [searchParams]);
 	const [showLinkInviteModal, setShowLinkInviteModal] = useState(false);
 	const acceptLinkInvite = trpc.teams.acceptLinkInvite.useMutation();
 	const declineLinkInvite = trpc.teams.declineLinkInvite.useMutation();
@@ -141,7 +154,7 @@ export default function TeamsLanding({
 									<div
 										className={`w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-gray-100"}`}
 									>
-										<Users
+										<Landmark
 											className={`w-12 h-12 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
 										/>
 									</div>

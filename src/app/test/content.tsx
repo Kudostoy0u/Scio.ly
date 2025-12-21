@@ -261,7 +261,7 @@ export default function TestContent({
 					/>
 
 					{/* Inline back link to Practice */}
-					<div className="w-full max-w-3xl mt-0.5 mb-5">
+					<div className="w-full max-w-3xl mt-0.5 mb-5 px-3 md:px-0">
 						<button
 							type="button"
 							onClick={handleBackToMain}
@@ -285,20 +285,22 @@ export default function TestContent({
 							/>
 						)
 					) : (
-						<ProgressBar
-							answeredCount={Object.keys(userAnswers).length}
-							totalCount={data.length}
-							isSubmitted={isSubmitted}
-							darkMode={darkMode}
-						/>
+						<div className="px-3 md:px-0">
+							<ProgressBar
+								answeredCount={Object.keys(userAnswers).length}
+								totalCount={data.length}
+								isSubmitted={isSubmitted}
+								darkMode={darkMode}
+							/>
+						</div>
 					)}
 
 					<main
-						className={`w-full max-w-3xl rounded-lg shadow-md p-3 md:p-6 mt-4 ${
+						className={`w-screen md:w-full md:max-w-3xl rounded-none md:rounded-lg shadow-md px-3 md:p-6 pt-4 pb-4 md:pt-4 mt-4 relative left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:mx-auto ${
 							darkMode ? "bg-gray-800" : "bg-white"
 						}`}
 					>
-						<div className="flex justify-between items-center mb-4">
+						<div className="flex justify-between items-center mb-4 pt-1">
 							<div className="flex items-center gap-4">
 								<button
 									type="button"

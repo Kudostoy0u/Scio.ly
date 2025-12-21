@@ -84,6 +84,30 @@ export default function RosterTabUnified({
 	} | null>(null);
 	const [newEventName, setNewEventName] = useState("");
 	const [isSubmittingEvent, setIsSubmittingEvent] = useState(false);
+	const [rosterNotes, setRosterNotes] = useState("");
+	const [isSavingNotes, setIsSavingNotes] = useState(false);
+	const notesSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+	// Edit/view mode state with localStorage persistence
+	// Non-captains always see view mode
+	const [isEditMode, setIsEditMode] = useState(() => {
+		if (typeof window === "undefined" || !isCaptain) {
+			return false; // Default to view mode for non-captains
+		}
+		const saved = localStorage.getItem(`roster-edit-mode-${team.slug}`);
+		return saved === "true";
+	});
+
+	// Ensure non-captains always see view mode
+	const effectiveEditMode = isCaptain ? isEditMode : false;
+
+	const toggleEditMode = () => {
+		const newMode = !isEditMode;
+		setIsEditMode(newMode);
+		if (isCaptain && typeof window !== "undefined") {
+			localStorage.setItem(`roster-edit-mode-${team.slug}`, String(newMode));
+		}
+	};
 
 	const groups = team.division === "B" ? DIVISION_B_GROUPS : DIVISION_C_GROUPS;
 
@@ -165,10 +189,37 @@ export default function RosterTabUnified({
 		rosterRef.current = roster;
 	}, [roster]);
 
+	// Fetch roster notes when subteam changes
+	useEffect(() => {
+		if (!activeSubteamId) {
+			setRosterNotes("");
+			return;
+		}
+
+		const fetchNotes = async () => {
+			try {
+				const response = await fetch(
+					`/api/teams/${team.slug}/subteams/${activeSubteamId}/roster-notes`,
+				);
+				if (response.ok) {
+					const data = await response.json();
+					setRosterNotes(data.rosterNotes || "");
+				}
+			} catch (error) {
+				console.error("Failed to fetch roster notes:", error);
+			}
+		};
+
+		void fetchNotes();
+	}, [activeSubteamId, team.slug]);
+
 	useEffect(() => {
 		return () => {
 			if (saveTimeoutRef.current) {
 				clearTimeout(saveTimeoutRef.current);
+			}
+			if (notesSaveTimeoutRef.current) {
+				clearTimeout(notesSaveTimeoutRef.current);
 			}
 		};
 	}, []);
@@ -599,6 +650,50 @@ export default function RosterTabUnified({
 		});
 	};
 
+	const saveRosterNotes = async (notes: string) => {
+		if (!activeSubteamId) {
+			return;
+		}
+
+		setIsSavingNotes(true);
+		try {
+			const response = await fetch(
+				`/api/teams/${team.slug}/subteams/${activeSubteamId}/roster-notes`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ notes }),
+				},
+			);
+
+			if (!response.ok) {
+				const error = await response.json();
+				toast.error(error.error || "Failed to save notes");
+				return;
+			}
+			invalidateTeam(team.slug);
+		} catch (error) {
+			console.error("Failed to save roster notes:", error);
+			toast.error("Failed to save notes");
+		} finally {
+			setIsSavingNotes(false);
+		}
+	};
+
+	const handleNotesChange = (value: string) => {
+		setRosterNotes(value);
+
+		if (notesSaveTimeoutRef.current) {
+			clearTimeout(notesSaveTimeoutRef.current);
+		}
+
+		notesSaveTimeoutRef.current = setTimeout(() => {
+			if (isCaptain) {
+				void saveRosterNotes(value);
+			}
+		}, 1000);
+	};
+
 	if (!activeSubteamId) {
 		if (subteams.length === 0) {
 			return (
@@ -633,6 +728,9 @@ export default function RosterTabUnified({
 				darkMode={darkMode}
 				conflicts={conflicts}
 				isSaving={isSaving}
+				isCaptain={isCaptain}
+				isEditMode={effectiveEditMode}
+				onToggleMode={toggleEditMode}
 			/>
 
 			<SubteamSelector
@@ -668,6 +766,7 @@ export default function RosterTabUnified({
 								group={group}
 								roster={roster}
 								isCaptain={isCaptain}
+								isEditMode={effectiveEditMode}
 								collapsedGroups={collapsedGroups}
 								isLastGroup={isLastGroup}
 								onToggleGroupCollapse={toggleGroupCollapse}
@@ -680,6 +779,53 @@ export default function RosterTabUnified({
 							/>
 						);
 					})}
+				</div>
+			)}
+
+			{/* Additional stuff section */}
+			{!isLoading && (
+				<div
+					className={`rounded-lg border-2 p-4 ${
+						darkMode
+							? "bg-gray-800 border-gray-700"
+							: "bg-white border-gray-300"
+					}`}
+				>
+					<h3
+						className={`text-lg font-semibold mb-3 ${
+							darkMode ? "text-gray-200" : "text-gray-800"
+						}`}
+					>
+						Additional stuff
+					</h3>
+					<textarea
+						value={rosterNotes}
+						onChange={(e) => handleNotesChange(e.target.value)}
+						disabled={!isCaptain}
+						placeholder={
+							isCaptain
+								? "Team notes that cannot be reflected anywhere else..."
+								: "Only captains and admins can edit this section."
+						}
+						className={`w-full rounded-lg px-3 py-2 text-sm border min-h-[120px] resize-y ${
+							darkMode
+								? isCaptain
+									? "bg-gray-900 text-white border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+									: "bg-gray-900/50 text-gray-400 border-gray-700 cursor-not-allowed"
+								: isCaptain
+									? "bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+									: "bg-gray-50 text-gray-500 border-gray-300 cursor-not-allowed"
+						}`}
+					/>
+					{isSavingNotes && (
+						<div
+							className={`text-xs mt-2 ${
+								darkMode ? "text-gray-400" : "text-gray-500"
+							}`}
+						>
+							Saving...
+						</div>
+					)}
 				</div>
 			)}
 

@@ -306,19 +306,21 @@ export default function CalendarGrid({
 										"event_type" in event ? event.event_type : "practice";
 
 									return (
-										<button
-											type="button"
+										<div
 											key={`${eventIndex}-${event.title}-${event.start_time || "no-time"}`}
-											className={`text-[10px] md:text-xs p-1 rounded border cursor-pointer transition-colors hover:opacity-80 text-left w-full ${getEventColors(eventType)}`}
-											onClick={() => {
-												if ("event_type" in event) {
-													onEventClick(event as CalendarEvent);
-												}
-											}}
-											aria-label={`View event: ${event.title}`}
+											className={`text-[10px] md:text-xs p-1 rounded border transition-colors hover:opacity-80 text-left w-full ${getEventColors(eventType)}`}
 										>
 											<div className="flex items-start justify-between gap-1">
-												<div className="flex-1 min-w-0">
+												<button
+													type="button"
+													onClick={() => {
+														if ("event_type" in event) {
+															onEventClick(event as CalendarEvent);
+														}
+													}}
+													className="flex-1 min-w-0 text-left cursor-pointer"
+													aria-label={`View event: ${event.title}`}
+												>
 													<div className="truncate font-medium">
 														{event.title}
 													</div>
@@ -333,7 +335,7 @@ export default function CalendarGrid({
 															)}
 														</div>
 													)}
-												</div>
+												</button>
 												<button
 													type="button"
 													onClick={(e) => {
@@ -351,7 +353,7 @@ export default function CalendarGrid({
 													×
 												</button>
 											</div>
-										</button>
+										</div>
 									);
 								})}
 							</div>

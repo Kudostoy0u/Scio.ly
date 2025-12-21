@@ -81,6 +81,7 @@ export default function PeopleTabUnified({
 		null,
 	);
 	const [showNamePrompt, setShowNamePrompt] = useState(false);
+	const [customRosterEvents, setCustomRosterEvents] = useState<string[]>([]);
 
 	const normalizedMembers = useMemo<StoreTeamMember[]>(() => {
 		const list = (members as TeamMemberV2[] | undefined) ?? [];
@@ -319,8 +320,43 @@ export default function PeopleTabUnified({
 		}
 	};
 
-	const handleAddEventClick = (member: Member) => {
+	const handleAddEventClick = async (member: Member) => {
 		setSelectedMember(member);
+
+		// Fetch custom roster events for the subteam
+		const subteamId = member.subteamId || member.subteam?.id;
+		if (subteamId) {
+			try {
+				const response = await fetch(
+					`/api/teams/${team.slug}/removed-events?subteamId=${subteamId}`,
+				);
+				if (response.ok) {
+					const data = await response.json();
+					// Extract all added events from all conflict blocks
+					const addedEvents: string[] = [];
+					if (data.blocks && typeof data.blocks === "object") {
+						for (const block of Object.values(data.blocks)) {
+							if (
+								block &&
+								typeof block === "object" &&
+								"added" in block &&
+								Array.isArray(block.added)
+							) {
+								addedEvents.push(...block.added);
+							}
+						}
+					}
+					setCustomRosterEvents(addedEvents);
+				} else {
+					setCustomRosterEvents([]);
+				}
+			} catch {
+				setCustomRosterEvents([]);
+			}
+		} else {
+			setCustomRosterEvents([]);
+		}
+
 		setShowEventModal(true);
 	};
 
@@ -493,9 +529,11 @@ export default function PeopleTabUnified({
 					onClose={() => {
 						setShowEventModal(false);
 						setSelectedMember(null);
+						setCustomRosterEvents([]);
 					}}
 					onSelectEvent={handleEventSelect}
 					division={team.division}
+					customEvents={customRosterEvents}
 				/>
 			)}
 

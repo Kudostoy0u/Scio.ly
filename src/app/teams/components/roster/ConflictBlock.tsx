@@ -11,6 +11,7 @@ interface ConflictBlockProps {
 	group: ConflictBlockType;
 	roster: Record<string, string[]>;
 	isCaptain: boolean;
+	isEditMode: boolean;
 	collapsedGroups: Set<string>;
 	isLastGroup: boolean;
 	onToggleGroupCollapse: (groupLabel: string) => void;
@@ -27,6 +28,7 @@ export default function ConflictBlock({
 	group,
 	roster,
 	isCaptain,
+	isEditMode,
 	collapsedGroups,
 	isLastGroup,
 	onToggleGroupCollapse,
@@ -127,6 +129,7 @@ export default function ConflictBlock({
 									eventName={evt}
 									roster={roster}
 									isCaptain={isCaptain}
+									isEditMode={isEditMode}
 									colorKey={group.colorKey}
 									colors={colors}
 									onUpdateRoster={onUpdateRoster}
@@ -146,6 +149,7 @@ export default function ConflictBlock({
 									eventName={evt}
 									roster={roster}
 									isCaptain={isCaptain}
+									isEditMode={isEditMode}
 									colorKey={group.colorKey}
 									colors={colors}
 									onUpdateRoster={onUpdateRoster}
@@ -223,6 +227,7 @@ export default function ConflictBlock({
 						eventName={evt}
 						roster={roster}
 						isCaptain={isCaptain}
+						isEditMode={isEditMode}
 						colorKey={group.colorKey}
 						colors={colors}
 						onUpdateRoster={onUpdateRoster}

@@ -56,9 +56,10 @@ export default async function TeamsPage(ctx: {
 	const auto = await getAutoLinkSelection();
 	const searchParams = await ctx.searchParams;
 	const viewAll = searchParams.view === "all";
+	const tab = searchParams.tab;
 
-	// Only redirect if we have a valid team slug, user hasn't just unlinked, and user doesn't explicitly want to view all teams
-	if (!(justUnlinked || viewAll) && auto?.slug) {
+	// Only redirect if we have a valid team slug, user hasn't just unlinked, and user doesn't explicitly want to view all teams or settings tab
+	if (!(justUnlinked || viewAll || tab === "settings") && auto?.slug) {
 		redirect(`/teams/${auto.slug}`);
 	}
 

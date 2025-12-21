@@ -198,6 +198,7 @@ export async function getTeamFullData(
 			groupId: teamSubteams.teamId,
 			teamId: teamSubteams.teamId,
 			description: teamSubteams.description,
+			rosterNotes: teamSubteams.rosterNotes,
 			displayOrder: teamSubteams.displayOrder,
 			createdAt: sql<string>`${teamSubteams.createdAt}::text`,
 		})
@@ -389,6 +390,7 @@ export async function getTeamFullData(
 			teamId: s.teamId,
 			name: s.description || "Unnamed Subteam",
 			description: s.description || "",
+			rosterNotes: s.rosterNotes || null,
 			displayOrder: s.displayOrder,
 			createdAt: s.createdAt,
 		})),

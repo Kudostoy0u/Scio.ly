@@ -68,25 +68,27 @@ export default function EventList({
 					Available Events
 				</h3>
 				<div className="flex items-center space-x-3">
-					<label
-						htmlFor="sort"
-						className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
-					>
-						Sort:
-					</label>
-					<select
-						id="sort"
-						value={sortOption}
-						onChange={(e) => onSortChange(e.target.value)}
-						className={`text-xs rounded-md border-0 py-1.5 pl-3 pr-8 ${
-							darkMode
-								? "bg-gray-700 text-white focus:ring-blue-500"
-								: "bg-gray-50 text-gray-900 focus:ring-blue-600"
-						} focus:ring-1 focus:outline-none`}
-					>
-						<option value="alphabetical">Alphabetical</option>
-						<option value="subject">Subject</option>
-					</select>
+					<div className="hidden md:flex items-center space-x-3">
+						<label
+							htmlFor="sort"
+							className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+						>
+							Sort:
+						</label>
+						<select
+							id="sort"
+							value={sortOption}
+							onChange={(e) => onSortChange(e.target.value)}
+							className={`text-xs rounded-md border-0 py-1.5 pl-3 pr-8 ${
+								darkMode
+									? "bg-gray-700 text-white focus:ring-blue-500"
+									: "bg-gray-50 text-gray-900 focus:ring-blue-600"
+							} focus:ring-1 focus:outline-none`}
+						>
+							<option value="alphabetical">Alphabetical</option>
+							<option value="subject">Subject</option>
+						</select>
+					</div>
 					<div
 						className={`flex rounded-md border ${darkMode ? "border-gray-600" : "border-gray-300"}`}
 					>
@@ -195,17 +197,17 @@ export default function EventList({
 													: "hover:bg-gray-50"
 										}`}
 									>
-										<div className="flex justify-between items-center">
+										<div className="flex justify-between items-center gap-2">
 											<h4
-												className={`font-medium text-sm md:text-base ${
+												className={`font-medium text-sm md:text-base flex-1 min-w-0 break-words ${
 													darkMode ? "text-white" : "text-gray-900"
 												}`}
 											>
 												{event.name}
 											</h4>
-											<div className="flex items-center space-x-2">
+											<div className="flex items-center space-x-2 flex-shrink-0">
 												<span
-													className={`text-xs md:text-xs text-[10px] px-3 py-1 rounded-full ${
+													className={`text-[9px] px-2 py-0.5 rounded-full ${
 														darkMode
 															? "bg-gray-700 text-gray-300"
 															: "bg-gray-100 text-gray-600"
@@ -215,14 +217,14 @@ export default function EventList({
 												</span>
 												{isOffline && !isDownloaded && (
 													<span
-														className={`text-xs px-2 py-0.5 rounded ${darkMode ? "bg-red-900 text-red-200" : "bg-red-100 text-red-600"}`}
+														className={`text-[9px] px-1.5 py-0.5 rounded ${darkMode ? "bg-red-900 text-red-200" : "bg-red-100 text-red-600"}`}
 													>
 														Not downloaded
 													</span>
 												)}
 												{event.divisions && (
 													<span
-														className={`hidden lg:inline-block text-xs px-3 py-1 rounded-full ${
+														className={`hidden lg:inline-block text-[9px] px-2 py-0.5 rounded-full ${
 															darkMode
 																? "bg-blue-900 text-blue-200"
 																: "bg-blue-100 text-blue-600"

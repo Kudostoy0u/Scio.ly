@@ -49,6 +49,7 @@ export interface TeamFullData {
 		teamId: string;
 		name: string;
 		description: string | null;
+		rosterNotes: string | null;
 		displayOrder: number;
 		createdAt: string;
 	}>;

@@ -65,6 +65,7 @@ export const teamSubteams = cockroachTable(
 			.references(() => teams.id, { onDelete: "cascade" }),
 		name: string().notNull(),
 		description: string(),
+		rosterNotes: string("roster_notes"),
 		displayOrder: int8("display_order", { mode: "number" })
 			.default(0)
 			.notNull(),

@@ -331,13 +331,6 @@ export default function AssignmentViewerModal({
 																			: "Pending"}
 																</span>
 															</div>
-															{member.email && (
-																<p
-																	className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}
-																>
-																	{member.email}
-																</p>
-															)}
 														</div>
 
 														<div className="text-left md:text-right">

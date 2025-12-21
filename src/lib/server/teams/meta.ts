@@ -53,6 +53,7 @@ export async function getTeamFullBySlug(
 			teamId: teamSubteams.teamId,
 			name: teamSubteams.name,
 			description: teamSubteams.description,
+			rosterNotes: teamSubteams.rosterNotes,
 			displayOrder: teamSubteams.displayOrder,
 			createdAt: teamSubteams.createdAt,
 		})
@@ -247,6 +248,7 @@ export async function getTeamFullBySlug(
 			teamId: s.teamId,
 			name: s.name,
 			description: s.description,
+			rosterNotes: s.rosterNotes || null,
 			displayOrder: Number(s.displayOrder ?? 0),
 			createdAt: s.createdAt ? String(s.createdAt) : new Date().toISOString(),
 		})),

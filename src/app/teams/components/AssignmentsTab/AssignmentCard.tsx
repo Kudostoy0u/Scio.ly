@@ -102,30 +102,32 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
 			<div className="flex items-start justify-between">
 				<div className="flex-1">
 					<div className="flex items-start justify-between mb-2">
-						<div className="flex items-center gap-2 flex-1">
+						<div className="flex flex-col md:flex-row md:items-center gap-2 flex-1">
 							<h3
 								className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
 							>
 								{assignment.title}
 							</h3>
-							{assignment.event_name && (
-								<span
-									className={`text-xs px-2 py-0.5 rounded-full ${
-										darkMode
-											? "bg-gray-700 text-gray-200"
-											: "bg-gray-100 text-gray-700"
-									}`}
-								>
-									{assignment.event_name}
-								</span>
-							)}
-							{!everyoneDeclined && (
-								<AssignmentStatusBadge
-									assignment={mergedAssignment}
-									isCaptain={isCaptain}
-									darkMode={darkMode}
-								/>
-							)}
+							<div className="flex items-center gap-2 flex-wrap">
+								{assignment.event_name && (
+									<span
+										className={`text-xs px-2 py-0.5 rounded-full ${
+											darkMode
+												? "bg-gray-700 text-gray-200"
+												: "bg-gray-100 text-gray-700"
+										}`}
+									>
+										{assignment.event_name}
+									</span>
+								)}
+								{!everyoneDeclined && (
+									<AssignmentStatusBadge
+										assignment={mergedAssignment}
+										isCaptain={isCaptain}
+										darkMode={darkMode}
+									/>
+								)}
+							</div>
 						</div>
 						<div className="ml-4 flex items-center space-x-2">
 							{everyoneDeclined ? (

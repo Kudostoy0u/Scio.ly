@@ -297,10 +297,9 @@ export default function Header({
 			>
 				<div className="w-full">
 					<div
-						className={`${isTeamsPage ? "flex justify-between items-center h-16 pl-28 pr-5" : "container mx-auto flex justify-between items-center h-16 pl-5"}`}
+						className={`${isTeamsPage ? "flex justify-between items-center h-16 pl-5 pr-5 md:pl-28 md:pr-4" : "container mx-auto flex justify-between items-center h-16 pl-5 pr-4"}`}
 					>
 						<div className="flex items-center gap-2">
-							{leftAddon}
 							<div className={logoOffsetClassName ?? ""}>
 								<Logo
 									darkMode={darkMode}
@@ -308,6 +307,7 @@ export default function Header({
 									isDashboard={isDashboard}
 								/>
 							</div>
+							{leftAddon}
 						</div>
 
 						{/* Desktop Navigation */}
