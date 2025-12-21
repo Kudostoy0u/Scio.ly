@@ -8,7 +8,7 @@ export const fetchCache = "force-cache";
 
 // Optimized metadata for better caching
 export const metadata: Metadata = {
-	title: "Scio.ly - Science Olympiad Practice Platform",
+	title: "Scio.ly | Science Olympiad Practice",
 	description:
 		"The ultimate Science Olympiad practice platform with comprehensive study materials, practice tests, and team collaboration tools.",
 	keywords: [
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 		"education",
 	],
 	openGraph: {
-		title: "Scio.ly - Science Olympiad Practice Platform",
+		title: "Scio.ly | Science Olympiad Practice",
 		description:
 			"The ultimate Science Olympiad practice platform with comprehensive study materials, practice tests, and team collaboration tools.",
 		type: "website",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 	},
 	twitter: {
 		card: "summary_large_image",
-		title: "Scio.ly - Science Olympiad Practice Platform",
+		title: "Scio.ly | Science Olympiad Practice",
 		description:
 			"The ultimate Science Olympiad practice platform with comprehensive study materials, practice tests, and team collaboration tools.",
 	},

@@ -1,10 +1,10 @@
 import { dbPg } from "@/lib/db/index";
 import {
-	newTeamAssignmentQuestions,
-	newTeamAssignmentRoster,
-	newTeamAssignments,
-} from "@/lib/db/schema/assignments";
-import { users } from "@/lib/db/schema/core";
+	teamAssignmentQuestions,
+	teamAssignmentRoster,
+	teamAssignments,
+} from "@/lib/db/schema";
+import { users } from "@/lib/db/schema";
 import { FrontendQuestionSchema } from "@/lib/schemas/question";
 import { getServerUser } from "@/lib/supabaseServer";
 import { parseDifficulty } from "@/lib/types/difficulty";
@@ -42,6 +42,12 @@ function parseCodebustersQuestion(
 	}
 
 	// Regular Codebusters question
+	const solutionValue =
+		typeof codebustersData?.solution === "object" &&
+		codebustersData?.solution !== null
+			? codebustersData.solution
+			: undefined;
+	const answerFallback = "";
 	const codebustersQuestion = {
 		id: q.id,
 		question: q.questionText,
@@ -56,10 +62,31 @@ function parseCodebustersQuestion(
 		charLength: codebustersData?.charLength || 100,
 		encrypted: codebustersData?.encrypted || "",
 		key: codebustersData?.key || "",
+		kShift: codebustersData?.kShift,
+		plainAlphabet: codebustersData?.plainAlphabet,
+		cipherAlphabet: codebustersData?.cipherAlphabet,
+		matrix: codebustersData?.matrix,
+		decryptionMatrix: codebustersData?.decryptionMatrix,
+		portaKeyword: codebustersData?.portaKeyword,
+		nihilistPolybiusKey: codebustersData?.nihilistPolybiusKey,
+		nihilistCipherKey: codebustersData?.nihilistCipherKey,
+		checkerboardRowKey: codebustersData?.checkerboardRowKey,
+		checkerboardColKey: codebustersData?.checkerboardColKey,
+		checkerboardPolybiusKey: codebustersData?.checkerboardPolybiusKey,
+		checkerboardUsesIJ: codebustersData?.checkerboardUsesIJ,
+		blockSize: codebustersData?.blockSize,
+		columnarKey: codebustersData?.columnarKey,
+		fractionationTable: codebustersData?.fractionationTable,
+		caesarShift: codebustersData?.caesarShift,
+		affineA: codebustersData?.affineA,
+		affineB: codebustersData?.affineB,
+		baconianBinaryType: codebustersData?.baconianBinaryType,
+		cryptarithmData: codebustersData?.cryptarithmData,
+		askForKeyword: codebustersData?.askForKeyword,
 		hint: codebustersData?.hint || "",
-		solution: codebustersData?.solution || q.correctAnswer,
-		answers: [codebustersData?.solution || q.correctAnswer],
-		correctAnswer: codebustersData?.solution || q.correctAnswer,
+		solution: solutionValue,
+		answers: [answerFallback],
+		correctAnswer: answerFallback,
 		points: q.points,
 		order: q.orderIndex,
 		orderIndex: q.orderIndex,
@@ -67,7 +94,7 @@ function parseCodebustersQuestion(
 	};
 
 	try {
-		return FrontendQuestionSchema.parse(codebustersQuestion);
+		return FrontendQuestionSchema.passthrough().parse(codebustersQuestion);
 	} catch (error) {
 		if (error instanceof z.ZodError) {
 			const errorMessages = error.issues?.map(
@@ -222,6 +249,7 @@ interface AssignmentRow {
 	points: number;
 	isRequired: boolean;
 	maxAttempts: number | null;
+	timeLimitMinutes: number | null;
 	createdAt: string;
 	updatedAt: string;
 	creatorEmail: string;
@@ -248,8 +276,36 @@ interface CodebustersData {
 	charLength?: number;
 	encrypted?: string;
 	key?: string;
+	kShift?: number;
+	plainAlphabet?: string;
+	cipherAlphabet?: string;
+	matrix?: number[][];
+	decryptionMatrix?: number[][];
+	portaKeyword?: string;
+	nihilistPolybiusKey?: string;
+	nihilistCipherKey?: string;
+	checkerboardRowKey?: string;
+	checkerboardColKey?: string;
+	checkerboardPolybiusKey?: string;
+	checkerboardUsesIJ?: boolean;
+	blockSize?: number;
+	columnarKey?: string;
+	fractionationTable?: { [key: string]: string };
+	caesarShift?: number;
+	affineA?: number;
+	affineB?: number;
+	baconianBinaryType?: string;
+	cryptarithmData?: {
+		equation: string;
+		numericExample: string | null;
+		digitGroups: Array<{
+			digits: string;
+			word: string;
+		}>;
+	};
+	askForKeyword?: boolean;
 	hint?: string;
-	solution?: string;
+	solution?: Record<string, string>;
 }
 
 // GET /api/assignments/[assignmentId] - Get assignment details and questions
@@ -278,22 +334,23 @@ export async function GET(
 		// Get assignment details with creator information
 		const assignmentResult = await dbPg
 			.select({
-				id: newTeamAssignments.id,
-				title: newTeamAssignments.title,
-				description: newTeamAssignments.description,
-				assignmentType: newTeamAssignments.assignmentType,
-				dueDate: newTeamAssignments.dueDate,
-				points: newTeamAssignments.points,
-				isRequired: newTeamAssignments.isRequired,
-				maxAttempts: newTeamAssignments.maxAttempts,
-				createdAt: newTeamAssignments.createdAt,
-				updatedAt: newTeamAssignments.updatedAt,
+				id: teamAssignments.id,
+				title: teamAssignments.title,
+				description: teamAssignments.description,
+				assignmentType: teamAssignments.assignmentType,
+				dueDate: teamAssignments.dueDate,
+				points: teamAssignments.points,
+				isRequired: teamAssignments.isRequired,
+				maxAttempts: teamAssignments.maxAttempts,
+				timeLimitMinutes: teamAssignments.timeLimitMinutes,
+				createdAt: teamAssignments.createdAt,
+				updatedAt: teamAssignments.updatedAt,
 				creatorEmail: users.email,
 				creatorName: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}))`,
 			})
-			.from(newTeamAssignments)
-			.innerJoin(users, eq(newTeamAssignments.createdBy, users.id))
-			.where(eq(newTeamAssignments.id, assignmentId))
+			.from(teamAssignments)
+			.innerJoin(users, eq(teamAssignments.createdBy, users.id))
+			.where(eq(teamAssignments.id, assignmentId))
 			.limit(1);
 
 		if (assignmentResult.length === 0) {
@@ -319,6 +376,7 @@ export async function GET(
 			points: assignmentRow.points ?? 0,
 			isRequired: assignmentRow.isRequired ?? true,
 			maxAttempts: assignmentRow.maxAttempts ?? null,
+			timeLimitMinutes: assignmentRow.timeLimitMinutes ?? null,
 			createdAt: assignmentRow.createdAt
 				? String(assignmentRow.createdAt)
 				: new Date().toISOString(),
@@ -332,17 +390,17 @@ export async function GET(
 		// Check if user is assigned to this assignment
 		const rosterResult = await dbPg
 			.select({
-				studentName: newTeamAssignmentRoster.studentName,
-				userId: newTeamAssignmentRoster.userId,
-				subteamId: newTeamAssignmentRoster.subteamId,
+				studentName: teamAssignmentRoster.displayName,
+				userId: teamAssignmentRoster.userId,
+				subteamId: teamAssignmentRoster.subteamId,
 			})
-			.from(newTeamAssignmentRoster)
+			.from(teamAssignmentRoster)
 			.where(
 				and(
-					eq(newTeamAssignmentRoster.assignmentId, assignmentId),
+					eq(teamAssignmentRoster.assignmentId, assignmentId),
 					or(
-						eq(newTeamAssignmentRoster.userId, user.id),
-						eq(newTeamAssignmentRoster.studentName, user.email ?? ""),
+						eq(teamAssignmentRoster.userId, user.id),
+						eq(teamAssignmentRoster.displayName, user.email ?? ""),
 					),
 				),
 			)
@@ -369,19 +427,19 @@ export async function GET(
 		 */
 		const questionsResult = await dbPg
 			.select({
-				id: newTeamAssignmentQuestions.id,
-				questionText: newTeamAssignmentQuestions.questionText,
-				questionType: newTeamAssignmentQuestions.questionType,
-				options: newTeamAssignmentQuestions.options,
-				correctAnswer: newTeamAssignmentQuestions.correctAnswer,
-				points: newTeamAssignmentQuestions.points,
-				orderIndex: newTeamAssignmentQuestions.orderIndex,
-				imageData: newTeamAssignmentQuestions.imageData,
-				difficulty: newTeamAssignmentQuestions.difficulty,
+				id: teamAssignmentQuestions.id,
+				questionText: teamAssignmentQuestions.questionText,
+				questionType: teamAssignmentQuestions.questionType,
+				options: teamAssignmentQuestions.options,
+				correctAnswer: teamAssignmentQuestions.correctAnswer,
+				points: teamAssignmentQuestions.points,
+				orderIndex: teamAssignmentQuestions.orderIndex,
+				imageData: teamAssignmentQuestions.imageData,
+				difficulty: teamAssignmentQuestions.difficulty,
 			})
-			.from(newTeamAssignmentQuestions)
-			.where(eq(newTeamAssignmentQuestions.assignmentId, assignmentId))
-			.orderBy(asc(newTeamAssignmentQuestions.orderIndex));
+			.from(teamAssignmentQuestions)
+			.where(eq(teamAssignmentQuestions.assignmentId, assignmentId))
+			.orderBy(asc(teamAssignmentQuestions.orderIndex));
 
 		/**
 		 * Format questions for the frontend test system

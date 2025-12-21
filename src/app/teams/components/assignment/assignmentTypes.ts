@@ -1,21 +1,25 @@
 export interface Question {
 	question_text: string;
 	question_type: "multiple_choice" | "free_response" | "codebusters";
+	author?: string;
 	options?: Array<{ id: string; text: string; isCorrect: boolean }>;
 	correct_answer?: string;
 	answers?: (string | number)[] | string;
 	order_index: number;
 	imageData?: string;
 	difficulty?: number;
+	cipherType?: string;
 }
 
 export interface RosterMember {
 	student_name: string;
 	user_id?: string;
 	subteam_id?: string;
+	subteam_name?: string | null;
 	isLinked: boolean;
 	userEmail?: string;
 	username?: string;
+	roster_entry_id?: string; // For unique identification of roster entries
 }
 
 export interface AssignmentCreatorProps {
@@ -30,7 +34,6 @@ export interface AssignmentCreatorProps {
 export interface AssignmentDetails {
 	title: string;
 	description: string;
-	assignmentType: "homework" | "project" | "study" | "other";
 	dueDate: string;
 	points: number;
 	timeLimitMinutes: number;
@@ -40,7 +43,6 @@ export interface AssignmentDetails {
 export interface QuestionGenerationSettings {
 	questionCount: number;
 	questionType: "mcq" | "both" | "frq";
-	selectedSubtopics: string[];
 	idPercentage: number;
 	pureIdOnly: boolean;
 	// Difficulty settings
@@ -50,6 +52,10 @@ export interface QuestionGenerationSettings {
 	division?: "B" | "C" | "any";
 	charLengthMin?: number;
 	charLengthMax?: number;
+	// Subtopics
+	subtopics?: string[];
+	// Rocks and Minerals filter
+	rmTypeFilter?: "rock" | "mineral";
 }
 
 export interface AssignmentStepProps {
@@ -62,18 +68,17 @@ export interface AssignmentStepProps {
 export interface AssignmentDetailsStepProps extends AssignmentStepProps {
 	details: AssignmentDetails;
 	onDetailsChange: (details: Partial<AssignmentDetails>) => void;
-	prefillEventName?: string;
 	availableEvents: string[];
 }
 
 export interface QuestionGenerationStepProps extends AssignmentStepProps {
 	settings: QuestionGenerationSettings;
 	onSettingsChange: (settings: Partial<QuestionGenerationSettings>) => void;
-	availableSubtopics: string[];
 	supportsPictureQuestions: boolean;
 	supportsIdentificationOnly: boolean;
 	onGenerateQuestions: () => Promise<void>;
 	generatingQuestions: boolean;
+	eventName?: string; // For loading subtopics and determining if Rocks and Minerals
 }
 
 export interface QuestionPreviewStepProps {

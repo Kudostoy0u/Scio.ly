@@ -474,13 +474,13 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
 		}
 	};
 
-	const handleBackdropClick = (e: React.MouseEvent<HTMLDialogElement>) => {
+	const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
 		if (e.target === e.currentTarget) {
 			onClose();
 		}
 	};
 
-	const handleBackdropKeyDown = (e: React.KeyboardEvent<HTMLDialogElement>) => {
+	const handleBackdropKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
 		if (e.key === "Escape") {
 			onClose();
 		}
@@ -488,17 +488,19 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
 
 	return (
 		<>
-			<dialog
-				className="fixed inset-0 z-50 flex items-center justify-center border-0 bg-transparent p-0 backdrop:bg-black/50"
+			<div
+				className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
 				onClick={handleBackdropClick}
 				onKeyDown={handleBackdropKeyDown}
-				aria-modal="true"
-				open
 			>
-				<div
-					className={`relative w-11/12 h-5/6 max-w-4xl rounded-lg shadow-2xl flex flex-col ${
+				<div className="absolute inset-0 bg-black/50" aria-hidden="true" />
+				<dialog
+					open
+					className={`relative w-11/12 h-5/6 max-w-4xl rounded-lg shadow-2xl flex flex-col border-0 p-0 ${
 						darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"
 					}`}
+					style={{ margin: 0, padding: 0, border: "none" }}
+					aria-modal="true"
 					onClick={(e) => e.stopPropagation()}
 					onKeyDown={(e) => e.stopPropagation()}
 				>
@@ -530,8 +532,8 @@ const CipherInfoModal: React.FC<CipherInfoModalProps> = ({
 						darkMode={darkMode}
 						contentRef={contentRef}
 					/>
-				</div>
-			</dialog>
+				</dialog>
+			</div>
 		</>
 	);
 };

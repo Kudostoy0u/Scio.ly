@@ -26,8 +26,8 @@ type DatabaseQuestion = {
 	options: unknown;
 	answers: unknown;
 	subtopics: unknown;
-	createdAt: Date | null;
-	updatedAt: Date | null;
+	createdAt: Date | string | null;
+	updatedAt: Date | string | null;
 };
 
 const QuestionFiltersSchema = z.object({
@@ -188,6 +188,25 @@ function hashIdToInt(id: string): number {
 const transformDatabaseResult = (result: DatabaseQuestion): Question => {
 	const core = encodeBase52Local(hashIdToInt(result.id));
 	const base52Code = `${core}S`;
+	logger.dev.structured("info", "Transforming database result", result);
+
+	// Helper function to convert Date or string to ISO string
+	const toISOString = (
+		value: Date | string | null | undefined,
+	): string | undefined => {
+		if (!value) return undefined;
+		if (value instanceof Date) return value.toISOString();
+		if (typeof value === "string") {
+			// If it's already an ISO string, return it
+			if (value.includes("T") && value.includes("Z")) return value;
+			// Otherwise, try to parse it as a date and convert to ISO
+			const date = new Date(value);
+			if (!Number.isNaN(date.getTime())) return date.toISOString();
+			return value;
+		}
+		return undefined;
+	};
+
 	return {
 		id: result.id,
 		question: result.question,
@@ -198,8 +217,8 @@ const transformDatabaseResult = (result: DatabaseQuestion): Question => {
 		options: Array.isArray(result.options) ? result.options : [],
 		answers: Array.isArray(result.answers) ? result.answers : [],
 		subtopics: Array.isArray(result.subtopics) ? result.subtopics : [],
-		created_at: result.createdAt?.toISOString(),
-		updated_at: result.updatedAt?.toISOString(),
+		created_at: toISOString(result.createdAt),
+		updated_at: toISOString(result.updatedAt),
 		base52: base52Code,
 	};
 };

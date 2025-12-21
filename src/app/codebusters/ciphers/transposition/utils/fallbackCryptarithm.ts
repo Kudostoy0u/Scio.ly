@@ -1,5 +1,4 @@
 import { toUniqueLetters } from "./wordBank";
-import { generateSolutionWords } from "./wordGeneration";
 
 const FALLBACK_WORDS = [
 	{ w1: "SEND", w2: "MORE", w3: "MONEY", n1: 9567, n2: 1085, n3: 10652 },
@@ -68,18 +67,47 @@ export function generateFallbackCryptarithm(uniqueWords: string[]): {
 		return num;
 	};
 
-	const numSolutionWords = Math.floor(Math.random() * 3) + 3;
-	const fallbackSolutionWords = generateSolutionWords(
-		fallbackLetters,
-		fallbackMapping,
-		numSolutionWords,
-		uniqueWords,
-	);
+	// Randomly pick 3-5 words from words.json that only contain letters from the mapping
+	const numSolutionWords = Math.floor(Math.random() * 3) + 3; // 3-5 words
+	const availableLettersSet = new Set(fallbackLetters);
+	const excludeWords = new Set([
+		fallback.w1.toUpperCase(),
+		fallback.w2.toUpperCase(),
+		fallback.w3.toUpperCase(),
+	]);
 
-	const solutionWords =
-		fallbackSolutionWords.length >= 3
-			? fallbackSolutionWords
-			: [fallback.w1, fallback.w2, fallback.w3];
+	const solutionWords: string[] = [];
+	const usedWords = new Set<string>();
+	const shuffledWords = [...uniqueWords].sort(() => Math.random() - 0.5);
+
+	for (const word of shuffledWords) {
+		if (solutionWords.length >= numSolutionWords) {
+			break;
+		}
+
+		const wordUpper = word.toUpperCase();
+
+		// Skip if already used or is an equation word
+		if (usedWords.has(wordUpper) || excludeWords.has(wordUpper)) {
+			continue;
+		}
+
+		// Check if word only contains letters from the mapping
+		const wordLetters = wordUpper.split("");
+		const allLettersInWord = wordLetters.every((letter) =>
+			availableLettersSet.has(letter),
+		);
+
+		if (allLettersInWord && wordLetters.length >= 2) {
+			solutionWords.push(wordUpper);
+			usedWords.add(wordUpper);
+		}
+	}
+
+	// Fallback to equation words if we didn't find enough
+	if (solutionWords.length < 3) {
+		solutionWords.push(fallback.w1, fallback.w2, fallback.w3);
+	}
 
 	const digitGroups = createDigitGroups(solutionWords, fallbackToNumber);
 

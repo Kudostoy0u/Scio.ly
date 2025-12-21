@@ -20,9 +20,38 @@ interface AssignmentQuestion {
 	charLength?: number;
 	encrypted?: string;
 	key?: string;
+	kShift?: number;
+	plainAlphabet?: string;
+	cipherAlphabet?: string;
+	matrix?: number[][];
+	decryptionMatrix?: number[][];
+	portaKeyword?: string;
+	nihilistPolybiusKey?: string;
+	nihilistCipherKey?: string;
+	checkerboardRowKey?: string;
+	checkerboardColKey?: string;
+	checkerboardPolybiusKey?: string;
+	checkerboardUsesIJ?: boolean;
+	blockSize?: number;
+	columnarKey?: string;
+	fractionationTable?: { [key: string]: string };
+	caesarShift?: number;
+	affineA?: number;
+	affineB?: number;
+	baconianBinaryType?: string;
+	cryptarithmData?: {
+		equation: string;
+		numericExample: string | null;
+		digitGroups: Array<{
+			digits: string;
+			word: string;
+		}>;
+	};
+	askForKeyword?: boolean;
 	hint?: string;
 	solution?: string | Record<string, string>;
 	correct_answer?: string;
+	points?: number;
 }
 
 interface CodebustersParams {
@@ -108,6 +137,28 @@ export function useAssignmentLoader({
 					encrypted: q.encrypted || "",
 					key: q.key || "",
 					hint: q.hint || "",
+					kShift: q.kShift,
+					plainAlphabet: q.plainAlphabet,
+					cipherAlphabet: q.cipherAlphabet,
+					matrix: q.matrix,
+					decryptionMatrix: q.decryptionMatrix,
+					portaKeyword: q.portaKeyword,
+					nihilistPolybiusKey: q.nihilistPolybiusKey,
+					nihilistCipherKey: q.nihilistCipherKey,
+					checkerboardRowKey: q.checkerboardRowKey,
+					checkerboardColKey: q.checkerboardColKey,
+					checkerboardPolybiusKey: q.checkerboardPolybiusKey,
+					checkerboardUsesIJ: q.checkerboardUsesIJ,
+					blockSize: q.blockSize,
+					columnarKey: q.columnarKey,
+					fractionationTable: q.fractionationTable,
+					caesarShift: q.caesarShift,
+					affineA: q.affineA,
+					affineB: q.affineB,
+					baconianBinaryType: q.baconianBinaryType,
+					cryptarithmData: q.cryptarithmData,
+					askForKeyword: q.askForKeyword,
+					points: typeof q.points === "number" ? q.points : undefined,
 					solution:
 						typeof q.solution === "object" && q.solution !== null
 							? (q.solution as { [key: string]: string })

@@ -27,7 +27,7 @@ export const TokenInput = ({
 	isHinted,
 	isCorrect,
 	focusedToken,
-	blockEnd,
+	blockEnd: _blockEnd,
 	quoteIndex,
 	onSolutionChange,
 	applyTokenToGrid,
@@ -41,10 +41,7 @@ export const TokenInput = ({
 		correctMapping[idx] || "",
 	);
 	return (
-		<div
-			key={idx}
-			className={`flex flex-col items-center ${blockEnd.has(idx) ? "mr-6 md:mr-10" : ""}`}
-		>
+		<div key={idx} className="flex flex-col items-center">
 			<div
 				className={`text-xs mb-1 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
 			>

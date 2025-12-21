@@ -13,7 +13,7 @@
 - media/ – image helpers (`media/preloadImage.ts`)
 
 ## Key Exports
-- Teams: `getTeamAccess`, `getTeamAccessCockroach`, `hasLeadershipAccess`, `hasLeadershipAccessCockroach`, `resolveTeamSlugToUnits`, `hashObject`, `teamCache`
+- Teams: `getTeamAccess`, `hasLeadershipAccess`, `resolveTeamSlugToUnits`, `hashObject`, `teamCache`
 - Storage: `StorageService`, `LocalStorageCache`, `globalApiCache`
 - Content: `generateDisplayName`, `stripTrailingParenthetical`, `normalizeMath`, `slugifyText`, `extractToc`
 - Assessments: `encodeBase52`, `decodeBase52`, `generateQuestionCode`, `getEventCapabilities`, `getLetterGradeFromPercentage`

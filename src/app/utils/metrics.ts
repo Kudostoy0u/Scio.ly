@@ -356,27 +356,110 @@ export const updateMetrics = async (
 			game_points: currentStats.game_points,
 		};
 
-		const { data, error } = await withAuthRetry(async () => {
-			const query = (await supabase
-				.from("user_stats")
-				.upsert([updatedStats] as unknown as never[])
-				.select()
-				.single()) as {
-				data: Database["public"]["Tables"]["user_stats"]["Row"] | null;
-				error: Error | null;
-			};
-			return query;
-		}, "updateMetrics");
+		// Use upsert with conflict handling - if it fails, retry with fresh data
+		let data: Database["public"]["Tables"]["user_stats"]["Row"] | null = null;
+		let error: Error | null = null;
+
+		try {
+			const result = await withAuthRetry(async () => {
+				const query = (await supabase
+					.from("user_stats")
+					.upsert([updatedStats] as unknown as never[], {
+						onConflict: "user_id,date",
+					})
+					.select()
+					.single()) as {
+					data: Database["public"]["Tables"]["user_stats"]["Row"] | null;
+					error: unknown;
+				};
+				return query;
+			}, "updateMetrics");
+
+			data = result.data;
+			error = result.error
+				? result.error instanceof Error
+					? result.error
+					: new Error(String(result.error))
+				: null;
+		} catch (upsertError: unknown) {
+			// If upsert fails with duplicate key error, fetch fresh data and retry once
+			if (
+				upsertError &&
+				typeof upsertError === "object" &&
+				"code" in upsertError &&
+				upsertError.code === "23505"
+			) {
+				// Fetch the current data again (might have been updated by another request)
+				const freshData = await fetchDailyUserStatsRow(userId, today);
+				if (freshData) {
+					// Recalculate with fresh data
+					const freshUpdatedStats = {
+						user_id: userId,
+						date: today,
+						questions_attempted: freshData.questions_attempted + attemptedDelta,
+						correct_answers: freshData.correct_answers + correctDelta,
+						events_practiced:
+							updates.eventName &&
+							!freshData.events_practiced.includes(updates.eventName)
+								? [...freshData.events_practiced, updates.eventName]
+								: freshData.events_practiced,
+						event_questions: {
+							...freshData.event_questions,
+							...(updates.eventName && attemptedDelta
+								? {
+										[updates.eventName]:
+											(freshData.event_questions?.[updates.eventName] || 0) +
+											attemptedDelta,
+									}
+								: {}),
+						},
+						game_points: freshData.game_points,
+					};
+
+					const retryResult = await withAuthRetry(async () => {
+						const query = (await supabase
+							.from("user_stats")
+							.upsert([freshUpdatedStats] as unknown as never[], {
+								onConflict: "user_id,date",
+							})
+							.select()
+							.single()) as {
+							data: Database["public"]["Tables"]["user_stats"]["Row"] | null;
+							error: unknown;
+						};
+						return query;
+					}, "updateMetrics");
+
+					data = retryResult.data;
+					error = retryResult.error
+						? retryResult.error instanceof Error
+							? retryResult.error
+							: new Error(String(retryResult.error))
+						: null;
+				} else {
+					error =
+						upsertError instanceof Error
+							? upsertError
+							: new Error(String(upsertError));
+				}
+			} else {
+				error =
+					upsertError instanceof Error
+						? upsertError
+						: new Error(String(upsertError));
+			}
+		}
 
 		if (error || !data) {
+			logger.error("updateMetrics error:", error);
 			return null;
 		}
 
 		saveLocalMetrics({
-			questionsAttempted: updatedStats.questions_attempted,
+			questionsAttempted: data.questions_attempted,
 
-			correctAnswers: updatedStats.correct_answers,
-			eventsPracticed: updatedStats.events_practiced,
+			correctAnswers: data.correct_answers,
+			eventsPracticed: data.events_practiced || [],
 			eventQuestions: updatedStats.event_questions,
 			gamePoints: updatedStats.game_points,
 		});

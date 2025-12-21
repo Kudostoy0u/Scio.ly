@@ -1,7 +1,24 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import type { AssignmentDetailsStepProps } from "./assignmentTypes";
+
+// Calculate default due date: 1 week from today at 11:59 PM
+function getDefaultDueDate(): string {
+	const oneWeekFromNow = new Date();
+	oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
+	oneWeekFromNow.setHours(23, 59, 0, 0);
+
+	// Format as YYYY-MM-DDTHH:mm for datetime-local input
+	const year = oneWeekFromNow.getFullYear();
+	const month = String(oneWeekFromNow.getMonth() + 1).padStart(2, "0");
+	const day = String(oneWeekFromNow.getDate()).padStart(2, "0");
+	const hours = String(oneWeekFromNow.getHours()).padStart(2, "0");
+	const minutes = String(oneWeekFromNow.getMinutes()).padStart(2, "0");
+
+	return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
 
 export default function AssignmentDetailsStep({
 	darkMode,
@@ -10,9 +27,34 @@ export default function AssignmentDetailsStep({
 	onError,
 	details,
 	onDetailsChange,
-	prefillEventName = "",
 	availableEvents,
 }: AssignmentDetailsStepProps) {
+	const [dueDateEnabled, setDueDateEnabled] = useState(false);
+	const prevDueDateEnabledRef = useRef(dueDateEnabled);
+
+	// Set default due date when enabled, clear when disabled
+	useEffect(() => {
+		// Only run when dueDateEnabled actually changes
+		if (prevDueDateEnabledRef.current === dueDateEnabled) {
+			return;
+		}
+
+		prevDueDateEnabledRef.current = dueDateEnabled;
+
+		if (dueDateEnabled) {
+			// Only set default if no date is currently set
+			if (!details.dueDate) {
+				const defaultDate = getDefaultDueDate();
+				onDetailsChange({ dueDate: defaultDate });
+			}
+		} else {
+			// Clear date when disabled (only if it's currently set to avoid unnecessary updates)
+			if (details.dueDate) {
+				onDetailsChange({ dueDate: "" });
+			}
+		}
+	}, [dueDateEnabled, details.dueDate, onDetailsChange]);
+
 	const handleNext = () => {
 		const error = validateDetails();
 		if (error) {
@@ -66,88 +108,46 @@ export default function AssignmentDetailsStep({
 					/>
 				</div>
 
-				{!prefillEventName && (
-					<div>
-						<label
-							htmlFor="event-selection"
-							className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-						>
-							Event *
-						</label>
-						<select
-							id="event-selection"
-							value={details.eventName}
-							onChange={(e) => onDetailsChange({ eventName: e.target.value })}
-							className={`w-full px-3 py-2 border rounded-lg ${
-								darkMode
-									? "bg-gray-700 border-gray-600 text-white"
-									: "bg-white border-gray-300 text-gray-900"
-							}`}
-						>
-							<option value="">Select an event</option>
-							{availableEvents.map((event) => (
-								<option key={event} value={event}>
-									{event}
-								</option>
-							))}
-						</select>
-					</div>
-				)}
-
 				<div>
 					<label
-						htmlFor="assignment-type"
+						htmlFor="event-selection"
 						className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 					>
-						Type
+						Event <span className="text-red-500">*</span>
 					</label>
 					<select
-						id="assignment-type"
-						value={details.assignmentType}
-						onChange={(e) => {
-							const value = e.target.value;
-							if (
-								value === "homework" ||
-								value === "project" ||
-								value === "study" ||
-								value === "other"
-							) {
-								onDetailsChange({
-									assignmentType: value as
-										| "homework"
-										| "project"
-										| "study"
-										| "other",
-								});
-							}
-						}}
+						id="event-selection"
+						value={details.eventName}
+						onChange={(e) => onDetailsChange({ eventName: e.target.value })}
 						className={`w-full px-3 py-2 border rounded-lg ${
 							darkMode
 								? "bg-gray-700 border-gray-600 text-white"
 								: "bg-white border-gray-300 text-gray-900"
 						}`}
 					>
-						<option value="homework">Homework</option>
-						<option value="project">Project</option>
-						<option value="study">Study Guide</option>
-						<option value="other">Other</option>
+						<option value="">Select an event</option>
+						{availableEvents.map((event) => (
+							<option key={event} value={event}>
+								{event}
+							</option>
+						))}
 					</select>
 				</div>
 
 				<div>
 					<label
-						htmlFor="assignment-points"
+						htmlFor="assignment-time-limit"
 						className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 					>
-						Points
+						Time Limit (minutes)
 					</label>
 					<input
-						id="assignment-points"
+						id="assignment-time-limit"
 						type="number"
-						value={Number.isFinite(details.points) ? details.points : 0}
+						value={details.timeLimitMinutes || ""}
 						onChange={(e) =>
 							onDetailsChange({
-								points: Number.parseInt(e.target.value, 10) || 0,
+								timeLimitMinutes: Number.parseInt(e.target.value, 10) || 0,
 							})
 						}
 						className={`w-full px-3 py-2 border rounded-lg ${
@@ -155,27 +155,39 @@ export default function AssignmentDetailsStep({
 								? "bg-gray-700 border-gray-600 text-white"
 								: "bg-white border-gray-300 text-gray-900"
 						}`}
-						placeholder="Enter point value"
+						placeholder="Optional"
 						min={0}
 					/>
 				</div>
 
 				<div>
-					<label
-						htmlFor="assignment-due-date"
-						className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-					>
-						Due Date
-					</label>
+					<div className="flex items-center gap-2 mb-1">
+						<label
+							htmlFor="assignment-due-date"
+							className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+						>
+							Due Date
+						</label>
+						<button
+							type="button"
+							onClick={() => setDueDateEnabled(!dueDateEnabled)}
+							className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+						>
+							{dueDateEnabled ? "disable?" : "enable?"}
+						</button>
+					</div>
 					<input
 						id="assignment-due-date"
-						type="date"
+						type="datetime-local"
 						value={details.dueDate}
 						onChange={(e) => onDetailsChange({ dueDate: e.target.value })}
+						disabled={!dueDateEnabled}
 						className={`w-full px-3 py-2 border rounded-lg ${
-							darkMode
-								? "bg-gray-700 border-gray-600 text-white"
-								: "bg-white border-gray-300 text-gray-900"
+							!dueDateEnabled
+								? "bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed"
+								: darkMode
+									? "bg-gray-700 border-gray-600 text-white"
+									: "bg-white border-gray-300 text-gray-900"
 						}`}
 					/>
 				</div>

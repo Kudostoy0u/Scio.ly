@@ -1,18 +1,24 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Eye, Pencil } from "lucide-react";
 import type { Conflict } from "./rosterUtils";
 
 interface RosterHeaderProps {
 	darkMode: boolean;
 	conflicts: Conflict[];
 	isSaving: boolean;
+	isCaptain: boolean;
+	isEditMode: boolean;
+	onToggleMode: () => void;
 }
 
 export default function RosterHeader({
 	darkMode,
 	conflicts,
 	isSaving,
+	isCaptain,
+	isEditMode,
+	onToggleMode,
 }: RosterHeaderProps) {
 	return (
 		<div className="flex items-center justify-between mb-6">
@@ -22,6 +28,28 @@ export default function RosterHeader({
 				>
 					Team Roster
 				</h2>
+				{isCaptain && (
+					<button
+						type="button"
+						onClick={onToggleMode}
+						className={`p-1.5 rounded-lg border-2 transition-colors ${
+							darkMode
+								? isEditMode
+									? "bg-blue-600 border-blue-500 text-white hover:bg-blue-700"
+									: "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"
+								: isEditMode
+									? "bg-blue-600 border-blue-500 text-white hover:bg-blue-700"
+									: "bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200"
+						}`}
+						title={isEditMode ? "Switch to view mode" : "Switch to edit mode"}
+					>
+						{isEditMode ? (
+							<Pencil className="w-4 h-4" />
+						) : (
+							<Eye className="w-4 h-4" />
+						)}
+					</button>
+				)}
 				{conflicts.length > 0 && (
 					<div className="relative group">
 						<AlertTriangle className="w-5 h-5 text-yellow-500" />

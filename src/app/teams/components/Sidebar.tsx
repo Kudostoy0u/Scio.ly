@@ -1,15 +1,8 @@
 "use client";
 
 import { useTheme } from "@/app/contexts/ThemeContext";
-import {
-	Archive,
-	Calendar,
-	ChevronRight,
-	Home,
-	Settings,
-	Users,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Calendar, ChevronRight, Home, Settings, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface Team {
 	id: string;
@@ -37,7 +30,11 @@ export default function Sidebar({
 	onNavigateToMainDashboard,
 }: SidebarProps) {
 	const { darkMode } = useTheme();
-	const router = useRouter();
+	const [isMounted, setIsMounted] = useState(false);
+
+	useEffect(() => {
+		setIsMounted(true);
+	}, []);
 
 	const sidebarItems = [
 		{
@@ -53,10 +50,6 @@ export default function Sidebar({
 			tab: "settings" as const,
 		},
 	];
-
-	const handleArchivedClick = () => {
-		router.push("/teams/archived");
-	};
 
 	return (
 		<div
@@ -116,83 +109,68 @@ export default function Sidebar({
 						</button>
 					))}
 
-					{/* Archived Teams Button */}
-					<button
-						type="button"
-						onClick={handleArchivedClick}
-						className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${
-							darkMode
-								? "text-gray-300 hover:bg-gray-800 hover:text-white"
-								: "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-						}`}
-					>
-						<div className="flex items-center space-x-3">
-							<Archive className="w-4 h-4" />
-							<span>Archived</span>
-						</div>
-						<ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-					</button>
-
 					{/* Teams Section - Right below navigation items */}
-					{userTeams.length > 0 && (
-						<div className="mt-6">
-							<div className="mb-3">
-								<h3
-									className={`text-xs font-semibold uppercase tracking-wider ${
-										darkMode ? "text-gray-400" : "text-gray-500"
-									}`}
-								>
-									Your Teams
-								</h3>
-							</div>
-							<div className="space-y-1">
-								{userTeams.map((team) => (
-									<button
-										type="button"
-										key={team.id}
-										onClick={() => onTeamSelect?.(team)}
-										className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group ${
-											currentTeamSlug === team.slug
-												? darkMode
-													? "bg-blue-900/20 text-blue-300 border border-blue-800"
-													: "bg-blue-50 text-blue-700 border border-blue-200"
-												: darkMode
-													? "text-gray-300 hover:bg-gray-800 hover:text-white"
-													: "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+					<div className="mt-6">
+						{isMounted && userTeams.length > 0 && (
+							<>
+								<div className="mb-3">
+									<h3
+										className={`text-xs font-semibold uppercase tracking-wider ${
+											darkMode ? "text-gray-400" : "text-gray-500"
 										}`}
 									>
-										<div className="flex items-center space-x-3 min-w-0 flex-1">
-											<div
-												className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-													darkMode ? "bg-gray-800" : "bg-gray-100"
-												}`}
-											>
-												<Users className="w-4 h-4" />
-											</div>
-											<div className="min-w-0 flex-1">
-												<div className="font-medium truncate">
-													{team.school}
-												</div>
+										Your Teams
+									</h3>
+								</div>
+								<div className="space-y-1">
+									{userTeams.map((team) => (
+										<button
+											type="button"
+											key={team.id}
+											onClick={() => onTeamSelect?.(team)}
+											className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group ${
+												currentTeamSlug === team.slug && activeTab === "home"
+													? darkMode
+														? "bg-blue-900/20 text-blue-300 border border-blue-800"
+														: "bg-blue-50 text-blue-700 border border-blue-200"
+													: darkMode
+														? "text-gray-300 hover:bg-gray-800 hover:text-white"
+														: "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+											}`}
+										>
+											<div className="flex items-center space-x-3 min-w-0 flex-1">
 												<div
-													className={`text-xs truncate ${
-														currentTeamSlug === team.slug
-															? darkMode
-																? "text-blue-400"
-																: "text-blue-600"
-															: darkMode
-																? "text-gray-400"
-																: "text-gray-500"
+													className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+														darkMode ? "bg-gray-800" : "bg-gray-100"
 													}`}
 												>
-													Division {team.division}
+													<Users className="w-4 h-4" />
+												</div>
+												<div className="min-w-0 flex-1">
+													<div className="font-medium truncate">
+														{team.school}
+													</div>
+													<div
+														className={`text-xs truncate ${
+															currentTeamSlug === team.slug
+																? darkMode
+																	? "text-blue-400"
+																	: "text-blue-600"
+																: darkMode
+																	? "text-gray-400"
+																	: "text-gray-500"
+														}`}
+													>
+														Division {team.division}
+													</div>
 												</div>
 											</div>
-										</div>
-									</button>
-								))}
-							</div>
-						</div>
-					)}
+										</button>
+									))}
+								</div>
+							</>
+						)}
+					</div>
 				</nav>
 			</div>
 		</div>

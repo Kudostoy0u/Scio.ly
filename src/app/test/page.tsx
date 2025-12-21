@@ -49,6 +49,10 @@ export default async function Page({
 			? Number(parsed.idPercentage)
 			: undefined;
 	const pureIdOnly = parsed?.pureIdOnly === true;
+	const rmTypeFilter =
+		parsed?.rmTypeFilter === "rock" || parsed?.rmTypeFilter === "mineral"
+			? (parsed.rmTypeFilter as "rock" | "mineral")
+			: undefined;
 
 	// Do not SSR-fetch questions. Client logic handles ID/base composition.
 	// Only pass through router parameters so the client can fetch appropriately.
@@ -64,6 +68,7 @@ export default async function Page({
 				difficulties?: string[];
 				idPercentage?: number;
 				pureIdOnly?: boolean;
+				rmTypeFilter?: "rock" | "mineral";
 				assignmentId?: string;
 				teamsAssign?: string;
 				viewResults?: string;
@@ -80,6 +85,7 @@ export default async function Page({
 		difficulties,
 		idPercentage,
 		pureIdOnly,
+		rmTypeFilter,
 		assignmentId,
 		teamsAssign,
 		viewResults,

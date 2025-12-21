@@ -10,6 +10,7 @@ import Header from "@/app/components/Header";
 import ShareModal from "@/app/components/ShareModal";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { toast } from "react-toastify";
+import { default as FloatingTimer } from "./components/FloatingTimer";
 import { default as ProgressBar } from "./components/ProgressBar";
 import { default as TestFooter } from "./components/TestFooter";
 import { default as TestHeader } from "./components/TestHeader";
@@ -69,15 +70,34 @@ const formatQuestionsForPrint = (
 };
 
 const createAnswerKey = (data: Question[]) => {
-	let answerKeyHtml = '<div class="answer-key"><h2>Answer Key</h2>';
+	let answerKeyHtml = '<div class="answer-key-section">';
+	answerKeyHtml += '<div class="answer-key-header">ANSWER KEY</div>';
+	answerKeyHtml += '<div class="answer-key-content">';
 
-	for (const [index, question] of data.entries()) {
-		if (question.answers && question.answers.length > 0) {
-			answerKeyHtml += `<div class="answer-item">${index + 1}. ${question.answers.join(", ")}</div>`;
+	const totalQuestions = data.length;
+	const columns = Math.min(5, Math.ceil(totalQuestions / 20)); // 20 questions per column max
+	const questionsPerColumn = Math.ceil(totalQuestions / columns);
+
+	for (let col = 0; col < columns; col++) {
+		answerKeyHtml += '<div class="answer-column">';
+
+		for (
+			let i = col * questionsPerColumn;
+			i < Math.min((col + 1) * questionsPerColumn, totalQuestions);
+			i++
+		) {
+			const question = data[i];
+			if (question?.answers && question.answers.length > 0) {
+				answerKeyHtml += `<div class="answer-item">${i + 1}. ${question.answers.join(", ")}</div>`;
+			}
 		}
+
+		answerKeyHtml += "</div>";
 	}
 
 	answerKeyHtml += "</div>";
+	answerKeyHtml += "</div>";
+
 	return answerKeyHtml;
 };
 
@@ -225,6 +245,11 @@ export default function TestContent({
 	return (
 		<>
 			<Header />
+			<FloatingTimer
+				timeLeft={timeLeft}
+				darkMode={darkMode}
+				isSubmitted={isSubmitted}
+			/>
 			<TestLayout darkMode={darkMode}>
 				<div className="pt-20">
 					<TestHeader
@@ -236,7 +261,7 @@ export default function TestContent({
 					/>
 
 					{/* Inline back link to Practice */}
-					<div className="w-full max-w-3xl mt-0.5 mb-5">
+					<div className="w-full max-w-3xl mt-0.5 mb-5 px-3 md:px-0">
 						<button
 							type="button"
 							onClick={handleBackToMain}
@@ -260,19 +285,22 @@ export default function TestContent({
 							/>
 						)
 					) : (
-						<ProgressBar
-							answeredCount={Object.keys(userAnswers).length}
-							totalCount={data.length}
-							isSubmitted={isSubmitted}
-						/>
+						<div className="px-3 md:px-0">
+							<ProgressBar
+								answeredCount={Object.keys(userAnswers).length}
+								totalCount={data.length}
+								isSubmitted={isSubmitted}
+								darkMode={darkMode}
+							/>
+						</div>
 					)}
 
 					<main
-						className={`w-full max-w-[90vw] md:max-w-3xl min-w-[50vw] rounded-lg shadow-md p-3 md:p-6 mt-4 ${
+						className={`w-screen md:w-full md:max-w-3xl rounded-none md:rounded-lg shadow-md px-3 md:p-6 pt-4 pb-4 md:pt-4 mt-4 relative left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:mx-auto ${
 							darkMode ? "bg-gray-800" : "bg-white"
 						}`}
 					>
-						<div className="flex justify-between items-center mb-4">
+						<div className="flex justify-between items-center mb-4 pt-1">
 							<div className="flex items-center gap-4">
 								<button
 									type="button"

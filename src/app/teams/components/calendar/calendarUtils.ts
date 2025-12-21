@@ -18,7 +18,9 @@ export interface CalendarEvent {
 	is_recurring: boolean;
 	recurrence_pattern?: Record<string, unknown>;
 	created_by: string;
+	owner_user_id?: string | null;
 	team_id?: string;
+	subteam_id?: string;
 	attendees?: Array<{
 		user_id: string;
 		status: "pending" | "attending" | "declined" | "tentative";
@@ -29,7 +31,8 @@ export interface CalendarEvent {
 
 export interface RecurringMeeting {
 	id: string;
-	team_id: string;
+	team_id?: string;
+	subteam_id?: string;
 	days_of_week: number[];
 	start_time: string;
 	end_time: string;
@@ -61,6 +64,7 @@ export interface EventForm {
 	recurrence_pattern: Record<string, unknown>;
 	meeting_type: "personal" | "team";
 	selected_team_id: string;
+	selected_subteam_id: string;
 }
 
 export interface RecurringForm {
@@ -75,6 +79,7 @@ export interface RecurringForm {
 	exceptions: string[];
 	meeting_type: "personal" | "team";
 	selected_team_id: string;
+	selected_subteam_id: string;
 }
 
 export interface UserTeam {
@@ -82,8 +87,13 @@ export interface UserTeam {
 	name: string;
 	slug: string;
 	school: string;
+	division?: "B" | "C";
 	user_role: string;
 	team_id: string;
+	subteams?: Array<{
+		id: string;
+		name: string;
+	}>;
 }
 
 // Get events for a specific date
@@ -250,31 +260,6 @@ export const getEventColors = (type: string, darkMode: boolean) => {
 };
 
 // Get team options for dropdowns
-export const getTeamOptions = (userTeams: UserTeam[]) => {
-	type TeamOption = UserTeam & { isAllTeams?: boolean };
-	return userTeams.reduce((acc: TeamOption[], team) => {
-		const schoolKey = team.school || "Unknown School";
-		const existingGroup = acc.find((group) => group.school === schoolKey);
-
-		if (existingGroup) {
-			acc.push(team);
-		} else {
-			acc.push({
-				id: `all-${schoolKey}`,
-				school: schoolKey,
-				team_id: "All",
-				name: "",
-				slug: "",
-				user_role: "",
-				isAllTeams: true,
-			});
-			acc.push(team);
-		}
-
-		return acc;
-	}, []);
-};
-
 // Default form values
 export const getDefaultEventForm = (): EventForm => ({
 	title: "",
@@ -289,6 +274,7 @@ export const getDefaultEventForm = (): EventForm => ({
 	recurrence_pattern: {},
 	meeting_type: "personal",
 	selected_team_id: "",
+	selected_subteam_id: "",
 });
 
 export const getDefaultRecurringForm = (): RecurringForm => ({
@@ -303,4 +289,5 @@ export const getDefaultRecurringForm = (): RecurringForm => ({
 	exceptions: [],
 	meeting_type: "personal",
 	selected_team_id: "",
+	selected_subteam_id: "",
 });

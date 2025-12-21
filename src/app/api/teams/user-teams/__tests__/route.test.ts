@@ -1,5 +1,5 @@
 import { GET } from "@/app/api/teams/user-teams/route";
-import { cockroachDBTeamsService } from "@/lib/services/cockroachdb-teams";
+import { teamsService } from "@/lib/services/teams";
 import { getServerUser } from "@/lib/supabaseServer";
 import type { User } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
@@ -10,14 +10,14 @@ vi.mock("@/lib/supabaseServer", () => ({
 	getServerUser: vi.fn(),
 }));
 
-vi.mock("@/lib/services/cockroachdb-teams", () => ({
-	cockroachDBTeamsService: {
+vi.mock("@/lib/services/teams", () => ({
+	teamsService: {
 		getUserTeams: vi.fn(),
 	},
 }));
 
 const mockGetServerUser = vi.mocked(getServerUser);
-const mockService = vi.mocked(cockroachDBTeamsService);
+const mockService = vi.mocked(teamsService);
 
 describe("/api/teams/user-teams", () => {
 	const mockUserId = "user-123";
@@ -221,7 +221,7 @@ describe("/api/teams/user-teams", () => {
 							id: mockUserId,
 							name: "John Doe",
 							email: "john@example.com",
-							role: "co_captain",
+							role: "captain",
 							joined_at: "2023-01-01T00:00:00.000Z",
 						},
 					],
@@ -257,7 +257,7 @@ describe("/api/teams/user-teams", () => {
 			const body = await response.json();
 			expect(body.teams).toHaveLength(3);
 			expect(body.teams[0].members[0].role).toBe("captain");
-			expect(body.teams[1].members[0].role).toBe("co_captain");
+			expect(body.teams[1].members[0].role).toBe("captain");
 			expect(body.teams[2].members[0].role).toBe("member");
 		});
 

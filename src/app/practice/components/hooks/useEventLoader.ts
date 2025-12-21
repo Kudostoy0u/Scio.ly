@@ -1,5 +1,6 @@
 import type { Event } from "@/app/practice/types";
 import { EVENTS_2026 } from "@/lib/constants/events2026";
+import { getAllSubtopics } from "@/lib/constants/subtopics";
 import logger from "@/lib/utils/logging/logger";
 import { useEffect, useState } from "react";
 
@@ -23,15 +24,10 @@ export function useEventLoader(viewMode: "current" | "all") {
 
 				setEvents(eventsWithIds);
 
-				// Load subtopics from JSON file
+				// Load subtopics from module (single source of truth)
 				try {
-					const subtopicsRes = await fetch("/subtopics.json");
-					if (subtopicsRes.ok) {
-						const eventSubtopics = await subtopicsRes.json();
-						window.eventSubtopicsMapping = eventSubtopics;
-					} else {
-						window.eventSubtopicsMapping = {};
-					}
+					const eventSubtopics = getAllSubtopics();
+					window.eventSubtopicsMapping = eventSubtopics;
 				} catch (err) {
 					logger.error("Error loading subtopics:", err);
 					window.eventSubtopicsMapping = {};
@@ -49,10 +45,7 @@ export function useEventLoader(viewMode: "current" | "all") {
 				setLoading(true);
 				setError(null);
 
-				const [statsRes, subtopicsRes] = await Promise.all([
-					fetch("/api/meta/stats"),
-					fetch("/subtopics.json"),
-				]);
+				const statsRes = await fetch("/api/meta/stats");
 
 				if (!statsRes.ok) {
 					throw new Error("Failed to fetch stats");
@@ -74,16 +67,13 @@ export function useEventLoader(viewMode: "current" | "all") {
 
 				setEvents(mapped);
 
-				if (subtopicsRes.ok) {
-					try {
-						const subtopicsJson = await subtopicsRes.json();
-						window.eventSubtopicsMapping = subtopicsJson as Record<
-							string,
-							string[]
-						>;
-					} catch {
-						// Ignore errors
-					}
+				// Load subtopics from module (single source of truth)
+				try {
+					const eventSubtopics = getAllSubtopics();
+					window.eventSubtopicsMapping = eventSubtopics;
+				} catch (err) {
+					logger.error("Error loading subtopics:", err);
+					window.eventSubtopicsMapping = {};
 				}
 			} catch (err) {
 				logger.error("Error loading all events:", err);

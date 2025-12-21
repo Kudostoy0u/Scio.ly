@@ -2,8 +2,39 @@
 
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { AlertTriangle } from "lucide-react";
+import { useMemo } from "react";
 import type { Member } from "../types";
 import { DIVISION_B_GROUPS, DIVISION_C_GROUPS } from "./roster/rosterUtils";
+
+/**
+ * Science Olympiad Division B events
+ * Standard events list for the 2024-2025 season
+ */
+const DIVISION_B_EVENTS = [
+	"Anatomy & Physiology",
+	"Boomilever",
+	"Circuit Lab",
+	"Codebusters",
+	"Crime Busters",
+	"Disease Detectives",
+	"Dynamic Planet",
+	"Entomology",
+	"Experimental Design",
+	"Helicopter",
+	"Heredity",
+	"Hovercraft",
+	"Machines",
+	"Meteorology",
+	"Metric Mastery",
+	"Mission Possible",
+	"Potions & Poisons",
+	"Remote Sensing",
+	"Rocks and Minerals",
+	"Scrambler",
+	"Solar System",
+	"Water Quality",
+	"Write It Do It",
+] as const;
 
 /**
  * Science Olympiad Division C events
@@ -44,14 +75,16 @@ interface EventAssignmentModalProps {
 	 * @param subteamId - The ID of the subteam to assign the event to
 	 */
 	onSelectEvent: (eventName: string, subteamId: string) => Promise<void>;
-	/** List of available events (defaults to Division C events) */
+	/** List of available events (defaults to division-specific events) */
 	events?: readonly string[];
 	/** The member being assigned events */
 	selectedMember: Member | null;
 	/** The ID of the subteam for the member */
 	subteamId: string;
-	/** Division (B or C) for conflict detection */
+	/** Division (B or C) for conflict detection and event list selection */
 	division?: "B" | "C";
+	/** Custom events added to the roster (from blockOverrides) */
+	customEvents?: string[];
 }
 
 /**
@@ -85,10 +118,11 @@ export default function EventAssignmentModal({
 	isOpen,
 	onClose,
 	onSelectEvent,
-	events = DIVISION_C_EVENTS,
+	events,
 	selectedMember,
 	subteamId,
 	division = "C",
+	customEvents = [],
 }: EventAssignmentModalProps) {
 	const { darkMode } = useTheme();
 
@@ -96,6 +130,24 @@ export default function EventAssignmentModal({
 	if (!(isOpen && selectedMember)) {
 		return null;
 	}
+
+	// Get the default events list based on division if not provided
+	const defaultEvents =
+		division === "B" ? DIVISION_B_EVENTS : DIVISION_C_EVENTS;
+
+	// Merge default events with custom roster events
+	const allEvents = useMemo(() => {
+		const eventSet = new Set<string>();
+		// Add default division events
+		for (const event of events || defaultEvents) {
+			eventSet.add(event);
+		}
+		// Add custom roster events
+		for (const event of customEvents) {
+			eventSet.add(event);
+		}
+		return Array.from(eventSet).sort();
+	}, [events, defaultEvents, customEvents]);
 
 	// Get the appropriate conflict groups based on division
 	const conflictGroups =
@@ -189,7 +241,7 @@ export default function EventAssignmentModal({
 						</p>
 
 						{/* Event buttons */}
-						{events.map((event) => {
+						{allEvents.map((event) => {
 							const conflictWarning = getConflictWarning(event);
 							const hasConflict = !!conflictWarning;
 

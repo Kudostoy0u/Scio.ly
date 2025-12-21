@@ -1,11 +1,11 @@
 import { dbPg } from "@/lib/db";
-import { users } from "@/lib/db/schema/core";
+import { users } from "@/lib/db/schema";
 import {
-	newTeamGroups,
-	newTeamMemberships,
-	newTeamRosterData,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+	teamMemberships,
+	teamRoster,
+	teamSubteams,
+	teams,
+} from "@/lib/db/schema";
 import { UUIDSchema } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
@@ -52,9 +52,9 @@ export async function GET(
 
 		// Resolve the slug to team group using Drizzle ORM
 		const [groupResult] = await dbPg
-			.select({ id: newTeamGroups.id })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.select({ id: teams.id })
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (!groupResult) {
@@ -65,14 +65,14 @@ export async function GET(
 
 		// Check if user is a member of this team group using Drizzle ORM
 		const membershipResult = await dbPg
-			.select({ role: newTeamMemberships.role })
-			.from(newTeamMemberships)
-			.innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+			.select({ role: teamMemberships.role })
+			.from(teamMemberships)
+			.innerJoin(teamSubteams, eq(teamMemberships.teamId, teamSubteams.id))
 			.where(
 				and(
-					eq(newTeamUnits.groupId, groupId),
-					eq(newTeamMemberships.userId, user.id),
-					eq(newTeamMemberships.status, "active"),
+					eq(teamSubteams.teamId, groupId),
+					eq(teamMemberships.userId, user.id),
+					eq(teamMemberships.status, "active"),
 				),
 			);
 
@@ -81,15 +81,15 @@ export async function GET(
 		}
 
 		// Build where conditions for team units
-		const teamUnitsWhere = [eq(newTeamUnits.groupId, groupId)];
+		const teamUnitsWhere = [eq(teamSubteams.teamId, groupId)];
 		if (subteamId) {
-			teamUnitsWhere.push(eq(newTeamUnits.id, subteamId));
+			teamUnitsWhere.push(eq(teamSubteams.id, subteamId));
 		}
 
 		// Get team units using Drizzle ORM
 		const teamUnits = await dbPg
-			.select({ id: newTeamUnits.id })
-			.from(newTeamUnits)
+			.select({ id: teamSubteams.id })
+			.from(teamSubteams)
 			.where(and(...teamUnitsWhere));
 
 		const teamUnitIds = teamUnits.map((u) => u.id);
@@ -100,36 +100,36 @@ export async function GET(
 
 		// Get team members from memberships table using Drizzle ORM
 		const membersWhere = [
-			inArray(newTeamMemberships.teamId, teamUnitIds),
-			eq(newTeamMemberships.status, "active"),
+			inArray(teamMemberships.teamId, teamUnitIds),
+			eq(teamMemberships.status, "active"),
 		];
 
 		const membersResult = await dbPg
 			.select({
-				user_id: newTeamMemberships.userId,
-				role: newTeamMemberships.role,
-				joined_at: newTeamMemberships.joinedAt,
-				team_unit_id: newTeamUnits.id,
-				team_id: newTeamUnits.teamId,
-				description: newTeamUnits.description,
+				user_id: teamMemberships.userId,
+				role: teamMemberships.role,
+				joined_at: teamMemberships.joinedAt,
+				team_unit_id: teamSubteams.id,
+				team_id: teamSubteams.teamId,
+				description: teamSubteams.description,
 			})
-			.from(newTeamMemberships)
-			.innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+			.from(teamMemberships)
+			.innerJoin(teamSubteams, eq(teamMemberships.teamId, teamSubteams.id))
 			.where(and(...membersWhere));
 
 		// Get roster data if it exists (for additional student names) using Drizzle ORM
-		const rosterWhere = [inArray(newTeamRosterData.teamUnitId, teamUnitIds)];
+		const rosterWhere = [inArray(teamRoster.subteamId, teamUnitIds)];
 		if (subteamId) {
-			rosterWhere.push(eq(newTeamRosterData.teamUnitId, subteamId));
+			rosterWhere.push(eq(teamRoster.subteamId, subteamId));
 		}
 
 		const rosterResult = await dbPg
 			.select({
-				student_name: newTeamRosterData.studentName,
-				user_id: newTeamRosterData.userId,
-				team_unit_id: newTeamRosterData.teamUnitId,
+				student_name: teamRoster.displayName,
+				user_id: teamRoster.userId,
+				team_unit_id: teamRoster.subteamId,
 			})
-			.from(newTeamRosterData)
+			.from(teamRoster)
 			.where(and(...rosterWhere));
 
 		// Get real user data using Drizzle ORM
@@ -205,7 +205,7 @@ export async function GET(
 		> = {};
 
 		for (const rosterEntry of rosterResult) {
-			if (rosterEntry.student_name) {
+			if (rosterEntry.student_name && rosterEntry.team_unit_id) {
 				const studentName = rosterEntry.student_name;
 
 				// If this student already exists, update the link status
@@ -228,7 +228,6 @@ export async function GET(
 			}
 		}
 
-		// Then, add roster entries to linkStatus
 		for (const [studentName, rosterData] of Object.entries(rosterByStudent)) {
 			// Get user data if this roster entry is linked
 			let userEmail: string | null = null;

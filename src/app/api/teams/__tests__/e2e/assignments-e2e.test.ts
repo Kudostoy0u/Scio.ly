@@ -67,7 +67,7 @@ describe("Assignment Management E2E", () => {
 	afterAll(() => {
 		// Cleanup
 		const userIds = testUsers.map((u) => u.id);
-		const teamGroupIds = testTeams.map((t) => t.groupId);
+		const teamGroupIds = testTeams.map((t) => t.teamId);
 		cleanupTestData(userIds, teamGroupIds);
 	});
 
@@ -136,6 +136,7 @@ describe("Assignment Management E2E", () => {
 			addAssignmentRosterEntry({
 				assignmentId: assignment.id,
 				studentName: "Member User",
+				displayName: "Member User",
 				userId: member.id,
 				subteamId: team.subteamId,
 			});
@@ -145,7 +146,7 @@ describe("Assignment Management E2E", () => {
 
 			expect(rosterAssignment).toBeDefined();
 			expect(rosterAssignment?.userId).toBe(member.id);
-			expect(rosterAssignment?.studentName).toBe("Member User");
+			expect(rosterAssignment?.displayName).toBe("Member User");
 		});
 	});
 

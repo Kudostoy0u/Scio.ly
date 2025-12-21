@@ -6,140 +6,78 @@ import logger from "@/lib/utils/logging/logger";
 import { GoogleGenAI } from "@google/genai";
 
 /**
- * Environment variable containing comma-separated Gemini API keys
- * Used for load balancing across multiple API keys
+ * Environment variable containing Gemini API key
  */
-const GEMINI_API_KEYS =
-	process.env.GEMINI_API_KEYS?.split(",").map((key) => key.trim()) || [];
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 
 /**
- * Client and key information pair
+ * Client information
  */
 export interface ClientWithKey {
 	client: GoogleGenAI;
-	keyIndex: number;
 	apiKey: string;
 }
 
 /**
- * Gemini client manager for load balancing and failover
+ * Gemini client manager
  */
 export class GeminiClientManager {
-	/** Array of Gemini AI clients for load balancing */
-	private aiClients: GoogleGenAI[] = [];
-	/** Array of API keys corresponding to clients */
-	private apiKeys: string[] = [];
+	/** Gemini AI client */
+	private aiClient: GoogleGenAI | null = null;
+	/** API key */
+	private apiKey = "";
 
 	/**
-	 * Initializes the Gemini client manager with available API keys
-	 * Sets up multiple clients for load balancing and failover
+	 * Initializes the Gemini client manager with the API key
 	 */
 	constructor() {
-		// Initialize AI clients with available API keys
-		GEMINI_API_KEYS.forEach((apiKey, _index) => {
-			if (apiKey) {
-				this.aiClients.push(new GoogleGenAI({ apiKey }));
-				this.apiKeys.push(apiKey);
-			}
-		});
+		if (GEMINI_API_KEY) {
+			this.aiClient = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+			this.apiKey = GEMINI_API_KEY;
 
-		if (this.aiClients.length === 0) {
-			logger.warn("No Gemini API keys provided, AI features will be disabled");
-		} else if (process.env.NODE_ENV !== "production") {
-			// Log initialization in non-production environments
-			logger.log(
-				`Initialized Gemini client with ${this.aiClients.length} API keys`,
-			);
+			if (process.env.NODE_ENV !== "production") {
+				logger.log("Initialized Gemini client");
+			}
+		} else {
+			logger.warn("No GEMINI_API_KEY provided, AI features will be disabled");
 		}
 	}
 
 	/**
-	 * Gets a random Gemini client
-	 * Provides random load balancing across multiple API keys
+	 * Gets the Gemini client
 	 * @returns {ClientWithKey} Client with key information
 	 */
-	public getRandomClient(): ClientWithKey {
-		if (this.aiClients.length === 0) {
-			throw new Error("No Gemini API clients available");
+	public getClient(): ClientWithKey {
+		if (!this.aiClient) {
+			throw new Error("Gemini API client not initialized");
 		}
 
-		const keyIndex = Math.floor(Math.random() * this.aiClients.length);
-		const client = this.aiClients[keyIndex];
-		const apiKey = this.apiKeys[keyIndex];
-		if (!(client && apiKey)) {
-			throw new Error("No AI client or API key available");
-		}
 		return {
-			client,
-			keyIndex,
-			apiKey,
+			client: this.aiClient,
+			apiKey: this.apiKey,
 		};
 	}
 
 	/**
-	 * Gets the API key at a specific index
-	 * @param {number} keyIndex - Index of the API key
+	 * Gets the masked API key
 	 * @returns {string} API key (masked for security)
 	 */
-	public getApiKeyForIndex(keyIndex: number): string {
-		if (keyIndex < 0 || keyIndex >= this.apiKeys.length) {
-			return "unknown";
-		}
-		const key = this.apiKeys[keyIndex];
-		if (!key) {
+	public getMaskedApiKey(): string {
+		if (!this.apiKey) {
 			return "unknown";
 		}
 		// Mask the key for logging (show first 8 and last 4 characters)
-		if (key.length > 12) {
-			return `${key.substring(0, 8)}...${key.substring(key.length - 4)}`;
+		if (this.apiKey.length > 12) {
+			return `${this.apiKey.substring(0, 8)}...${this.apiKey.substring(this.apiKey.length - 4)}`;
 		}
 		return "***";
 	}
 
 	/**
-	 * Gets all available clients
-	 * @returns {GoogleGenAI[]} Array of all Gemini clients
+	 * Checks if client is available
+	 * @returns {boolean} True if client is available
 	 */
-	public getAllClients(): GoogleGenAI[] {
-		return [...this.aiClients];
-	}
-
-	/**
-	 * Checks if any clients are available
-	 * @returns {boolean} True if clients are available
-	 */
-	public hasClients(): boolean {
-		return this.aiClients.length > 0;
-	}
-
-	/**
-	 * Gets the number of available clients
-	 * @returns {number} Number of available clients
-	 */
-	public getClientCount(): number {
-		return this.aiClients.length;
-	}
-
-	/**
-	 * Gets a client by index (for retry logic)
-	 * @param {number} keyIndex - Index of the API key
-	 * @returns {ClientWithKey} Client with key information
-	 */
-	public getClientByIndex(keyIndex: number): ClientWithKey {
-		if (this.aiClients.length === 0) {
-			throw new Error("No Gemini API clients available");
-		}
-
-		const index = keyIndex % this.aiClients.length;
-		const client = this.aiClients[index];
-		const apiKey = this.apiKeys[index];
-		if (!(client && apiKey)) {
-			throw new Error("No AI client or API key available");
-		}
-		return {
-			client,
-			keyIndex: index,
-			apiKey,
-		};
+	public hasClient(): boolean {
+		return this.aiClient !== null;
 	}
 }

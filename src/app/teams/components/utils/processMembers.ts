@@ -23,13 +23,15 @@ export function processMembers(
 		username: person.username || null,
 		role: person.role,
 		joinedAt: person.joinedAt || null,
-		subteam: {
-			id: person.subteamId || "",
-			name: person.subteam?.name || "Unknown",
-			description: person.subteam?.description || "",
-		},
+		subteam: person.subteamId
+			? {
+					id: person.subteamId,
+					name: person.subteam?.name || "Unknown",
+					description: person.subteam?.description || "",
+				}
+			: undefined,
 		subteams: [],
-		subteamId: person.subteamId || "",
+		subteamId: person.subteamId || undefined,
 		events: person.events || [],
 		eventCount: person.events?.length || 0,
 		avatar: undefined,
@@ -98,10 +100,16 @@ export function processMembers(
 
 	// Sort: captains first, then alphabetical
 	filtered.sort((a, b) => {
-		if (a.role === "captain" && b.role !== "captain") {
+		if (a.role === "admin" && b.role !== "admin") {
 			return -1;
 		}
-		if (b.role === "captain" && a.role !== "captain") {
+		if (b.role === "admin" && a.role !== "admin") {
+			return 1;
+		}
+		if (a.role === "captain" && b.role !== "captain" && b.role !== "admin") {
+			return -1;
+		}
+		if (b.role === "captain" && a.role !== "captain" && a.role !== "admin") {
 			return 1;
 		}
 		return getDisplayName(a).localeCompare(getDisplayName(b));

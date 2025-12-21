@@ -42,7 +42,7 @@ interface PracticeEvent {
 
 interface RecurringMeeting {
 	id: string;
-	team_id: string;
+	team_id?: string;
 	days_of_week: number[];
 	start_time: string;
 	end_time: string;
@@ -60,9 +60,9 @@ interface EventListProps {
 	events: CalendarEvent[];
 	recurringMeetings: RecurringMeeting[];
 	eventTypeFilter: string;
+	referenceDate: Date;
 	onEventClick: (event: CalendarEvent) => void;
 	onDeleteEvent: (eventId: string) => void;
-	isEventBlacklisted?: (eventId: string) => boolean;
 	title?: string;
 	hideHeader?: boolean;
 	hideEmptyState?: boolean;
@@ -73,9 +73,9 @@ export default function EventList({
 	events,
 	recurringMeetings,
 	eventTypeFilter,
+	referenceDate,
 	onEventClick,
 	onDeleteEvent,
-	isEventBlacklisted,
 	title = "Upcoming Events",
 	hideHeader = false,
 	hideEmptyState = false,
@@ -202,11 +202,6 @@ export default function EventList({
 
 				const eventId = `recurring-${meeting.id}-${dateStr}`;
 
-				// Skip if this event is blacklisted
-				if (isEventBlacklisted?.(eventId)) {
-					continue;
-				}
-
 				recurringEvents.push(createRecurringEvent(meeting, dateStr, eventId));
 			}
 		}
@@ -290,28 +285,29 @@ export default function EventList({
 
 	// Get filtered events for list view
 	const getFilteredEvents = () => {
-		const now = new Date();
-		const currentMonth = now.getMonth();
-		const currentYear = now.getFullYear();
-		const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
-		const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+		const currentMonth = referenceDate.getMonth();
+		const currentYear = referenceDate.getFullYear();
 
-		// Generate recurring events for current and next month
+		// Generate recurring events for the selected month
 		const currentMonthEvents = generateRecurringEventsForMonth(
 			currentYear,
 			currentMonth,
 		);
-		const nextMonthEvents = generateRecurringEventsForMonth(
-			nextYear,
-			nextMonth,
-		);
-		const recurringEvents = [...currentMonthEvents, ...nextMonthEvents];
+		const recurringEvents = [...currentMonthEvents];
 
 		const allEvents = [...events, ...recurringEvents];
 		return filterAndSortEvents(allEvents);
 	};
 
 	const filteredEvents = getFilteredEvents();
+	const uniqueEvents = new Map<string, CalendarEvent>();
+	for (const event of filteredEvents) {
+		const key = `${event.id}-${event.start_time}`;
+		if (!uniqueEvents.has(key)) {
+			uniqueEvents.set(key, event);
+		}
+	}
+	const dedupedEvents = Array.from(uniqueEvents.values());
 
 	return (
 		<div
@@ -325,7 +321,7 @@ export default function EventList({
 						{title}
 					</h3>
 				)}
-				{filteredEvents.length === 0 ? (
+				{dedupedEvents.length === 0 ? (
 					hideEmptyState ? null : (
 						<div
 							className={`text-center py-8 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
@@ -335,14 +331,16 @@ export default function EventList({
 					)
 				) : (
 					<div className="space-y-3">
-						{filteredEvents.map((event) => {
+						{dedupedEvents.map((event, index) => {
 							const eventType =
 								"event_type" in event ? event.event_type : "practice";
+							// Create a unique key that combines event.id with index and start_time to ensure uniqueness
+							const uniqueKey = `${event.id}-${event.start_time}-${index}`;
 
 							return (
 								<button
 									type="button"
-									key={event.id}
+									key={uniqueKey}
 									className={`w-full text-left p-4 rounded-lg border cursor-pointer transition-colors hover:opacity-80 ${getEventColors(eventType)}`}
 									onClick={() => handleEventClick(event)}
 								>
@@ -393,12 +391,13 @@ export default function EventList({
 												e.stopPropagation();
 												onDeleteEvent(event.id);
 											}}
-											className={`ml-4 p-2 rounded-full transition-colors ${
+											className={`ml-4 p-2 rounded-full transition-colors cursor-pointer ${
 												darkMode
 													? "text-red-400 hover:bg-red-900/30 hover:text-red-300"
 													: "text-red-500 hover:bg-red-100 hover:text-red-700"
 											}`}
 											title="Delete event"
+											aria-label="Delete event"
 										>
 											<svg
 												className="w-5 h-5"

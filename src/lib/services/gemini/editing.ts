@@ -214,12 +214,9 @@ Also include suggestedDifficulty (0.0-1.0) when you recommend an updated difficu
 						? `${this.clientWithKey.apiKey.substring(0, 8)}...${this.clientWithKey.apiKey.substring(this.clientWithKey.apiKey.length - 4)}`
 						: "***";
 				logger.error("Failed to parse Gemini response", error as Error, {
-					apiKeyIndex: this.clientWithKey.keyIndex,
 					apiKey: maskedKey,
 				});
-				throw new Error(
-					`Invalid response format from Gemini (API key index: ${this.clientWithKey.keyIndex})`,
-				);
+				throw new Error("Invalid response format from Gemini");
 			}
 		} catch (error) {
 			const maskedKey =
@@ -227,11 +224,10 @@ Also include suggestedDifficulty (0.0-1.0) when you recommend an updated difficu
 					? `${this.clientWithKey.apiKey.substring(0, 8)}...${this.clientWithKey.apiKey.substring(this.clientWithKey.apiKey.length - 4)}`
 					: "***";
 			logger.error("Gemini API error", error as Error, {
-				apiKeyIndex: this.clientWithKey.keyIndex,
 				apiKey: maskedKey,
 			});
 			throw new Error(
-				`Gemini API error (API key index: ${this.clientWithKey.keyIndex}, key: ${maskedKey}): ${(error as Error).message}`,
+				`Gemini API error (key: ${maskedKey}): ${(error as Error).message}`,
 			);
 		}
 	}

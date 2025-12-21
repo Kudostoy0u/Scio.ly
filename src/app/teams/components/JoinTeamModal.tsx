@@ -63,7 +63,11 @@ export default function JoinTeamModal({
 					animate={{ opacity: 1 }}
 					exit={{ opacity: 0 }}
 					className="fixed inset-0 transition-opacity z-40"
-					style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+					style={{
+						backgroundColor: darkMode
+							? "rgba(0, 0, 0, 0.75)"
+							: "rgba(0, 0, 0, 0.5)",
+					}}
 					onClick={onClose}
 				/>
 

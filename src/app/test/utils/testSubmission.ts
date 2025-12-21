@@ -237,45 +237,43 @@ async function handleEnhancedAssignmentSubmission(
 	mcqTotal: number,
 ): Promise<void> {
 	try {
-		const res = await fetch(`/api/assignments/${assignmentId}/submit`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				answers: formattedAnswers,
-				score: mcqScore,
-				totalPoints: mcqTotal,
-				timeSpent: routerData.timeLimit
-					? Number.parseInt(routerData.timeLimit) * 60 - (timeLeft || 0)
-					: 0,
-				submittedAt: new Date().toISOString(),
-			}),
+		const { getTRPCProxyClient } = await import("@/lib/trpc/client");
+		const client = getTRPCProxyClient();
+		const result = await client.teams.submitAssignment.mutate({
+			assignmentId,
+			answers: formattedAnswers,
+			score: mcqScore,
+			totalPoints: mcqTotal,
+			timeSpent: routerData.timeLimit
+				? Number.parseInt(routerData.timeLimit) * 60 - (timeLeft || 0)
+				: 0,
+			submittedAt: new Date().toISOString(),
 		});
 
-		if (res.ok) {
-			try {
-				(await import("react-toastify")).toast.success(
-					"Assignment submitted successfully!",
-				);
-				const url = new URL(window.location.href);
-				url.searchParams.delete("assignment");
-				window.history.replaceState({}, "", url.pathname + url.search);
-			} catch {
-				// Ignore errors
-			}
-		} else {
-			try {
-				const j = await res.json().catch(() => null);
-				const msg = j?.error || "Failed to submit assignment";
-				(await import("react-toastify")).toast.error(msg);
-			} catch {
-				// Ignore errors
-			}
-		}
-	} catch (_error) {
-		try {
-			(await import("react-toastify")).toast.error(
-				"Failed to submit assignment",
+		// Dispatch event to invalidate assignments cache
+		if (result.teamSlug && typeof window !== "undefined") {
+			window.dispatchEvent(
+				new CustomEvent("assignmentSubmitted", {
+					detail: { teamSlug: result.teamSlug, assignmentId },
+				}),
 			);
+		}
+
+		try {
+			(await import("react-toastify")).toast.success(
+				"Assignment submitted successfully!",
+			);
+			const url = new URL(window.location.href);
+			url.searchParams.delete("assignment");
+			window.history.replaceState({}, "", url.pathname + url.search);
+		} catch {
+			// Ignore errors
+		}
+	} catch (error) {
+		try {
+			const errorMessage =
+				error instanceof Error ? error.message : "Failed to submit assignment";
+			(await import("react-toastify")).toast.error(errorMessage);
 		} catch {
 			// Ignore errors
 		}

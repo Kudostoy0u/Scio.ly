@@ -185,10 +185,12 @@ describe("assignmentUtils", () => {
 				"Test Event 1",
 				5,
 				"both",
-				["Subtopic 1"],
 				2,
 				false,
 				"team123",
+				["any"],
+				undefined,
+				["Subtopic 1"],
 			);
 
 			expect(questions).toEqual(mockQuestions);
@@ -218,7 +220,7 @@ describe("assignmentUtils", () => {
 			});
 
 			await expect(
-				generateQuestions("Test Event 1", 5, "both", [], 0, false, "team123"),
+				generateQuestions("Test Event 1", 5, "both", 0, false, "team123"),
 			).rejects.toThrow("Failed to generate questions");
 		});
 	});

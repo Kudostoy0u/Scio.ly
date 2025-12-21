@@ -1,25 +1,34 @@
-import { QuestionGenerationRequestSchema } from "@/lib/schemas/question";
+import { generateQuestionsForAssignment } from "@/lib/server/questions/generate";
+import { assertCaptainAccess } from "@/lib/server/teams/shared";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
-import { getEventCapabilities } from "@/lib/utils/assessments/eventConfig";
-import {
-	isUserCaptain,
-	resolveTeamSlugToUnits,
-} from "@/lib/utils/teams/resolver";
+import logger from "@/lib/utils/logging/logger";
 import { type NextRequest, NextResponse } from "next/server";
-import { shuffleArray } from "./utils/arrayUtils";
-import { resolveEventName } from "./utils/eventUtils";
-import {
-	fetchIdQuestionsFromEvents,
-	fetchQuestionsFromEvents,
-} from "./utils/questionFetchers";
-import { formatQuestion } from "./utils/questionFormatters";
-import type { QuestionCandidate } from "./utils/questionUtils";
+import { z } from "zod";
+
+const QuestionGenerationRequestSchema = z.object({
+	event_name: z.string().min(1),
+	question_count: z.number().int().min(1).max(100),
+	question_types: z.array(z.enum(["multiple_choice", "free_response"])).min(1),
+	division: z.string().optional(),
+	id_percentage: z.number().int().min(0).max(100).optional(),
+	pure_id_only: z.boolean().optional(),
+	difficulties: z.array(z.string()).optional(),
+	time_limit_minutes: z.number().int().optional(),
+	subtopics: z.array(z.string()).optional(),
+	rm_type_filter: z.enum(["rock", "mineral"]).optional(),
+});
 
 export async function POST(
 	request: NextRequest,
 	{ params }: { params: Promise<{ teamId: string }> },
 ) {
+	const startTime = Date.now();
 	try {
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Request started",
+		);
+
 		const supabase = await createSupabaseServerClient();
 		const {
 			data: { user },
@@ -27,132 +36,154 @@ export async function POST(
 		} = await supabase.auth.getUser();
 
 		if (authError || !user) {
+			logger.dev.structured(
+				"warn",
+				"[POST /api/teams/[teamId]/assignments/generate-questions] Unauthorized",
+				{
+					authError: authError?.message,
+				},
+			);
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 		}
 
-		const { teamId } = await params;
-		const body = await request.json();
+		const { teamId } = await params; // This is actually a slug
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Parsing request",
+			{
+				teamId,
+				userId: user.id,
+			},
+		);
 
-		// Strict validation of request body
+		const body = await request.json();
+		logger.dev.structured(
+			"debug",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Request body",
+			{
+				body: JSON.stringify(body),
+			},
+		);
+
+		// Validate request body
 		const validatedRequest = QuestionGenerationRequestSchema.parse(body);
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Request validated",
+			{
+				event_name: validatedRequest.event_name,
+				question_count: validatedRequest.question_count,
+				question_types: validatedRequest.question_types,
+			},
+		);
 
 		const {
 			event_name,
 			question_count,
 			question_types,
-			subtopics,
-			time_limit_minutes,
 			division,
 			id_percentage: idPercentage,
 			pure_id_only: pureIdOnly,
 			difficulties,
+			subtopics,
+			rm_type_filter: rmTypeFilter,
 		} = validatedRequest;
 
-		const { eventName, targetEvents } = resolveEventName(event_name);
-		const capabilities = getEventCapabilities(eventName);
-
-		// Resolve team slug to team units and verify user has access
-		const teamInfo = await resolveTeamSlugToUnits(teamId);
-
-		// Check if user is captain or co-captain of any team unit in this group
-		const isCaptain = await isUserCaptain(user.id, teamInfo.teamUnitIds);
-
-		if (!isCaptain) {
-			return NextResponse.json(
-				{ error: "Only captains can generate questions" },
-				{ status: 403 },
-			);
-		}
-
-		const origin = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-		let questions: QuestionCandidate[] = await fetchQuestionsFromEvents(
-			targetEvents,
-			question_count,
-			question_types,
-			division,
-			subtopics,
-			difficulties,
-			origin,
-			capabilities.maxQuestions,
+		// Verify user is captain/admin
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Verifying captain access",
+			{
+				teamId,
+				userId: user.id,
+			},
+		);
+		await assertCaptainAccess(teamId, user.id);
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Captain access verified",
 		);
 
-		// Handle image support - fetch from id-questions API if needed
-		if (pureIdOnly) {
-			questions = await fetchIdQuestionsFromEvents(
-				targetEvents,
-				question_count,
-				question_types,
-				division,
-				subtopics,
-				difficulties,
-				origin,
-				true,
+		// Convert question_types array to single type for practice logic
+		const questionType: "mcq" | "frq" | "both" =
+			question_types.length === 2
+				? "both"
+				: question_types[0] === "multiple_choice"
+					? "mcq"
+					: "frq";
+
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Generating questions",
+			{
+				eventName: event_name,
+				questionCount: question_count,
+				questionType,
+				division: division || "any",
+				idPercentage: idPercentage || 0,
+				pureIdOnly: pureIdOnly || false,
+				difficulties: difficulties || ["any"],
+			},
+		);
+
+		// Use the same logic as practice feature
+		const questions = await generateQuestionsForAssignment({
+			eventName: event_name,
+			questionCount: question_count,
+			questionType,
+			division: division || "any",
+			idPercentage: idPercentage || 0,
+			pureIdOnly: pureIdOnly || false,
+			difficulties: difficulties || ["any"],
+			rmTypeFilter: rmTypeFilter,
+			subtopics: subtopics,
+		});
+
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Questions generated",
+			{
+				count: questions.length,
+			},
+		);
+
+		// Format questions for assignment (convert from practice format to assignment format)
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Formatting questions",
+		);
+		const formattedQuestions = questions.map((q, index) => {
+			const isMcq = Array.isArray(q.options) && q.options.length > 0;
+			const answers = Array.isArray(q.answers) ? q.answers : [];
+
+			return {
+				question_text: q.question || "",
+				question_type: isMcq ? "multiple_choice" : "free_response",
+				options: isMcq ? q.options : undefined,
+				answers: answers,
+				points: 1,
+				order_index: index,
+				difficulty: typeof q.difficulty === "number" ? q.difficulty : 0.5,
+				imageData: q.imageData || null,
+			};
+		});
+
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Questions formatted",
+			{
+				formattedCount: formattedQuestions.length,
+			},
+		);
+
+		if (formattedQuestions.length === 0) {
+			logger.dev.structured(
+				"warn",
+				"[POST /api/teams/[teamId]/assignments/generate-questions] No questions found",
+				{
+					eventName: event_name,
+				},
 			);
-		} else if (idPercentage !== undefined && idPercentage > 0) {
-			// Fetch mixed questions from all target events
-			const idQuestionsCount = Math.round(
-				(idPercentage / 100) * question_count,
-			);
-			const regularQuestionsCount = question_count - idQuestionsCount;
-
-			const [regularQuestions, idQuestions] = await Promise.all([
-				regularQuestionsCount > 0
-					? fetchQuestionsFromEvents(
-							targetEvents,
-							regularQuestionsCount,
-							question_types,
-							division,
-							subtopics,
-							difficulties,
-							origin,
-							capabilities.maxQuestions,
-						)
-					: Promise.resolve([]),
-				idQuestionsCount > 0
-					? fetchIdQuestionsFromEvents(
-							targetEvents,
-							idQuestionsCount,
-							question_types,
-							division,
-							subtopics,
-							difficulties,
-							origin,
-							false,
-						)
-					: Promise.resolve([]),
-			]);
-
-			// Combine and shuffle the results
-			const allMixedQuestions = [...regularQuestions, ...idQuestions];
-			questions = shuffleArray(allMixedQuestions).slice(0, question_count);
-		}
-
-		/**
-		 * Format and validate questions for assignment
-		 *
-		 * CRITICAL: This function ensures EVERY question has a valid answers field.
-		 * Questions without valid answers are REJECTED with a clear error message.
-		 *
-		 * @throws {Error} If any question is missing valid answers
-		 */
-		const validQuestions = questions
-			.filter((question) => {
-				const optionList = Array.isArray(question.options)
-					? question.options
-					: undefined;
-				const answerList = Array.isArray(question.answers)
-					? question.answers
-					: undefined;
-				const hasContent =
-					(optionList?.length ?? 0) > 0 || (answerList?.length ?? 0) > 0;
-				return hasContent;
-			})
-			.slice(0, question_count)
-			.map((question, index: number) =>
-				formatQuestion(question, index, origin),
-			);
-
-		if (validQuestions.length === 0) {
 			return NextResponse.json(
 				{
 					error: "No valid questions found for this event",
@@ -166,16 +197,75 @@ export async function POST(
 			);
 		}
 
+		const duration = Date.now() - startTime;
+		logger.dev.structured(
+			"info",
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Success",
+			{
+				questionCount: formattedQuestions.length,
+				duration: `${duration}ms`,
+			},
+		);
+
 		return NextResponse.json({
-			questions: validQuestions,
+			questions: formattedQuestions,
 			metadata: {
-				eventName,
-				questionCount: validQuestions.length,
-				capabilities,
-				timeLimit: time_limit_minutes,
+				eventName: event_name,
+				questionCount: formattedQuestions.length,
+				timeLimit: validatedRequest.time_limit_minutes,
 			},
 		});
 	} catch (error) {
+		const duration = Date.now() - startTime;
+
+		if (error instanceof z.ZodError) {
+			const zodErrors = error.issues || [];
+			logger.dev.structured(
+				"warn",
+				"[POST /api/teams/[teamId]/assignments/generate-questions] Validation error",
+				{
+					errors: zodErrors,
+					duration: `${duration}ms`,
+				},
+			);
+			return NextResponse.json(
+				{
+					error: "Invalid request",
+					details: zodErrors,
+				},
+				{ status: 400 },
+			);
+		}
+
+		if (error instanceof Error && error.message.includes("Only captains")) {
+			logger.dev.structured(
+				"warn",
+				"[POST /api/teams/[teamId]/assignments/generate-questions] Forbidden",
+				{
+					error: error.message,
+					duration: `${duration}ms`,
+				},
+			);
+			return NextResponse.json(
+				{ error: "Only captains can generate questions" },
+				{ status: 403 },
+			);
+		}
+
+		logger.dev.error(
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Error",
+			error instanceof Error ? error : new Error(String(error)),
+			{
+				duration: `${duration}ms`,
+				errorMessage: error instanceof Error ? error.message : String(error),
+				errorStack: error instanceof Error ? error.stack : undefined,
+			},
+		);
+		logger.error(
+			"[POST /api/teams/[teamId]/assignments/generate-questions] Error",
+			error,
+		);
+
 		return NextResponse.json(
 			{
 				error: "Internal server error",

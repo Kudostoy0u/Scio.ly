@@ -1,5 +1,8 @@
+import { dbPg } from "@/lib/db";
+import { teamRoster } from "@/lib/db/schema";
 import { upsertUserProfile } from "@/lib/db/teams/utils";
 import logger from "@/lib/utils/logging/logger";
+import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -63,6 +66,17 @@ export async function POST(req: NextRequest) {
 				username: trimmedUsername || undefined,
 				displayName: trimmedDisplayName || undefined,
 			});
+
+			// Keep teams v2 roster entries in sync for linked users so names update everywhere.
+			if (trimmedDisplayName) {
+				await dbPg
+					.update(teamRoster)
+					.set({
+						displayName: trimmedDisplayName,
+						updatedAt: new Date().toISOString(),
+					})
+					.where(eq(teamRoster.userId, id));
+			}
 		} catch (err: unknown) {
 			logger.error("profile/sync: upsertUserProfile failed", err);
 			logger.dev.error(

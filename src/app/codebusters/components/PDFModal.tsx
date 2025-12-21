@@ -32,7 +32,7 @@ export const PDFModal: React.FC<PdfModalProps> = ({
 	};
 
 	const handleBackdropClick = (
-		e: React.MouseEvent<HTMLButtonElement | HTMLDialogElement>,
+		e: React.MouseEvent<HTMLDivElement | HTMLButtonElement>,
 	) => {
 		if (e.target === e.currentTarget) {
 			onClose();
@@ -40,7 +40,7 @@ export const PDFModal: React.FC<PdfModalProps> = ({
 	};
 
 	const handleBackdropKeyDown = (
-		e: React.KeyboardEvent<HTMLButtonElement | HTMLDialogElement>,
+		e: React.KeyboardEvent<HTMLDivElement | HTMLButtonElement>,
 	) => {
 		if (e.key === "Escape") {
 			onClose();
@@ -111,15 +111,17 @@ export const PDFModal: React.FC<PdfModalProps> = ({
 	}
 
 	return (
-		<dialog
-			className="fixed inset-0 z-50 flex items-center justify-center border-0 bg-transparent p-0 backdrop:bg-black/50"
+		<div
+			className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
 			onClick={handleBackdropClick}
 			onKeyDown={handleBackdropKeyDown}
-			aria-modal="true"
-			open
 		>
-			<div
-				className="relative w-11/12 h-5/6 max-w-5xl bg-white rounded-lg shadow-2xl flex flex-col"
+			<div className="absolute inset-0 bg-black/50" aria-hidden="true" />
+			<dialog
+				open
+				className="relative w-11/12 h-5/6 max-w-5xl rounded-lg shadow-2xl flex flex-col border-0 p-0 bg-white"
+				style={{ margin: 0, padding: 0, border: "none" }}
+				aria-modal="true"
 				onClick={(e) => e.stopPropagation()}
 				onKeyDown={(e) => e.stopPropagation()}
 			>
@@ -158,7 +160,7 @@ export const PDFModal: React.FC<PdfModalProps> = ({
 						onError={handleIframeError}
 					/>
 				</div>
-			</div>
-		</dialog>
+			</dialog>
+		</div>
 	);
 };

@@ -1,11 +1,9 @@
 "use client";
 
-import AuthButton from "@/app/components/AuthButton";
+import Header from "@/app/components/Header";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
 import type React from "react";
 import { useState } from "react";
 import Sidebar from "./Sidebar";
@@ -46,45 +44,24 @@ export default function TeamLayout({
 		<div className={`min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
 			{/* Top Navigation Bar */}
 			{showTopBar && (
-				<div
-					className={`fixed top-0 left-0 right-0 z-40 border-b ${darkMode ? "border-gray-700 bg-gray-900" : "border-gray-200 bg-white"}`}
-				>
-					<div className="w-full px-4 sm:px-6 lg:px-8">
-						<div className="flex justify-between items-center h-16">
-							{/* Left side - Logo and mobile menu */}
-							<div className="flex items-center space-x-3">
-								<Link href="/" className="flex items-center">
-									<Image
-										src="https://res.cloudinary.com/djilwi4nh/image/upload/v1760504427/site-logo_lzc8t0.png"
-										alt="Scio.ly Logo"
-										width={32}
-										height={32}
-										className="rounded-md"
-									/>
-									<span
-										className={`ml-2 text-xl font-bold hidden md:block ${darkMode ? "text-white" : "text-gray-900"}`}
-									>
-										Scio.ly
-									</span>
-								</Link>
-
-								{/* Mobile menu button */}
-								<button
-									type="button"
-									onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-									className={`md:hidden p-2 rounded-lg ${darkMode ? "text-gray-300 hover:bg-gray-700" : "text-gray-600 hover:bg-gray-100"}`}
-								>
-									<Menu className="w-6 h-6" />
-								</button>
-							</div>
-
-							{/* Right side - Actions */}
-							<div className="flex items-center space-x-3">
-								<AuthButton />
-							</div>
-						</div>
-					</div>
-				</div>
+				<Header
+					logoOffsetClassName="md:-ml-12"
+					hideMobileNav
+					leftAddon={
+						<button
+							type="button"
+							onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+							className={`md:hidden p-2 rounded-lg ${
+								darkMode
+									? "text-gray-300 hover:bg-gray-700"
+									: "text-gray-600 hover:bg-gray-100"
+							}`}
+							aria-label="Toggle team menu"
+						>
+							<Menu className="w-6 h-6" />
+						</button>
+					}
+				/>
 			)}
 
 			<div className={`flex h-screen ${showTopBar ? "pt-16" : ""}`}>

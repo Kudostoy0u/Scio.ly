@@ -1,9 +1,5 @@
 import { dbPg } from "@/lib/db";
-import {
-	newTeamGroups,
-	newTeamMemberships,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+import { teamMemberships, teamSubteams, teams } from "@/lib/db/schema";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
 	handleError,
@@ -37,9 +33,9 @@ export async function POST(
 
 		// Resolve the slug to actual team unit IDs using Drizzle ORM
 		const [groupResult] = await dbPg
-			.select({ id: newTeamGroups.id })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.select({ id: teams.id })
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (!groupResult) {
@@ -50,9 +46,9 @@ export async function POST(
 
 		// Get all team units for this group using Drizzle ORM
 		const unitsResult = await dbPg
-			.select({ id: newTeamUnits.id })
-			.from(newTeamUnits)
-			.where(eq(newTeamUnits.groupId, groupId));
+			.select({ id: teamSubteams.id })
+			.from(teamSubteams)
+			.where(eq(teamSubteams.teamId, groupId));
 
 		if (unitsResult.length === 0) {
 			return handleNotFoundError("No team units found for this group");
@@ -63,16 +59,16 @@ export async function POST(
 		// Check if user is a member of any team unit in this group using Drizzle ORM
 		const membershipResult = await dbPg
 			.select({
-				id: newTeamMemberships.id,
-				role: newTeamMemberships.role,
-				teamId: newTeamMemberships.teamId,
+				id: teamMemberships.id,
+				role: teamMemberships.role,
+				teamId: teamMemberships.teamId,
 			})
-			.from(newTeamMemberships)
+			.from(teamMemberships)
 			.where(
 				and(
-					eq(newTeamMemberships.userId, user.id),
-					inArray(newTeamMemberships.teamId, teamUnitIds),
-					eq(newTeamMemberships.status, "active"),
+					eq(teamMemberships.userId, user.id),
+					inArray(teamMemberships.teamId, teamUnitIds),
+					eq(teamMemberships.status, "active"),
 				),
 			);
 
@@ -90,12 +86,12 @@ export async function POST(
 			for (const membership of captainMemberships) {
 				const [captainCountResult] = await dbPg
 					.select({ count: count() })
-					.from(newTeamMemberships)
+					.from(teamMemberships)
 					.where(
 						and(
-							eq(newTeamMemberships.teamId, membership.teamId),
-							eq(newTeamMemberships.role, "captain"),
-							eq(newTeamMemberships.status, "active"),
+							eq(teamMemberships.teamId, membership.teamId),
+							eq(teamMemberships.role, "captain"),
+							eq(teamMemberships.status, "active"),
 						),
 					);
 
@@ -117,12 +113,12 @@ export async function POST(
 
 		// Remove user from all team units in this group using Drizzle ORM
 		await dbPg
-			.update(newTeamMemberships)
+			.update(teamMemberships)
 			.set({ status: "inactive" })
 			.where(
 				and(
-					eq(newTeamMemberships.userId, user.id),
-					inArray(newTeamMemberships.teamId, teamUnitIds),
+					eq(teamMemberships.userId, user.id),
+					inArray(teamMemberships.teamId, teamUnitIds),
 				),
 			);
 

@@ -1,9 +1,5 @@
 import { dbPg } from "@/lib/db";
-import {
-	newTeamGroups,
-	newTeamMemberships,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+import { teamMemberships, teamSubteams, teams } from "@/lib/db/schema";
 import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
@@ -55,8 +51,8 @@ export async function POST(
 		// Validate request body
 		const PromoteMemberSchema = z.object({
 			userId: UUIDSchema,
-			newRole: z.enum(["captain", "co_captain"], {
-				message: "Only captain or co_captain promotion is supported",
+			newRole: z.enum(["captain"], {
+				message: "Only captain promotion is supported",
 			}),
 		});
 
@@ -77,9 +73,9 @@ export async function POST(
 
 		// Resolve the team group from the slug using Drizzle ORM
 		const [groupResult] = await dbPg
-			.select({ id: newTeamGroups.id, slug: newTeamGroups.slug })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.select({ id: teams.id, slug: teams.slug })
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (!groupResult) {
@@ -90,9 +86,9 @@ export async function POST(
 
 		// Get all team units for this group using Drizzle ORM
 		const unitsResult = await dbPg
-			.select({ id: newTeamUnits.id })
-			.from(newTeamUnits)
-			.where(eq(newTeamUnits.groupId, groupId));
+			.select({ id: teamSubteams.id })
+			.from(teamSubteams)
+			.where(eq(teamSubteams.teamId, groupId));
 
 		if (unitsResult.length === 0) {
 			return handleNotFoundError("No team units found");
@@ -102,13 +98,13 @@ export async function POST(
 
 		// Check if the requesting user is a captain of this team group using Drizzle ORM
 		const captainCheck = await dbPg
-			.select({ role: newTeamMemberships.role })
-			.from(newTeamMemberships)
+			.select({ role: teamMemberships.role })
+			.from(teamMemberships)
 			.where(
 				and(
-					inArray(newTeamMemberships.teamId, teamUnitIds),
-					eq(newTeamMemberships.userId, user.id),
-					eq(newTeamMemberships.role, "captain"),
+					inArray(teamMemberships.teamId, teamUnitIds),
+					eq(teamMemberships.userId, user.id),
+					eq(teamMemberships.role, "captain"),
 				),
 			)
 			.limit(1);
@@ -119,12 +115,12 @@ export async function POST(
 
 		// Check if the user to be promoted is a member of this team using Drizzle ORM
 		const memberCheck = await dbPg
-			.select({ id: newTeamMemberships.id, role: newTeamMemberships.role })
-			.from(newTeamMemberships)
+			.select({ id: teamMemberships.id, role: teamMemberships.role })
+			.from(teamMemberships)
 			.where(
 				and(
-					inArray(newTeamMemberships.teamId, teamUnitIds),
-					eq(newTeamMemberships.userId, userId),
+					inArray(teamMemberships.teamId, teamUnitIds),
+					eq(teamMemberships.userId, userId),
 				),
 			)
 			.limit(1);
@@ -148,16 +144,16 @@ export async function POST(
 
 		// Promote the user to the new role in all team units they're a member of using Drizzle ORM
 		const promoteResult = await dbPg
-			.update(newTeamMemberships)
+			.update(teamMemberships)
 			.set({ role: newRole })
 			.where(
 				and(
-					inArray(newTeamMemberships.teamId, teamUnitIds),
-					eq(newTeamMemberships.userId, userId),
-					ne(newTeamMemberships.role, newRole),
+					inArray(teamMemberships.teamId, teamUnitIds),
+					eq(teamMemberships.userId, userId),
+					ne(teamMemberships.role, newRole),
 				),
 			)
-			.returning({ id: newTeamMemberships.id });
+			.returning({ id: teamMemberships.id });
 
 		if (promoteResult.length === 0) {
 			return handleError(

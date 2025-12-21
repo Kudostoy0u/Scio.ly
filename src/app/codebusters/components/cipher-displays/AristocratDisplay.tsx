@@ -210,31 +210,73 @@ export const AristocratDisplay = ({
 					</div>
 				</div>
 			)}
-			<div className="flex flex-wrap gap-y-8 text-sm sm:text-base break-words whitespace-pre-wrap">
-				{text.split("").map((char, i) => {
-					const isLetter = UPPERCASE_LETTER_REGEX.test(char);
-					const value = solution?.[char] || "";
-					const isCorrect = isLetter && value === correctMapping[char];
-					const showCorrectAnswer = isTestSubmitted && isLetter;
+			{/* Group characters into blocks (consecutive letters without spaces) */}
+			{(() => {
+				const chars = text.split("").map((char, i) => ({ char, index: i }));
+				const blocks: Array<Array<{ char: string; index: number }>> = [];
+				let currentBlock: Array<{ char: string; index: number }> = [];
 
-					return (
-						<CharacterDisplay
-							key={`char-${quoteIndex}-${i}-${char}`}
-							char={char}
-							index={i}
-							quoteIndex={quoteIndex}
-							isLetter={isLetter}
-							value={value}
-							isCorrect={isCorrect}
-							showCorrectAnswer={showCorrectAnswer}
-							correctMapping={correctMapping}
-							darkMode={darkMode}
-							isTestSubmitted={isTestSubmitted}
-							onSolutionChange={onSolutionChange}
-						/>
-					);
-				})}
-			</div>
+				for (let i = 0; i < chars.length; i++) {
+					const { char } = chars[i] ?? { char: "", index: i };
+					const isSpace = char === " " || char === "\n" || char === "\t";
+
+					if (isSpace) {
+						// If we have a current block, finalize it
+						if (currentBlock.length > 0) {
+							blocks.push(currentBlock);
+							currentBlock = [];
+						}
+						// Add the space as its own "block" so it renders
+						blocks.push([{ char, index: i }]);
+					} else {
+						currentBlock.push({ char, index: i });
+					}
+				}
+				// Add any remaining characters as a final block
+				if (currentBlock.length > 0) {
+					blocks.push(currentBlock);
+				}
+
+				return (
+					<div className="flex flex-wrap gap-y-8 text-sm sm:text-base break-words whitespace-pre-wrap">
+						{blocks.map((block) => {
+							const firstCharIndex = block[0]?.index ?? 0;
+							return (
+								<div
+									key={`block-${firstCharIndex}`}
+									className="flex gap-0 flex-nowrap"
+									style={{ flexShrink: 0 }}
+								>
+									{block.map(({ char, index: i }) => {
+										const isLetter = UPPERCASE_LETTER_REGEX.test(char);
+										const value = solution?.[char] || "";
+										const isCorrect =
+											isLetter && value === correctMapping[char];
+										const showCorrectAnswer = isTestSubmitted && isLetter;
+
+										return (
+											<CharacterDisplay
+												key={`char-${quoteIndex}-${i}-${char}`}
+												char={char}
+												index={i}
+												quoteIndex={quoteIndex}
+												isLetter={isLetter}
+												value={value}
+												isCorrect={isCorrect}
+												showCorrectAnswer={showCorrectAnswer}
+												correctMapping={correctMapping}
+												darkMode={darkMode}
+												isTestSubmitted={isTestSubmitted}
+												onSolutionChange={onSolutionChange}
+											/>
+										);
+									})}
+								</div>
+							);
+						})}
+					</div>
+				);
+			})()}
 			<FrequencyTable
 				text={text}
 				frequencyNotes={frequencyNotes}

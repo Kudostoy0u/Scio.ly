@@ -103,30 +103,6 @@ const syncProfileToAPI = async (
 	}
 };
 
-// Helper function to verify and update persisted name (extracted to reduce complexity)
-const verifyPersistedName = async (userId: string) => {
-	try {
-		const verify = await supabase
-			.from("users")
-			.select("display_name, username")
-			.eq("id", userId)
-			.maybeSingle();
-		if (!verify.error) {
-			const dn = (verify.data as { display_name?: string } | null)
-				?.display_name;
-			if (dn?.trim()) {
-				try {
-					SyncLocalStorage.setItem(`scio_display_name_${userId}`, dn.trim());
-				} catch {
-					// Ignore errors when saving display name to localStorage
-				}
-			}
-		}
-	} catch {
-		// Ignore errors when updating user profile
-	}
-};
-
 // Helper function to build update payload (extracted to reduce complexity)
 const buildUpdatePayload = (
 	userId: string,
@@ -281,9 +257,6 @@ export default function NamePromptModal({
 				displayName,
 				username,
 			);
-
-			// Verify persisted name by reading back; then refresh caller
-			await verifyPersistedName(user.id);
 
 			if (onSave) {
 				onSave();
@@ -515,8 +488,8 @@ export default function NamePromptModal({
 					<button
 						type="button"
 						onClick={onClose}
-						className={`p-2 rounded-full hover:bg-opacity-10 ${
-							darkMode ? "hover:bg-white" : "hover:bg-gray-900"
+						className={`p-2 rounded-full transition-colors ${
+							darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
 						}`}
 					>
 						<X

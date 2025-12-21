@@ -7,19 +7,25 @@
 
 "use client";
 
+import ConfirmModal from "@/app/components/ConfirmModal";
+import Modal from "@/app/components/Modal";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import {
 	useInvalidateTeam,
+	useTeamCacheInvalidation,
 	useTeamFull,
 	useTeamSubteams,
 } from "@/lib/hooks/useTeam";
 import { trpc } from "@/lib/trpc/client";
-import { Clipboard, LogOut, ShieldCheck, Trash2, X } from "lucide-react";
+import { Clipboard, LogOut, Trash2, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
+import AssignmentsTab from "../components/AssignmentsTab";
+import NotImplemented from "../components/NotImplemented";
 import PeopleTabUnified from "../components/PeopleTabUnified";
 import RosterTabUnified from "../components/RosterTabUnified";
+import StreamTab from "../components/StreamTab";
 import TabNavigation from "../components/TabNavigation";
 import TeamLayout from "../components/TeamLayout";
 
@@ -27,24 +33,31 @@ interface TeamPageClientProps {
 	teamSlug: string;
 }
 
-type TabName = "home" | "people" | "roster" | "assignments";
+type TabName = "roster" | "people" | "stream" | "assignments";
 
 export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 	const { darkMode } = useTheme();
 	const router = useRouter();
-	const [activeTab, setActiveTab] = useState<TabName>("home");
+	const [activeTab, setActiveTab] = useState<TabName>("roster");
 	const [activeSubteamId, setActiveSubteamId] = useState<string | null>(null);
 	const [showCodes, setShowCodes] = useState(false);
 	const [confirmAction, setConfirmAction] = useState<"leave" | "delete" | null>(
 		null,
 	);
+	const [deleteSubteamConfirm, setDeleteSubteamConfirm] = useState<{
+		subteamId: string;
+		subteamName: string;
+	} | null>(null);
 	const [layoutTab, setLayoutTab] = useState<"home" | "upcoming" | "settings">(
 		"home",
 	);
 
+	useTeamCacheInvalidation(teamSlug);
+
 	const { data: teamData, isLoading, error } = useTeamFull(teamSlug);
 	const { data: subteams } = useTeamSubteams(teamSlug);
-	const { invalidateTeam } = useInvalidateTeam();
+	const { invalidateTeam, invalidateTeamAndUserTeams, refetchTeam } =
+		useInvalidateTeam();
 	const { data: userTeamsData } = trpc.teams.listUserTeams.useQuery();
 
 	const createSubteamMutation = trpc.teams.createSubteam.useMutation();
@@ -59,10 +72,15 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 		}
 		const getTabFromHash = (): TabName => {
 			const hash = window.location.hash.replace("#", "");
-			if (hash === "people" || hash === "roster" || hash === "assignments") {
-				return hash;
+			if (
+				hash === "people" ||
+				hash === "roster" ||
+				hash === "stream" ||
+				hash === "assignments"
+			) {
+				return hash as TabName;
 			}
-			return "home";
+			return "roster";
 		};
 		setActiveTab(getTabFromHash());
 		const onHashChange = () => {
@@ -141,26 +159,20 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 		);
 	}
 
-	const isCaptain = teamData.meta.userRole === "captain";
+	const isAdmin = teamData.meta.userRole === "admin";
+	const isCaptain = teamData.meta.userRole === "captain" || isAdmin;
 
 	const navigateToTab = (tab: TabName) => {
 		if (typeof window !== "undefined") {
-			if (tab === "home") {
-				window.location.hash = "";
-			} else {
-				window.location.hash = `#${tab}`;
-			}
+			window.location.hash = `#${tab}`;
 		}
 		setActiveTab(tab);
 	};
 
 	const handleCreateSubteam = async () => {
-		const name =
-			window.prompt("Subteam name? Leave blank for default") ?? undefined;
 		try {
 			const created = await createSubteamMutation.mutateAsync({
 				teamSlug,
-				name,
 			});
 			toast.success("Subteam created");
 			setActiveSubteamId(created.id);
@@ -185,7 +197,9 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 				newName: newName.trim(),
 			});
 			toast.success("Subteam renamed");
+			// Invalidate and refetch team data to ensure roster updates with new subteam name
 			await invalidateTeam(teamSlug);
+			await refetchTeam(teamSlug);
 		} catch (mutationError) {
 			toast.error(
 				mutationError instanceof Error
@@ -195,24 +209,26 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 		}
 	};
 
-	const handleDeleteSubteam = async (
-		subteamId: string,
-		subteamName: string,
-	) => {
-		if (
-			!window.confirm(
-				`Delete ${subteamName || "this subteam"}? This will remove its roster entries.`,
-			)
-		) {
+	const handleDeleteSubteam = (subteamId: string, subteamName: string) => {
+		if (!isCaptain) {
 			return;
 		}
+		setDeleteSubteamConfirm({ subteamId, subteamName });
+	};
+
+	const confirmDeleteSubteam = async () => {
+		if (!deleteSubteamConfirm) return;
+
+		const { subteamId } = deleteSubteamConfirm;
+		setDeleteSubteamConfirm(null);
+
 		try {
 			await deleteSubteamMutation.mutateAsync({ teamSlug, subteamId });
 			toast.success("Subteam deleted");
 			await invalidateTeam(teamSlug);
 			if (activeSubteamId === subteamId) {
 				setActiveSubteamId(
-					subteams?.find((s) => s.id !== subteamId)?.id ?? null,
+					subteams?.find((s: { id: string }) => s.id !== subteamId)?.id ?? null,
 				);
 			}
 		} catch (mutationError) {
@@ -228,8 +244,9 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 		try {
 			await leaveTeamMutation.mutateAsync({ teamSlug });
 			toast.success("You left the team");
+			// Invalidate team and user teams list since leaving removes team from list
+			await invalidateTeamAndUserTeams(teamSlug);
 			router.push("/teams");
-			await invalidateTeam(teamSlug);
 		} catch (mutationError) {
 			toast.error(
 				mutationError instanceof Error
@@ -243,7 +260,8 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 		try {
 			await archiveTeamMutation.mutateAsync({ teamSlug });
 			toast.success("Team deleted");
-			await invalidateTeam(teamSlug);
+			// Invalidate all team-related caches including user teams list
+			await invalidateTeamAndUserTeams(teamSlug);
 			router.push("/teams");
 		} catch (mutationError) {
 			toast.error(
@@ -263,350 +281,353 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 			onTeamSelect={handleTeamSelect}
 			onNavigateToMainDashboard={handleNavigateToMainDashboard}
 		>
-			<div>
-				<div
-					className={`${bannerBg} border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}
-				>
-					<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-						<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-							<div>
-								<p
-									className={`text-xs uppercase tracking-wide ${darkMode ? "text-blue-200" : "text-blue-700"}`}
-								>
-									Team
-								</p>
-								<h1
-									className={`text-3xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}
-								>
-									{teamData.meta.name || teamData.meta.school}
-								</h1>
-								<p
-									className={`mt-1 text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-								>
-									Division {teamData.meta.division} •{" "}
-									{isCaptain ? "Captain" : "Member"}{" "}
-									{teamData.meta.status === "archived" && (
-										<span className="ml-2 inline-flex items-center rounded-full bg-yellow-200 px-2 py-0.5 text-xs font-semibold text-yellow-900">
-											Archived
-										</span>
-									)}
-								</p>
-							</div>
-							<div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full lg:w-auto">
-								{isCaptain && (
-									<button
-										type="button"
-										onClick={() => setShowCodes(true)}
-										className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
-									>
-										<ShieldCheck className="mr-2 h-4 w-4" />
-										View join codes
-									</button>
-								)}
-								<button
-									type="button"
-									onClick={() => setConfirmAction("leave")}
-									className="inline-flex items-center justify-center rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-amber-700"
-								>
-									<LogOut className="mr-2 h-4 w-4" />
-									Leave team
-								</button>
-								{isCaptain && (
-									<button
-										type="button"
-										onClick={() => setConfirmAction("delete")}
-										className="inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-red-700"
-									>
-										<Trash2 className="mr-2 h-4 w-4" />
-										Delete team
-									</button>
-								)}
-							</div>
-						</div>
-						<div className="mt-6">
-							<TabNavigation
-								activeTab={activeTab}
-								onTabChange={navigateToTab}
-							/>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-				{activeTab === "home" && (
-					<div className="grid gap-6 md:grid-cols-2">
+			{layoutTab === "settings" ? (
+				<NotImplemented
+					title="Under Construction"
+					description="We're currently building out the team settings page. Check back soon for management features!"
+				/>
+			) : (
+				<>
+					<div>
 						<div
-							className={`rounded-xl p-6 shadow-sm ${darkMode ? "bg-gray-800" : "bg-white"}`}
+							className={`${bannerBg} border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}
 						>
-							<h3 className="text-lg font-semibold mb-2">Team Info</h3>
-							<p className="text-sm text-gray-500 dark:text-gray-400">
-								Last updated:{" "}
-								{new Date(teamData.meta.updatedAt).toLocaleString()}
-							</p>
-							<p className="text-sm text-gray-500 dark:text-gray-400">
-								Version: {teamData.meta.version}
-							</p>
-							<p className="text-sm text-gray-500 dark:text-gray-400">
-								Status: {teamData.meta.status}
-							</p>
-							<p className="text-sm text-gray-500 dark:text-gray-400">
-								Subteams: {subteams?.length ?? 0}
-							</p>
-							<div className="mt-4 flex flex-wrap gap-2">
-								<p className="text-xs text-gray-500 dark:text-gray-400">
-									Use the header controls to manage membership and deletion.
-								</p>
-							</div>
-						</div>
-						<div
-							className={`rounded-xl p-6 shadow-sm space-y-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}
-						>
-							<div>
-								<h3 className="text-lg font-semibold mb-2">Join Codes</h3>
-								<div className="space-y-2">
-									<div className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
-										<div>
-											<p className="font-medium">Member code</p>
-											<p className="text-gray-500 dark:text-gray-400">
-												Share with members to join.
-											</p>
-										</div>
-										<div className="flex items-center space-x-2">
-											<span className="font-mono text-sm">
-												{teamData.meta.memberCode}
-											</span>
+							<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+								<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+									<div>
+										<p
+											className={`text-xs uppercase tracking-wide ${darkMode ? "text-blue-200" : "text-blue-700"}`}
+										>
+											Team
+										</p>
+										<h1
+											className={`text-3xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}
+										>
+											{teamData.meta.name || teamData.meta.school}
+										</h1>
+										<p
+											className={`mt-1 text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+										>
+											Division {teamData.meta.division} •{" "}
+											{isCaptain ? "Captain" : "Member"}{" "}
+											{teamData.meta.status === "archived" && (
+												<span
+													className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${darkMode ? "bg-yellow-900 text-yellow-200" : "bg-yellow-200 text-yellow-900"}`}
+												>
+													Archived
+												</span>
+											)}
+										</p>
+									</div>
+									<div className="flex flex-row gap-2 w-full lg:w-auto">
+										{isCaptain && (
 											<button
 												type="button"
-												onClick={() =>
-													navigator.clipboard.writeText(
-														teamData.meta.memberCode,
-													)
-												}
-												className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+												onClick={() => setShowCodes(true)}
+												className="inline-flex items-center justify-center rounded-lg bg-blue-600 p-2.5 text-white shadow hover:bg-blue-700 transition-colors"
+												title="View join codes"
 											>
-												Copy
+												<UserPlus className="h-5 w-5" />
 											</button>
-										</div>
+										)}
+										<button
+											type="button"
+											onClick={() => setConfirmAction("leave")}
+											className="inline-flex items-center justify-center rounded-lg bg-amber-600 p-2.5 text-white shadow hover:bg-amber-700 transition-colors"
+											title="Leave team"
+										>
+											<LogOut className="h-5 w-5" />
+										</button>
+										{isAdmin && (
+											<button
+												type="button"
+												onClick={() => setConfirmAction("delete")}
+												className="inline-flex items-center justify-center rounded-lg bg-red-600 p-2.5 text-white shadow hover:bg-red-700 transition-colors"
+												title="Delete team"
+											>
+												<Trash2 className="h-5 w-5" />
+											</button>
+										)}
 									</div>
-									{isCaptain && teamData.meta.captainCode && (
-										<div className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
-											<div>
-												<p className="font-medium">Captain code</p>
-												<p className="text-gray-500 dark:text-gray-400">
-													Only share with captains.
-												</p>
-											</div>
-											<div className="flex items-center space-x-2">
-												<span className="font-mono text-sm">
-													{teamData.meta.captainCode}
-												</span>
-												<button
-													type="button"
-													onClick={() =>
-														navigator.clipboard.writeText(
-															teamData.meta.captainCode ?? "",
-														)
-													}
-													className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
-												>
-													Copy
-												</button>
-											</div>
-										</div>
-									)}
 								</div>
 							</div>
-							<div>
-								<h3 className="text-lg font-semibold mb-2">Roster Snapshot</h3>
-								<p className="text-2xl font-bold">
-									{teamData.members.length}{" "}
-									{teamData.members.length === 1 ? "person" : "people"}
-								</p>
-								<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-									Assignments: {teamData.assignments.length}
-								</p>
-							</div>
 						</div>
 					</div>
-				)}
 
-				{activeTab === "people" && (
-					<PeopleTabUnified
-						team={{
-							id: teamData.meta.teamId,
-							school: teamData.meta.school,
-							division: teamData.meta.division as "B" | "C",
-							slug: teamData.meta.slug,
-						}}
-						isCaptain={isCaptain}
-						activeSubteamId={activeSubteamId}
-						subteams={
-							subteams?.map((s) => ({
-								id: s.id,
-								name: s.name,
-								team_id: teamData.meta.teamId,
-								description: s.description ?? "",
-								created_at: s.createdAt,
-							})) ?? []
-						}
-						onSubteamChange={setActiveSubteamId}
-					/>
-				)}
-
-				{activeTab === "roster" && activeSubteamId && (
-					<RosterTabUnified
-						team={{
-							id: teamData.meta.teamId,
-							school: teamData.meta.school,
-							division: teamData.meta.division as "B" | "C",
-							slug: teamData.meta.slug,
-						}}
-						isCaptain={isCaptain}
-						activeSubteamId={activeSubteamId}
-						subteams={
-							subteams?.map((s) => ({
-								id: s.id,
-								name: s.name,
-								team_id: teamData.meta.teamId,
-								description: s.description ?? "",
-								created_at: s.createdAt,
-							})) ?? []
-						}
-						onSubteamChange={setActiveSubteamId}
-						onCreateSubteam={handleCreateSubteam}
-						onEditSubteam={handleRenameSubteam}
-						onDeleteSubteam={handleDeleteSubteam}
-					/>
-				)}
-
-				{activeTab === "assignments" && (
-					<div className={darkMode ? "text-white" : "text-gray-900"}>
-						Assignments tab - TODO
-					</div>
-				)}
-			</div>
-
-			{/* Join codes modal */}
-			{showCodes && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
 					<div
-						className={`w-full max-w-lg rounded-lg p-6 shadow-xl ${darkMode ? "bg-gray-900 text-white" : "bg-white text-gray-900"}`}
+						className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${darkMode ? "bg-gray-900" : "bg-white"} min-h-[calc(100vh-200px)]`}
 					>
-						<div className="flex items-center justify-between mb-4">
-							<h3 className="text-lg font-semibold">Join codes</h3>
-							<button
-								type="button"
-								onClick={() => setShowCodes(false)}
-								className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800"
-							>
-								<X className="h-4 w-4" />
-							</button>
+						<TabNavigation activeTab={activeTab} onTabChange={navigateToTab} />
+						<div className="py-8 min-h-[calc(100vh-300px)]">
+							{activeTab === "roster" &&
+								(activeSubteamId ? (
+									<RosterTabUnified
+										team={{
+											id: teamData.meta.teamId,
+											school: teamData.meta.school,
+											division: teamData.meta.division as "B" | "C",
+											slug: teamData.meta.slug,
+										}}
+										isCaptain={isCaptain}
+										activeSubteamId={activeSubteamId}
+										subteams={
+											subteams?.map(
+												(s: {
+													id: string;
+													name: string;
+													createdAt: string;
+													description: string | null;
+												}) => ({
+													id: s.id,
+													name: s.name,
+													team_id: teamData.meta.teamId,
+													description: s.description ?? "",
+													created_at: s.createdAt,
+												}),
+											) ?? []
+										}
+										onSubteamChange={setActiveSubteamId}
+										onCreateSubteam={handleCreateSubteam}
+										onEditSubteam={handleRenameSubteam}
+										onDeleteSubteam={
+											isCaptain ? handleDeleteSubteam : undefined
+										}
+									/>
+								) : (
+									<div
+										className={`rounded-xl p-8 text-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
+									>
+										<p
+											className={`text-lg font-semibold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}
+										>
+											No subteams yet
+										</p>
+										<p
+											className={`text-sm mb-4 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+										>
+											Create a subteam to start managing your roster.
+										</p>
+										{isCaptain && (
+											<button
+												type="button"
+												onClick={handleCreateSubteam}
+												className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors ${darkMode ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-600 hover:bg-blue-700"}`}
+											>
+												Create subteam
+											</button>
+										)}
+									</div>
+								))}
+
+							{activeTab === "people" && (
+								<PeopleTabUnified
+									team={{
+										id: teamData.meta.teamId,
+										school: teamData.meta.school,
+										division: teamData.meta.division as "B" | "C",
+										slug: teamData.meta.slug,
+									}}
+									isCaptain={isCaptain}
+									isAdmin={isAdmin}
+									activeSubteamId={activeSubteamId}
+									subteams={
+										subteams?.map(
+											(s: {
+												id: string;
+												name: string;
+												createdAt: string;
+												description: string | null;
+											}) => ({
+												id: s.id,
+												name: s.name,
+												team_id: teamData.meta.teamId,
+												description: s.description ?? "",
+												created_at: s.createdAt,
+											}),
+										) ?? []
+									}
+									onSubteamChange={setActiveSubteamId}
+								/>
+							)}
+
+							{activeTab === "stream" &&
+								(activeSubteamId ? (
+									<StreamTab
+										team={{
+											id: teamData.meta.teamId,
+											school: teamData.meta.school,
+											division: teamData.meta.division as "B" | "C",
+											slug: teamData.meta.slug,
+										}}
+										isCaptain={isCaptain}
+										activeSubteamId={activeSubteamId}
+									/>
+								) : (
+									<div
+										className={`rounded-xl p-8 text-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
+									>
+										<p
+											className={`text-lg font-semibold mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}
+										>
+											No subteams yet
+										</p>
+										<p
+											className={`text-sm mb-4 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+										>
+											Create a subteam to start using the stream.
+										</p>
+										{isCaptain && (
+											<button
+												type="button"
+												onClick={handleCreateSubteam}
+												className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors ${darkMode ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-600 hover:bg-blue-700"}`}
+											>
+												Create subteam
+											</button>
+										)}
+									</div>
+								))}
+
+							{activeTab === "assignments" && (
+								<AssignmentsTab
+									teamSlug={teamSlug}
+									isCaptain={isCaptain}
+									activeSubteamId={activeSubteamId}
+									onCreateAssignment={() => {
+										// Handled internally by AssignmentsTab
+									}}
+								/>
+							)}
 						</div>
-						<div className="space-y-3">
+					</div>
+
+					{/* Join codes modal */}
+					<Modal
+						isOpen={showCodes}
+						onClose={() => setShowCodes(false)}
+						title="Join codes"
+						maxWidth="lg"
+					>
+						<div className="space-y-4">
 							<div
-								className={`rounded-lg border p-3 ${darkMode ? "border-gray-700" : "border-gray-200"}`}
+								className={`rounded-lg border p-4 ${darkMode ? "border-gray-700 bg-gray-900/50" : "border-gray-200 bg-gray-50"}`}
 							>
-								<div className="flex items-center justify-between">
+								<div className="flex items-center justify-between mb-3">
 									<div>
-										<p className="text-sm font-medium">Member code</p>
-										<p className="text-xs text-gray-500 dark:text-gray-400">
+										<p
+											className={`text-sm font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}
+										>
+											Member code
+										</p>
+										<p
+											className={`text-xs mt-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+										>
 											Share with members to join.
 										</p>
 									</div>
 									<button
 										type="button"
-										onClick={() =>
-											navigator.clipboard.writeText(teamData.meta.memberCode)
-										}
-										className="inline-flex items-center rounded-md bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700"
+										onClick={async () => {
+											try {
+												await navigator.clipboard.writeText(
+													teamData.meta.memberCode,
+												);
+												toast.success("Member code copied to clipboard!");
+											} catch (_error) {
+												toast.error("Failed to copy code");
+											}
+										}}
+										className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
 									>
-										<Clipboard className="mr-1 h-4 w-4" />
+										<Clipboard className="mr-1.5 h-4 w-4" />
 										Copy
 									</button>
 								</div>
-								<p className="mt-2 font-mono text-sm">
+								<p
+									className={`mt-2 font-mono text-sm break-all ${darkMode ? "text-blue-400" : "text-blue-600"}`}
+								>
 									{teamData.meta.memberCode}
 								</p>
 							</div>
 							{isCaptain && teamData.meta.captainCode && (
 								<div
-									className={`rounded-lg border p-3 ${darkMode ? "border-gray-700" : "border-gray-200"}`}
+									className={`rounded-lg border p-4 ${darkMode ? "border-gray-700 bg-gray-900/50" : "border-gray-200 bg-gray-50"}`}
 								>
-									<div className="flex items-center justify-between">
+									<div className="flex items-center justify-between mb-3">
 										<div>
-											<p className="text-sm font-medium">Captain code</p>
-											<p className="text-xs text-gray-500 dark:text-gray-400">
+											<p
+												className={`text-sm font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}
+											>
+												Captain code
+											</p>
+											<p
+												className={`text-xs mt-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+											>
 												Only share with captains.
 											</p>
 										</div>
 										<button
 											type="button"
-											onClick={() =>
-												navigator.clipboard.writeText(
-													teamData.meta.captainCode ?? "",
-												)
-											}
-											className="inline-flex items-center rounded-md bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700"
+											onClick={async () => {
+												try {
+													await navigator.clipboard.writeText(
+														teamData.meta.captainCode ?? "",
+													);
+													toast.success("Captain code copied to clipboard!");
+												} catch (_error) {
+													toast.error("Failed to copy code");
+												}
+											}}
+											className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
 										>
-											<Clipboard className="mr-1 h-4 w-4" />
+											<Clipboard className="mr-1.5 h-4 w-4" />
 											Copy
 										</button>
 									</div>
-									<p className="mt-2 font-mono text-sm">
+									<p
+										className={`mt-2 font-mono text-sm break-all ${darkMode ? "text-blue-400" : "text-blue-600"}`}
+									>
 										{teamData.meta.captainCode}
 									</p>
 								</div>
 							)}
 						</div>
-					</div>
-				</div>
-			)}
+					</Modal>
 
-			{/* Confirm modal */}
-			{confirmAction && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-					<div
-						className={`w-full max-w-md rounded-lg p-6 shadow-xl ${darkMode ? "bg-gray-900 text-white" : "bg-white text-gray-900"}`}
-					>
-						<h3 className="text-lg font-semibold mb-2">
-							{confirmAction === "leave" ? "Leave team?" : "Delete team?"}
-						</h3>
-						<p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-							{confirmAction === "leave"
+					{/* Confirm modal for leave/delete team */}
+					<ConfirmModal
+						isOpen={confirmAction !== null}
+						onClose={() => setConfirmAction(null)}
+						onConfirm={() => {
+							if (confirmAction === "leave") {
+								handleLeaveTeam();
+							} else if (confirmAction === "delete") {
+								handleArchiveTeam();
+							}
+						}}
+						title={confirmAction === "leave" ? "Leave team?" : "Delete team?"}
+						message={
+							confirmAction === "leave"
 								? "You will lose access immediately."
-								: "This cannot be undone and removes all team data."}
-						</p>
-						<div className="flex justify-end gap-2">
-							<button
-								type="button"
-								onClick={() => setConfirmAction(null)}
-								className="rounded-md px-4 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800"
-							>
-								Cancel
-							</button>
-							<button
-								type="button"
-								onClick={() => {
-									const action = confirmAction;
-									setConfirmAction(null);
-									if (action === "leave") {
-										handleLeaveTeam();
-									} else {
-										handleArchiveTeam();
-									}
-								}}
-								className={`rounded-md px-4 py-2 text-sm font-semibold text-white ${
-									confirmAction === "leave"
-										? "bg-gray-700 hover:bg-gray-800"
-										: "bg-red-600 hover:bg-red-700"
-								}`}
-							>
-								{confirmAction === "leave" ? "Leave team" : "Delete team"}
-							</button>
-						</div>
-					</div>
-				</div>
+								: "This cannot be undone and removes all team data."
+						}
+						confirmText={
+							confirmAction === "leave" ? "Leave team" : "Delete team"
+						}
+						confirmVariant={confirmAction === "leave" ? "warning" : "danger"}
+					/>
+
+					{/* Confirm modal for delete subteam */}
+					<ConfirmModal
+						isOpen={isCaptain && deleteSubteamConfirm !== null}
+						onClose={() => setDeleteSubteamConfirm(null)}
+						onConfirm={confirmDeleteSubteam}
+						title="Delete subteam?"
+						message={`Delete ${deleteSubteamConfirm?.subteamName || "this subteam"}? This will remove its roster entries.`}
+						confirmText="Delete"
+						confirmVariant="danger"
+					/>
+				</>
 			)}
 		</TeamLayout>
 	);

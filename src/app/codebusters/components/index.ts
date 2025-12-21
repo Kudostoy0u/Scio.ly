@@ -10,5 +10,6 @@ export { default as CodebustersSummary } from "./CodebustersSummary";
 export { PrintConfigModal } from "./PrintConfigModal";
 export { default as ActionButtons } from "./ActionButtons";
 export { default as QuestionsList } from "./QuestionsList";
+export { default as FloatingTimer } from "./FloatingTimer";
 
 export * from "./cipher-displays";

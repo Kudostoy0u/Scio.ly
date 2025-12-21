@@ -11,7 +11,7 @@ import NamePromptModal from "@/app/components/NamePromptModal";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { useInvalidateTeam, useTeamMembers } from "@/lib/hooks/useTeam";
-import type { TeamMember as TeamMemberV2 } from "@/lib/server/teams-v2";
+import type { TeamMember as TeamMemberV2 } from "@/lib/server/teams";
 import type { TeamMember as StoreTeamMember } from "@/lib/stores/teams/types";
 import {
 	generateDisplayName,
@@ -35,6 +35,7 @@ interface PeopleTabProps {
 		slug: string;
 	};
 	isCaptain: boolean;
+	isAdmin?: boolean;
 	activeSubteamId?: string | null;
 	subteams?: Array<{
 		id: string;
@@ -49,6 +50,7 @@ interface PeopleTabProps {
 export default function PeopleTabUnified({
 	team,
 	isCaptain,
+	isAdmin = false,
 	subteams = [],
 }: PeopleTabProps) {
 	const { darkMode } = useTheme();
@@ -64,7 +66,7 @@ export default function PeopleTabUnified({
 	// TODO: Re-enable when linkAccount is implemented
 	// const linkAccountMutation = trpc.teams.linkAccount.useMutation();
 
-	const { invalidateTeam } = useInvalidateTeam();
+	const { updateTeamData } = useInvalidateTeam();
 
 	const [showInlineInvite, setShowInlineInvite] = useState(false);
 	const [linkInviteStates, setLinkInviteStates] = useState<
@@ -79,6 +81,7 @@ export default function PeopleTabUnified({
 		null,
 	);
 	const [showNamePrompt, setShowNamePrompt] = useState(false);
+	const [customRosterEvents, setCustomRosterEvents] = useState<string[]>([]);
 
 	const normalizedMembers = useMemo<StoreTeamMember[]>(() => {
 		const list = (members as TeamMemberV2[] | undefined) ?? [];
@@ -95,16 +98,68 @@ export default function PeopleTabUnified({
 		}));
 	}, [members]);
 
+	// Initialize pendingLinkInvites from server data when members change
+	// This ensures pending link invites persist across tab navigation
+	useEffect(() => {
+		if (normalizedMembers.length > 0) {
+			const serverPendingInvites: Record<string, boolean> = {};
+			// Process members temporarily to get the correct display names
+			// (same logic as processMembers uses)
+			for (const member of normalizedMembers) {
+				if (member.hasPendingLinkInvite) {
+					let displayName = member.name;
+					// Handle name transformation same way processMembers does
+					if (!displayName || typeof displayName !== "string") {
+						displayName = null;
+					}
+					if (needsNamePrompt(displayName)) {
+						const emailLocal =
+							member.email &&
+							typeof member.email === "string" &&
+							member.email.includes("@")
+								? member.email.split("@")[0]
+								: "";
+						const { name: robust } = generateDisplayName(
+							{
+								displayName: null,
+								firstName: null,
+								lastName: null,
+								username:
+									member.username &&
+									typeof member.username === "string" &&
+									member.username.trim()
+										? member.username.trim()
+										: emailLocal && emailLocal.length > 2
+											? emailLocal
+											: null,
+								email: member.email,
+							},
+							member.id || "",
+						);
+						if (robust?.trim()) {
+							displayName = robust.trim();
+						}
+					}
+					// Use the final display name
+					const finalName =
+						displayName ||
+						member.email?.split("@")[0] ||
+						member.username ||
+						"Unknown";
+					serverPendingInvites[finalName] = true;
+				}
+			}
+			// Merge with existing state to preserve optimistic updates
+			setPendingLinkInvites((prev) => ({ ...serverPendingInvites, ...prev }));
+		}
+	}, [normalizedMembers]);
+
 	const filteredMembers = useMemo(() => {
 		if (normalizedMembers.length === 0) {
 			return [];
 		}
 		return processMembers(normalizedMembers, pendingLinkInvites, team.division);
 	}, [normalizedMembers, pendingLinkInvites, team.division]);
-
-	const handleRefresh = useCallback(async () => {
-		await invalidateTeam(team.slug);
-	}, [invalidateTeam, team.slug]);
 
 	const {
 		handleRemoveSelfFromSubteam,
@@ -114,14 +169,30 @@ export default function PeopleTabUnified({
 		handleSubteamAssign,
 		handleInviteSubmit,
 		handleLinkInviteSubmit,
-		handleCancelLinkInvite,
+		handleCancelLinkInvite: originalHandleCancelLinkInvite,
 		handleCancelInvitation,
 		handleRemoveMember,
 		handlePromoteToCaptain,
+		handlePromoteToAdmin,
+		handleDemoteCaptainToMember,
 	} = useMemberActions({
 		teamSlug: team.slug,
 		selectedSubteam,
 	});
+
+	// Wrap handleCancelLinkInvite to also clear the pending state
+	const handleCancelLinkInvite = useCallback(
+		async (memberName: string) => {
+			// Clear from local state immediately for optimistic update
+			setPendingLinkInvites((prev) => {
+				const updated = { ...prev };
+				delete updated[memberName];
+				return updated;
+			});
+			await originalHandleCancelLinkInvite(memberName);
+		},
+		[originalHandleCancelLinkInvite],
+	);
 
 	const handleNameClick = useCallback(
 		(member: Member) => {
@@ -133,9 +204,8 @@ export default function PeopleTabUnified({
 	);
 
 	const handleNameUpdate = useCallback(() => {
-		handleRefresh();
 		setShowNamePrompt(false);
-	}, [handleRefresh]);
+	}, []);
 
 	useEffect(() => {
 		const onDisplayNameUpdated = (e: Event) => {
@@ -143,7 +213,19 @@ export default function PeopleTabUnified({
 			if (!(newName && user?.id)) {
 				return;
 			}
-			handleRefresh();
+			updateTeamData(team.slug, (prev) => {
+				if (!prev) return prev;
+				return {
+					...prev,
+					members: (prev.members ?? []).map((m: TeamMemberV2) =>
+						m.id === user.id ? { ...m, name: newName } : m,
+					),
+					rosterEntries: (prev.rosterEntries ?? []).map((r) =>
+						r.userId === user.id ? { ...r, displayName: newName } : r,
+					),
+				};
+			});
+			setShowNamePrompt(false);
 		};
 		window.addEventListener(
 			"scio-display-name-updated",
@@ -155,7 +237,7 @@ export default function PeopleTabUnified({
 				onDisplayNameUpdated as EventListener,
 			);
 		};
-	}, [user?.id, handleRefresh]);
+	}, [team.slug, updateTeamData, user?.id]);
 
 	useEffect(() => {
 		if (!(user?.id && filteredMembers.length > 0)) {
@@ -238,8 +320,43 @@ export default function PeopleTabUnified({
 		}
 	};
 
-	const handleAddEventClick = (member: Member) => {
+	const handleAddEventClick = async (member: Member) => {
 		setSelectedMember(member);
+
+		// Fetch custom roster events for the subteam
+		const subteamId = member.subteamId || member.subteam?.id;
+		if (subteamId) {
+			try {
+				const response = await fetch(
+					`/api/teams/${team.slug}/removed-events?subteamId=${subteamId}`,
+				);
+				if (response.ok) {
+					const data = await response.json();
+					// Extract all added events from all conflict blocks
+					const addedEvents: string[] = [];
+					if (data.blocks && typeof data.blocks === "object") {
+						for (const block of Object.values(data.blocks)) {
+							if (
+								block &&
+								typeof block === "object" &&
+								"added" in block &&
+								Array.isArray(block.added)
+							) {
+								addedEvents.push(...block.added);
+							}
+						}
+					}
+					setCustomRosterEvents(addedEvents);
+				} else {
+					setCustomRosterEvents([]);
+				}
+			} catch {
+				setCustomRosterEvents([]);
+			}
+		} else {
+			setCustomRosterEvents([]);
+		}
+
 		setShowEventModal(true);
 	};
 
@@ -367,6 +484,7 @@ export default function PeopleTabUnified({
 									member={member}
 									index={index}
 									isCaptain={isCaptain}
+									isAdmin={isAdmin}
 									subteams={subteams}
 									selectedMember={selectedMember}
 									onNameClick={handleNameClick}
@@ -380,6 +498,8 @@ export default function PeopleTabUnified({
 									}
 									onAddEvent={handleAddEventClick}
 									onPromoteToCaptain={handlePromoteToCaptain}
+									onPromoteToAdmin={handlePromoteToAdmin}
+									onDemoteCaptainToMember={handleDemoteCaptainToMember}
 									onSubteamAssign={handleSubteamAssign}
 									showSubteamDropdown={showSubteamDropdown}
 									onSubteamDropdownToggle={setShowSubteamDropdown}
@@ -409,9 +529,11 @@ export default function PeopleTabUnified({
 					onClose={() => {
 						setShowEventModal(false);
 						setSelectedMember(null);
+						setCustomRosterEvents([]);
 					}}
 					onSelectEvent={handleEventSelect}
 					division={team.division}
+					customEvents={customRosterEvents}
 				/>
 			)}
 

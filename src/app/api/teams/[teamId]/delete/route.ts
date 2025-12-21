@@ -1,9 +1,5 @@
 import { dbPg } from "@/lib/db";
-import {
-	newTeamGroups,
-	newTeamMemberships,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+import { teamMemberships, teamSubteams, teams } from "@/lib/db/schema";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
 	handleError,
@@ -38,12 +34,12 @@ export async function DELETE(
 		// Resolve the slug to team group using Drizzle ORM
 		const [groupResult] = await dbPg
 			.select({
-				id: newTeamGroups.id,
-				createdBy: newTeamGroups.createdBy,
-				status: newTeamGroups.status,
+				id: teams.id,
+				createdBy: teams.createdBy,
+				status: teams.status,
 			})
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (!groupResult) {
@@ -73,9 +69,9 @@ export async function DELETE(
 
 		// Get team units for this group using Drizzle ORM
 		const unitsResult = await dbPg
-			.select({ id: newTeamUnits.id })
-			.from(newTeamUnits)
-			.where(eq(newTeamUnits.groupId, groupId));
+			.select({ id: teamSubteams.id })
+			.from(teamSubteams)
+			.where(eq(teamSubteams.teamId, groupId));
 
 		if (unitsResult.length === 0) {
 			return handleNotFoundError("No team units found for this group");
@@ -87,14 +83,14 @@ export async function DELETE(
 		await dbPg.transaction(async (tx) => {
 			// Delete all memberships
 			await tx
-				.delete(newTeamMemberships)
-				.where(inArray(newTeamMemberships.teamId, teamUnitIds));
+				.delete(teamMemberships)
+				.where(inArray(teamMemberships.teamId, teamUnitIds));
 
 			// Delete all team units (cascade will handle related records)
-			await tx.delete(newTeamUnits).where(eq(newTeamUnits.groupId, groupId));
+			await tx.delete(teamSubteams).where(eq(teamSubteams.teamId, groupId));
 
 			// Delete the team group (cascade will handle related records)
-			await tx.delete(newTeamGroups).where(eq(newTeamGroups.id, groupId));
+			await tx.delete(teams).where(eq(teams.id, groupId));
 		});
 
 		return NextResponse.json({ message: "Team successfully deleted" });

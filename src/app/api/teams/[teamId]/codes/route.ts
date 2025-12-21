@@ -1,9 +1,5 @@
 import { dbPg } from "@/lib/db";
-import {
-	newTeamGroups,
-	newTeamMemberships,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+import { teamMemberships, teamSubteams, teams } from "@/lib/db/schema";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
 	handleError,
@@ -35,9 +31,9 @@ export async function GET(
 
 		// Resolve the slug to team group using Drizzle ORM
 		const [groupResult] = await dbPg
-			.select({ id: newTeamGroups.id })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.select({ id: teams.id })
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (!groupResult) {
@@ -48,9 +44,9 @@ export async function GET(
 
 		// Get team units for this group using Drizzle ORM
 		const unitsResult = await dbPg
-			.select({ id: newTeamUnits.id })
-			.from(newTeamUnits)
-			.where(eq(newTeamUnits.groupId, groupId));
+			.select({ id: teamSubteams.id })
+			.from(teamSubteams)
+			.where(eq(teamSubteams.teamId, groupId));
 
 		if (unitsResult.length === 0) {
 			return handleNotFoundError("No team units found for this group");
@@ -61,16 +57,16 @@ export async function GET(
 		// Check if user is captain or co-captain of any team unit using Drizzle ORM
 		const membershipResult = await dbPg
 			.select({
-				id: newTeamMemberships.id,
-				role: newTeamMemberships.role,
-				teamId: newTeamMemberships.teamId,
+				id: teamMemberships.id,
+				role: teamMemberships.role,
+				teamId: teamMemberships.teamId,
 			})
-			.from(newTeamMemberships)
+			.from(teamMemberships)
 			.where(
 				and(
-					eq(newTeamMemberships.userId, user.id),
-					inArray(newTeamMemberships.teamId, teamUnitIds),
-					eq(newTeamMemberships.status, "active"),
+					eq(teamMemberships.userId, user.id),
+					inArray(teamMemberships.teamId, teamUnitIds),
+					eq(teamMemberships.status, "active"),
 				),
 			);
 
@@ -78,8 +74,8 @@ export async function GET(
 			return handleForbiddenError("Not a team member");
 		}
 
-		const captainMemberships = membershipResult.filter((m) =>
-			["captain", "co_captain"].includes(m.role),
+		const captainMemberships = membershipResult.filter(
+			(m) => m.role === "captain",
 		);
 
 		if (captainMemberships.length === 0) {
@@ -89,11 +85,11 @@ export async function GET(
 		// Get team codes from the first team unit using Drizzle ORM
 		const [teamResult] = await dbPg
 			.select({
-				captainCode: newTeamUnits.captainCode,
-				userCode: newTeamUnits.userCode,
+				captainCode: teamSubteams.captainCode,
+				userCode: teamSubteams.userCode,
 			})
-			.from(newTeamUnits)
-			.where(eq(newTeamUnits.id, teamUnitIds[0] ?? ""))
+			.from(teamSubteams)
+			.where(eq(teamSubteams.id, teamUnitIds[0] ?? ""))
 			.limit(1);
 
 		if (!teamResult) {

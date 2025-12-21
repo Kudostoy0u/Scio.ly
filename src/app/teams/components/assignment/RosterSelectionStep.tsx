@@ -25,12 +25,6 @@ export default function RosterSelectionStep({
 
 	// Helper functions to reduce cognitive complexity
 	const getMemberCardClasses = (member: RosterMember) => {
-		if (!member.isLinked) {
-			return darkMode
-				? "opacity-50 cursor-not-allowed bg-gray-800 border-gray-600"
-				: "opacity-50 cursor-not-allowed bg-gray-100 border-gray-300";
-		}
-
 		if (selectedRoster.includes(member.student_name)) {
 			return darkMode
 				? "bg-blue-900/20 border-blue-400 cursor-pointer"
@@ -42,21 +36,27 @@ export default function RosterSelectionStep({
 			: "bg-white border-gray-200 hover:bg-gray-50 cursor-pointer";
 	};
 
-	const getMemberTextColor = (member: RosterMember) => {
-		return member.isLinked
-			? darkMode
-				? "text-white"
-				: "text-gray-900"
-			: "text-gray-500";
+	const getMemberTextColor = (_member: RosterMember) => {
+		return darkMode ? "text-white" : "text-gray-900";
 	};
 
 	const renderMemberInfo = (member: RosterMember) => {
-		if (member.username && member.isLinked && member.username !== "unknown") {
+		const subteamLabel = member.subteam_name || "No subteam";
+		if (member.username && member.username !== "unknown") {
 			return (
 				<div
 					className={`text-xs mt-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
 				>
 					@{member.username}
+					<span
+						className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+							darkMode
+								? "bg-gray-700 text-gray-200"
+								: "bg-gray-200 text-gray-700"
+						}`}
+					>
+						{subteamLabel}
+					</span>
 				</div>
 			);
 		}
@@ -65,19 +65,36 @@ export default function RosterSelectionStep({
 			return (
 				<div
 					className={`text-xs mt-1 ${
-						member.isLinked
-							? darkMode
-								? "text-gray-400"
-								: "text-gray-500"
-							: "text-gray-400"
+						darkMode ? "text-gray-400" : "text-gray-500"
 					}`}
 				>
 					{member.userEmail}
+					<span
+						className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+							darkMode
+								? "bg-gray-700 text-gray-200"
+								: "bg-gray-200 text-gray-700"
+						}`}
+					>
+						{subteamLabel}
+					</span>
 				</div>
 			);
 		}
 
-		return null;
+		return (
+			<div
+				className={`text-xs mt-1 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+			>
+				<span
+					className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+						darkMode ? "bg-gray-700 text-gray-200" : "bg-gray-200 text-gray-700"
+					}`}
+				>
+					{subteamLabel}
+				</span>
+			</div>
+		);
 	};
 
 	const handleCreateAssignment = async () => {
@@ -122,19 +139,20 @@ export default function RosterSelectionStep({
 				</div>
 			) : (
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
-					{rosterMembers.map((member) => (
+					{rosterMembers.map((member, index) => (
 						<button
-							key={member.student_name}
-							type="button"
-							className={`p-3 border rounded-lg transition-colors text-left w-full ${
-								member.isLinked
-									? getMemberCardClasses(member)
-									: getMemberCardClasses(member)
-							}`}
-							onClick={() =>
-								member.isLinked && toggleRosterMember(member.student_name)
+							key={
+								member.user_id
+									? `user_${member.user_id}`
+									: member.roster_entry_id
+										? `roster_${member.roster_entry_id}`
+										: `unlinked_${member.student_name}_${index}`
 							}
-							disabled={!member.isLinked}
+							type="button"
+							className={`p-3 border rounded-lg transition-colors text-left w-full ${getMemberCardClasses(
+								member,
+							)}`}
+							onClick={() => toggleRosterMember(member.student_name)}
 							aria-label={`Toggle selection for ${member.student_name}`}
 						>
 							<div className="flex items-center justify-between">
@@ -142,24 +160,11 @@ export default function RosterSelectionStep({
 									<input
 										type="checkbox"
 										checked={selectedRoster.includes(member.student_name)}
-										onChange={() =>
-											member.isLinked && toggleRosterMember(member.student_name)
-										}
-										disabled={!member.isLinked}
+										onChange={() => toggleRosterMember(member.student_name)}
 										className="mr-2"
 									/>
 									<span className={`font-medium ${getMemberTextColor(member)}`}>
 										{member.student_name}
-									</span>
-								</div>
-								<div className="flex items-center space-x-1">
-									<div
-										className={`w-2 h-2 rounded-full ${member.isLinked ? "bg-green-500" : "bg-red-500"}`}
-									/>
-									<span
-										className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-									>
-										{member.isLinked ? "Linked" : "Unlinked"}
 									</span>
 								</div>
 							</div>

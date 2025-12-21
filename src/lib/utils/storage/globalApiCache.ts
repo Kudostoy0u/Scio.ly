@@ -348,6 +348,98 @@ class GlobalApiCache {
 	}
 
 	/**
+	 * Invalidate all user-teams caches (for all users)
+	 * Useful when a team is deleted and we need to refresh all user teams lists
+	 */
+	invalidateAllUserTeams(): void {
+		const keysToDelete: string[] = [];
+
+		// Find all user-teams cache keys in memory
+		for (const [key] of this.memoryCache.entries()) {
+			if (key.includes("user-teams-")) {
+				keysToDelete.push(key);
+			}
+		}
+
+		// Invalidate memory cache entries
+		for (const key of keysToDelete) {
+			this.memoryCache.delete(key);
+			this.stopBackgroundRefresh(key);
+		}
+
+		// Clear localStorage entries
+		if (typeof localStorage !== "undefined") {
+			try {
+				const keys = Object.keys(localStorage);
+				for (const storageKey of keys) {
+					if (
+						storageKey.startsWith(this.STORAGE_PREFIX) &&
+						storageKey.includes("user-teams-")
+					) {
+						SyncLocalStorage.removeItem(storageKey);
+					}
+				}
+			} catch {
+				// Ignore storage errors
+			}
+		}
+	}
+
+	/**
+	 * Invalidate all caches related to a specific team
+	 * Useful when a team is deleted or significantly modified
+	 */
+	invalidateTeamCaches(teamSlug: string): void {
+		const keysToDelete: string[] = [];
+
+		// Find all team-related cache keys in memory
+		for (const [key] of this.memoryCache.entries()) {
+			if (
+				key.includes(`subteams-${teamSlug}`) ||
+				key.includes(`roster-${teamSlug}`) ||
+				key.includes(`members-${teamSlug}`) ||
+				key.includes(`stream-${teamSlug}`) ||
+				key.includes(`assignments-${teamSlug}`) ||
+				key.includes(`tournaments-${teamSlug}`) ||
+				key.includes(`timers-${teamSlug}`) ||
+				key.includes(`calendar_${teamSlug}`)
+			) {
+				keysToDelete.push(key);
+			}
+		}
+
+		// Invalidate memory cache entries
+		for (const key of keysToDelete) {
+			this.memoryCache.delete(key);
+			this.stopBackgroundRefresh(key);
+		}
+
+		// Clear localStorage entries
+		if (typeof localStorage !== "undefined") {
+			try {
+				const keys = Object.keys(localStorage);
+				for (const storageKey of keys) {
+					if (
+						storageKey.startsWith(this.STORAGE_PREFIX) &&
+						(storageKey.includes(`subteams-${teamSlug}`) ||
+							storageKey.includes(`roster-${teamSlug}`) ||
+							storageKey.includes(`members-${teamSlug}`) ||
+							storageKey.includes(`stream-${teamSlug}`) ||
+							storageKey.includes(`assignments-${teamSlug}`) ||
+							storageKey.includes(`tournaments-${teamSlug}`) ||
+							storageKey.includes(`timers-${teamSlug}`) ||
+							storageKey.includes(`calendar_${teamSlug}`))
+					) {
+						SyncLocalStorage.removeItem(storageKey);
+					}
+				}
+			} catch {
+				// Ignore storage errors
+			}
+		}
+	}
+
+	/**
 	 * Clear all calendar-related caches for a specific team or user
 	 */
 	clearCalendarCache(teamSlug?: string, userId?: string): void {

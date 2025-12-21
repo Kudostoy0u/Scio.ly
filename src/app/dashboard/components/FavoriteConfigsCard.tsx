@@ -420,7 +420,7 @@ function MobileFavoriteTile({
 				}`}
 			/>
 			<div
-				className={`absolute inset-0 transition-opacity flex items-center justify-center gap-1 ${
+				className={`absolute inset-0 transition-opacity flex items-center justify-center gap-3 z-20 ${
 					isSelected
 						? "opacity-100 pointer-events-auto"
 						: "opacity-0 pointer-events-none"
@@ -432,10 +432,10 @@ function MobileFavoriteTile({
 						event.stopPropagation();
 						onStart(config);
 					}}
-					className="p-1 rounded-full border border-white/70 text-white hover:border-white"
+					className="p-2 rounded-full border border-white/70 text-white hover:border-white active:bg-white/20"
 					title="Start"
 				>
-					<Play className="w-3 h-3" />
+					<Play className="w-5 h-5" />
 				</button>
 				<button
 					type="button"
@@ -443,10 +443,10 @@ function MobileFavoriteTile({
 						event.stopPropagation();
 						onRemove(config);
 					}}
-					className="p-1 rounded-full border border-white/70 text-white hover:border-white"
+					className="p-2 rounded-full border border-white/70 text-white hover:border-white active:bg-white/20"
 					title="Remove"
 				>
-					<Trash2 className="w-3 h-3" />
+					<Trash2 className="w-5 h-5" />
 				</button>
 			</div>
 		</div>

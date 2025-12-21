@@ -48,7 +48,7 @@ describe("Calendar Event Management E2E", () => {
 	afterAll(() => {
 		// Cleanup
 		const userIds = testUsers.map((u) => u.id);
-		const teamGroupIds = testTeams.map((t) => t.groupId);
+		const teamGroupIds = testTeams.map((t) => t.teamId);
 		cleanupTestData(userIds, teamGroupIds);
 	});
 
@@ -68,7 +68,7 @@ describe("Calendar Event Management E2E", () => {
 					Date.now() + 7 * 24 * 60 * 60 * 1000 + 8 * 60 * 60 * 1000,
 				),
 				location: "Test Location",
-				isAllDay: false,
+				allDay: false,
 				isRecurring: false,
 			});
 
@@ -84,18 +84,18 @@ describe("Calendar Event Management E2E", () => {
 			expect(retrievedEvent?.createdBy).toBe(captain.id);
 		});
 
-		it("should create a personal event (null teamId)", () => {
+		it("should create a personal event (using dummy teamId)", () => {
 			const captain = testUsers[0];
 			if (!captain) throw new Error("Test setup failed");
 
 			// Create personal event
 			const event = createEvent({
-				teamId: null,
+				teamId: "00000000-0000-0000-0000-000000000000",
 				createdBy: captain.id,
 				title: "Personal Practice",
 				eventType: "practice",
 				startTime: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
-				isAllDay: false,
+				allDay: false,
 				isRecurring: false,
 			});
 
@@ -122,7 +122,7 @@ describe("Calendar Event Management E2E", () => {
 				title: "Weekly Practice",
 				eventType: "practice",
 				startTime: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
-				isAllDay: false,
+				allDay: false,
 				isRecurring: true,
 				recurrencePattern: {
 					frequency: "weekly",

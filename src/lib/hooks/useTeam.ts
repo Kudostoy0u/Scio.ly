@@ -7,10 +7,16 @@
 
 "use client";
 
-import type { TeamFullData } from "@/lib/server/teams-v2";
+import type { TeamFullData } from "@/lib/server/teams";
 import { trpc } from "@/lib/trpc/client";
+import logger from "@/lib/utils/logging/logger";
+import { globalApiCache } from "@/lib/utils/storage/globalApiCache";
+import {
+	INFINITE_TTL,
+	LocalStorageCache,
+} from "@/lib/utils/storage/localStorageCache";
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 export const teamKeys = {
 	all: ["team"] as const,
@@ -52,7 +58,9 @@ export function useTeamMembers(teamSlug: string, subteamId?: string) {
 		if (!subteamId || subteamId === "all") {
 			return membersData;
 		}
-		return membersData.filter((m) => m.subteamId === subteamId);
+		return membersData.filter(
+			(m: TeamFullData["members"][0]) => m.subteamId === subteamId,
+		);
 	}, [membersData, subteamId]);
 
 	return { ...query, data: members };
@@ -96,23 +104,280 @@ export function useTeamAssignments(teamSlug: string) {
 	return { ...query, data: query.data?.assignments ?? [] };
 }
 
+type SubteamCacheManifest = {
+	subteamId: string;
+	streamUpdatedAt: string;
+	timersUpdatedAt: string;
+	tournamentsUpdatedAt: string;
+};
+
+type TeamCacheManifest = {
+	teamId: string;
+	fullUpdatedAt: string;
+	assignmentsUpdatedAt: string;
+	rosterUpdatedAt: string;
+	membersUpdatedAt: string;
+	subteamsUpdatedAt: string;
+	calendarUpdatedAt: string;
+	subteams: SubteamCacheManifest[];
+};
+
+const TEAM_MANIFEST_PREFIX = "team_cache_manifest_";
+
+const toTimestamp = (value: string | null | undefined) =>
+	value ? new Date(value).getTime() : 0;
+
+export function useTeamCacheInvalidation(teamSlug: string) {
+	const utils = trpc.useUtils();
+	const { data: manifest } = trpc.teams.cacheManifest.useQuery(
+		{ teamSlug },
+		{
+			enabled: !!teamSlug,
+			staleTime: 0,
+			refetchOnWindowFocus: false,
+			refetchOnMount: true,
+		},
+	);
+
+	useEffect(() => {
+		if (!manifest) {
+			return;
+		}
+
+		logger.log("[TeamCache] Manifest fetched", {
+			teamSlug,
+			manifest,
+		});
+
+		const storageKey = `${TEAM_MANIFEST_PREFIX}${teamSlug}`;
+		const cached = LocalStorageCache.get<TeamCacheManifest>(storageKey);
+
+		if (!cached) {
+			logger.log("[TeamCache] No cached manifest, bootstrapping refresh", {
+				teamSlug,
+			});
+
+			const bootstrapRefreshes: Promise<unknown>[] = [
+				utils.teams.full.prefetch({ teamSlug }),
+				utils.teams.assignments.prefetch({ teamSlug }),
+			];
+
+			for (const subteam of manifest.subteams ?? []) {
+				bootstrapRefreshes.push(
+					utils.teams.getStream.prefetch({
+						teamSlug,
+						subteamId: subteam.subteamId,
+					}),
+				);
+				bootstrapRefreshes.push(
+					utils.teams.getTimers.prefetch({
+						teamSlug,
+						subteamId: subteam.subteamId,
+					}),
+				);
+				bootstrapRefreshes.push(
+					utils.teams.getTournaments.prefetch({
+						teamSlug,
+						subteamId: subteam.subteamId,
+					}),
+				);
+			}
+
+			void Promise.all(bootstrapRefreshes).then(() => {
+				logger.log("[TeamCache] Bootstrap refresh complete", {
+					teamSlug,
+					count: bootstrapRefreshes.length,
+				});
+			});
+
+			LocalStorageCache.set(storageKey, manifest, INFINITE_TTL);
+			return;
+		}
+
+		const invalidations: Promise<unknown>[] = [];
+		const refreshes: Promise<unknown>[] = [];
+		const staleFlags: string[] = [];
+
+		const fullNeedsRefresh =
+			toTimestamp(manifest.fullUpdatedAt) > toTimestamp(cached.fullUpdatedAt) ||
+			toTimestamp(manifest.rosterUpdatedAt) >
+				toTimestamp(cached.rosterUpdatedAt) ||
+			toTimestamp(manifest.membersUpdatedAt) >
+				toTimestamp(cached.membersUpdatedAt) ||
+			toTimestamp(manifest.subteamsUpdatedAt) >
+				toTimestamp(cached.subteamsUpdatedAt);
+
+		if (fullNeedsRefresh) {
+			staleFlags.push("teams.full");
+			invalidations.push(utils.teams.full.invalidate({ teamSlug }));
+			refreshes.push(utils.teams.full.prefetch({ teamSlug }));
+		}
+
+		if (
+			toTimestamp(manifest.assignmentsUpdatedAt) >
+			toTimestamp(cached.assignmentsUpdatedAt)
+		) {
+			staleFlags.push("teams.assignments");
+			invalidations.push(utils.teams.assignments.invalidate({ teamSlug }));
+			refreshes.push(utils.teams.assignments.prefetch({ teamSlug }));
+		}
+
+		const cachedSubteams = new Map(
+			(cached.subteams ?? []).map((subteam) => [subteam.subteamId, subteam]),
+		);
+		const nextSubteams = new Map(
+			(manifest.subteams ?? []).map((subteam) => [subteam.subteamId, subteam]),
+		);
+
+		for (const [subteamId, next] of nextSubteams.entries()) {
+			const previous = cachedSubteams.get(subteamId);
+			if (!previous) {
+				staleFlags.push(`teams.getStream:${subteamId}`);
+				invalidations.push(
+					utils.teams.getStream.invalidate({ teamSlug, subteamId }),
+				);
+				refreshes.push(utils.teams.getStream.prefetch({ teamSlug, subteamId }));
+				staleFlags.push(`teams.getTimers:${subteamId}`);
+				invalidations.push(
+					utils.teams.getTimers.invalidate({ teamSlug, subteamId }),
+				);
+				refreshes.push(utils.teams.getTimers.prefetch({ teamSlug, subteamId }));
+				staleFlags.push(`teams.getTournaments:${subteamId}`);
+				invalidations.push(
+					utils.teams.getTournaments.invalidate({ teamSlug, subteamId }),
+				);
+				refreshes.push(
+					utils.teams.getTournaments.prefetch({ teamSlug, subteamId }),
+				);
+				continue;
+			}
+
+			if (
+				toTimestamp(next.streamUpdatedAt) >
+				toTimestamp(previous.streamUpdatedAt)
+			) {
+				staleFlags.push(`teams.getStream:${subteamId}`);
+				invalidations.push(
+					utils.teams.getStream.invalidate({ teamSlug, subteamId }),
+				);
+				refreshes.push(utils.teams.getStream.prefetch({ teamSlug, subteamId }));
+			}
+			if (
+				toTimestamp(next.timersUpdatedAt) >
+				toTimestamp(previous.timersUpdatedAt)
+			) {
+				staleFlags.push(`teams.getTimers:${subteamId}`);
+				invalidations.push(
+					utils.teams.getTimers.invalidate({ teamSlug, subteamId }),
+				);
+				refreshes.push(utils.teams.getTimers.prefetch({ teamSlug, subteamId }));
+			}
+			if (
+				toTimestamp(next.tournamentsUpdatedAt) >
+				toTimestamp(previous.tournamentsUpdatedAt)
+			) {
+				staleFlags.push(`teams.getTournaments:${subteamId}`);
+				invalidations.push(
+					utils.teams.getTournaments.invalidate({ teamSlug, subteamId }),
+				);
+				refreshes.push(
+					utils.teams.getTournaments.prefetch({ teamSlug, subteamId }),
+				);
+			}
+		}
+
+		for (const [subteamId] of cachedSubteams.entries()) {
+			if (!nextSubteams.has(subteamId)) {
+				staleFlags.push(`teams.getStream:${subteamId}`);
+				invalidations.push(
+					utils.teams.getStream.invalidate({ teamSlug, subteamId }),
+				);
+				refreshes.push(utils.teams.getStream.prefetch({ teamSlug, subteamId }));
+				staleFlags.push(`teams.getTimers:${subteamId}`);
+				invalidations.push(
+					utils.teams.getTimers.invalidate({ teamSlug, subteamId }),
+				);
+				refreshes.push(utils.teams.getTimers.prefetch({ teamSlug, subteamId }));
+				staleFlags.push(`teams.getTournaments:${subteamId}`);
+				invalidations.push(
+					utils.teams.getTournaments.invalidate({ teamSlug, subteamId }),
+				);
+				refreshes.push(
+					utils.teams.getTournaments.prefetch({ teamSlug, subteamId }),
+				);
+			}
+		}
+
+		if (invalidations.length > 0) {
+			logger.log("[TeamCache] Stale cache detected", {
+				teamSlug,
+				entries: staleFlags,
+			});
+			void Promise.all(invalidations);
+			void Promise.all(refreshes).then(() => {
+				logger.log("[TeamCache] Cache refresh complete", {
+					teamSlug,
+					count: refreshes.length,
+				});
+			});
+		} else {
+			logger.log("[TeamCache] Cache up to date", { teamSlug });
+		}
+
+		LocalStorageCache.set(storageKey, manifest, INFINITE_TTL);
+	}, [manifest, teamSlug, utils]);
+
+	return { manifest };
+}
+
 export function useInvalidateTeam() {
 	const queryClient = useQueryClient();
 	const utils = trpc.useUtils();
 
 	return {
-		invalidateTeam: async (teamSlug: string) => {
-			await Promise.all([
+		invalidateTeam: async (
+			teamSlug: string,
+			options?: { invalidateUserTeams?: boolean },
+		) => {
+			const invalidations = [
 				utils.teams.full.invalidate({ teamSlug }),
 				utils.teams.meta.invalidate({ teamSlug }),
 				queryClient.invalidateQueries({ queryKey: teamKeys.full(teamSlug) }),
 				queryClient.invalidateQueries({ queryKey: teamKeys.meta(teamSlug) }),
+			];
+
+			// If team is deleted, also invalidate user teams list
+			if (options?.invalidateUserTeams) {
+				invalidations.push(utils.teams.listUserTeams.invalidate());
+			}
+
+			await Promise.all(invalidations);
+		},
+		invalidateTeamAndUserTeams: async (teamSlug: string) => {
+			// Invalidate globalApiCache for all user-teams (affects all users)
+			globalApiCache.invalidateAllUserTeams();
+			// Invalidate all team-specific caches in globalApiCache
+			globalApiCache.invalidateTeamCaches(teamSlug);
+
+			await Promise.all([
+				utils.teams.full.invalidate({ teamSlug }),
+				utils.teams.meta.invalidate({ teamSlug }),
+				utils.teams.listUserTeams.invalidate(),
+				queryClient.invalidateQueries({ queryKey: teamKeys.full(teamSlug) }),
+				queryClient.invalidateQueries({ queryKey: teamKeys.meta(teamSlug) }),
+				queryClient.invalidateQueries({
+					queryKey: [["teams", "listUserTeams"]],
+				}),
 			]);
 		},
 		updateTeamData: (
 			teamSlug: string,
-			updater: (prev?: TeamFullData) => TeamFullData,
+			updater: (prev?: TeamFullData) => TeamFullData | undefined,
 		) => {
+			// Keep both caches in sync:
+			// - tRPC's internal query key (used by `trpc.teams.full.useQuery`)
+			// - our explicit `teamKeys.full` key (used by some manual invalidations)
+			utils.teams.full.setData({ teamSlug }, updater);
 			queryClient.setQueryData(teamKeys.full(teamSlug), updater);
 		},
 		refetchTeam: async (teamSlug: string) => {

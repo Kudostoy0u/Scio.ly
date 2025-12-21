@@ -1,157 +1,38 @@
+import wordsJson from "@/../public/words.json";
 import {
 	FALLBACK_WORDS,
 	getCustomWordBank,
 } from "@/app/codebusters/utils/common";
 
-// Expanded word bank for better variety
-const EXPANDED_WORDS = [
-	"SEND",
-	"MORE",
-	"MONEY",
-	"EAT",
-	"THAT",
-	"APPLE",
-	"HEAT",
-	"PLATE",
-	"THE",
-	"WORD",
-	"CODE",
-	"CIPHER",
-	"SECRET",
-	"PUZZLE",
-	"SOLVE",
-	"BRAIN",
-	"LOGIC",
-	"MATH",
-	"NUMBER",
-	"DIGIT",
-	"LETTER",
-	"ALPHA",
-	"BETA",
-	"GAMMA",
-	"DELTA",
-	"ALPHA",
-	"OMEGA",
-	"PI",
-	"SIGMA",
-	"THETA",
-	"LAMBDA",
-	"PHI",
-	"PSI",
-	"RHO",
-	"STAR",
-	"MOON",
-	"SUN",
-	"EARTH",
-	"MARS",
-	"VENUS",
-	"JUPITER",
-	"SATURN",
-	"BOOK",
-	"PAGE",
-	"STORY",
-	"TALE",
-	"NOVEL",
-	"POEM",
-	"VERSE",
-	"SONG",
-	"MUSIC",
-	"SOUND",
-	"VOICE",
-	"TONE",
-	"NOTE",
-	"CHORD",
-	"SCALE",
-	"MELODY",
-	"DANCE",
-	"MOVE",
-	"STEP",
-	"JUMP",
-	"RUN",
-	"WALK",
-	"RACE",
-	"SPEED",
-	"FAST",
-	"SLOW",
-	"QUICK",
-	"RAPID",
-	"SWIFT",
-	"FLEET",
-	"AGILE",
-	"NIMBLE",
-	"STRONG",
-	"POWER",
-	"FORCE",
-	"MIGHT",
-	"ENERGY",
-	"VIGOR",
-	"STRENGTH",
-	"MUSCLE",
-	"WATER",
-	"OCEAN",
-	"RIVER",
-	"LAKE",
-	"STREAM",
-	"WAVE",
-	"TIDE",
-	"CURRENT",
-	"FIRE",
-	"FLAME",
-	"HEAT",
-	"BURN",
-	"SPARK",
-	"GLOW",
-	"LIGHT",
-	"BRIGHT",
-	"DARK",
-	"NIGHT",
-	"SHADE",
-	"SHADOW",
-	"BLACK",
-	"DEEP",
-	"DUSK",
-	"DAWN",
-	"TIME",
-	"HOUR",
-	"MINUTE",
-	"SECOND",
-	"CLOCK",
-	"WATCH",
-	"TIMER",
-	"ALARM",
-	"SPACE",
-	"STAR",
-	"PLANET",
-	"GALAXY",
-	"UNIVERSE",
-	"COSMOS",
-	"VOID",
-	"EMPTY",
-	"SOLID",
-	"LIQUID",
-	"GAS",
-	"MATTER",
-	"ATOM",
-	"PARTICLE",
-	"MOLECULE",
-	"ELEMENT",
-];
-
 const UPPERCASE_LETTER_REGEX = /^[A-Z]$/;
 
+// Cache processed words to avoid reprocessing on every call
+let cachedWords: string[] | null = null;
+
 export function getUniqueWords(): string[] {
+	// Return cached words if available
+	if (cachedWords !== null) {
+		return cachedWords;
+	}
+
 	const custom = getCustomWordBank();
 	const wordBank = (custom && custom.length > 0 ? custom : FALLBACK_WORDS).map(
 		(w) => w.toUpperCase(),
 	);
 
-	// Combine word banks and filter to valid words (2-6 letters, all uppercase)
-	const allWords = [...wordBank, ...EXPANDED_WORDS]
+	// Load words from words.json and combine with word bank
+	const wordsFromJson = (wordsJson as string[])
 		.map((w) => w.toUpperCase().replace(/[^A-Z]/g, ""))
 		.filter((w) => w.length >= 2 && w.length <= 6);
 
-	// Remove duplicates
-	return Array.from(new Set(allWords));
+	// Combine word banks and filter to valid words (2-6 letters, all uppercase)
+	const allWords = [...wordBank, ...wordsFromJson]
+		.map((w) => w.toUpperCase().replace(/[^A-Z]/g, ""))
+		.filter((w) => w.length >= 2 && w.length <= 6);
+
+	// Remove duplicates and cache
+	cachedWords = Array.from(new Set(allWords));
+	return cachedWords;
 }
 
 export function pickWord(

@@ -48,6 +48,7 @@ interface EventForm {
 	recurrence_pattern: Record<string, unknown>;
 	meeting_type: "personal" | "team";
 	selected_team_id: string;
+	selected_subteam_id: string;
 }
 
 interface UserTeam {
@@ -55,8 +56,13 @@ interface UserTeam {
 	name: string;
 	slug: string;
 	school: string;
+	division?: "B" | "C";
 	user_role: string;
 	team_id: string;
+	subteams?: Array<{
+		id: string;
+		name: string;
+	}>;
 }
 
 interface EventModalProps {
@@ -80,55 +86,72 @@ export default function EventModal({
 	onFormChange,
 	onSubmit,
 }: EventModalProps) {
-	const handleTeamSelection = (value: string) => {
+	const teamOptions = userTeams;
+
+	const selectedTeam = teamOptions.find(
+		(team) => team.id === eventForm.selected_team_id,
+	);
+	const isSelectedTeamEligible =
+		!selectedTeam ||
+		selectedTeam.user_role === "captain" ||
+		selectedTeam.user_role === "admin";
+
+	const getMeetingSelectionValue = () => {
+		if (eventForm.meeting_type === "personal") {
+			return "personal";
+		}
+		if (eventForm.selected_team_id && eventForm.selected_subteam_id) {
+			return `team:${eventForm.selected_team_id}:sub:${eventForm.selected_subteam_id}`;
+		}
+		if (eventForm.selected_team_id) {
+			return `team:${eventForm.selected_team_id}:all`;
+		}
+		return "personal";
+	};
+
+	const handleMeetingSelection = (value: string) => {
 		if (value === "personal") {
 			onFormChange({
 				meeting_type: "personal",
 				selected_team_id: "",
+				selected_subteam_id: "",
 			});
-		} else if (value.startsWith("all-")) {
-			onFormChange({
-				meeting_type: "team",
-				selected_team_id: value,
-			});
-		} else {
-			onFormChange({
-				meeting_type: "team",
-				selected_team_id: value,
-			});
+			return;
 		}
+
+		const [prefix, teamId, kind, subteamId] = value.split(":");
+		if (prefix !== "team" || !teamId) {
+			return;
+		}
+
+		onFormChange({
+			meeting_type: "team",
+			selected_team_id: teamId,
+			selected_subteam_id: kind === "sub" && subteamId ? subteamId : "",
+		});
 	};
 
-	const getTeamOptions = () => {
-		type TeamOption = UserTeam & { isAllTeams?: boolean };
-		return userTeams.reduce((acc: TeamOption[], team) => {
-			const schoolKey = team.school || "Unknown School";
-			const existingGroup = acc.find((group) => group.school === schoolKey);
+	const meetingTypeOptions = [
+		{ value: "personal", label: "Personal" },
+		...teamOptions.flatMap((team) => {
+			const baseLabel = team.school;
+			const options = [
+				{
+					value: `team:${team.id}:all`,
+					label: `${baseLabel} (All subteams)`,
+				},
+			];
 
-			if (existingGroup) {
-				acc.push({
-					...team,
-					name: team.name,
-				});
-			} else {
-				acc.push({
-					id: `all-${schoolKey}`,
-					school: schoolKey,
-					name: "All Teams",
-					isAllTeams: true,
-					slug: "",
-					user_role: "",
-					team_id: "",
-				});
-				acc.push({
-					...team,
-					name: team.name,
+			for (const subteam of team.subteams ?? []) {
+				options.push({
+					value: `team:${team.id}:sub:${subteam.id}`,
+					label: `${baseLabel} (${subteam.name})`,
 				});
 			}
 
-			return acc;
-		}, []);
-	};
+			return options;
+		}),
+	];
 
 	return (
 		<AnimatePresence>
@@ -251,36 +274,34 @@ export default function EventModal({
 											htmlFor="meeting-type"
 											className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 										>
-											Meeting Type
+											For who?
 										</label>
 										<select
 											id="meeting-type"
-											value={
-												eventForm.meeting_type === "personal"
-													? "personal"
-													: eventForm.selected_team_id || "personal"
-											}
-											onChange={(e) => handleTeamSelection(e.target.value)}
+											value={getMeetingSelectionValue()}
+											onChange={(e) => handleMeetingSelection(e.target.value)}
 											className={`w-full px-3 py-2 border rounded-lg ${
 												darkMode
 													? "bg-gray-700 border-gray-600 text-white"
 													: "bg-white border-gray-300 text-gray-900"
 											}`}
 										>
-											<option value="personal">Personal</option>
-											{getTeamOptions().map((team) => (
-												<option
-													key={team.id}
-													value={
-														team.isAllTeams ? `all-${team.school}` : team.id
-													}
-												>
-													{team.isAllTeams
-														? `${team.school} - All Teams`
-														: `${team.school} - ${team.name}`}
+											{meetingTypeOptions.map((option) => (
+												<option key={option.value} value={option.value}>
+													{option.label}
 												</option>
 											))}
 										</select>
+										{eventForm.meeting_type === "team" &&
+											!isSelectedTeamEligible && (
+												<p
+													className={`mt-2 text-xs ${
+														darkMode ? "text-amber-300" : "text-amber-700"
+													}`}
+												>
+													Only captains/admins can create team events.
+												</p>
+											)}
 									</div>
 								</div>
 

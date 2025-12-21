@@ -57,7 +57,7 @@ describe("Team Invitation E2E", () => {
 	afterAll(() => {
 		// Cleanup
 		const userIds = testUsers.map((u) => u.id);
-		const teamGroupIds = testTeams.map((t) => t.groupId);
+		const teamGroupIds = testTeams.map((t) => t.teamId);
 		cleanupTestData(userIds, teamGroupIds);
 	});
 
@@ -134,9 +134,9 @@ describe("Team Invitation E2E", () => {
 			const notification = createTeamNotification({
 				userId: invitee.id,
 				teamId: team.subteamId,
-				notificationType: "team_invite",
+				type: "team_invite",
 				title: "Team Invitation",
-				message: "You've been invited to join the team",
+				content: "You've been invited to join the team",
 			});
 
 			expect(notification).toBeDefined();
@@ -145,7 +145,7 @@ describe("Team Invitation E2E", () => {
 			const retrievedNotification = getTeamNotificationById(notification.id);
 
 			expect(retrievedNotification).toBeDefined();
-			expect(retrievedNotification?.notificationType).toBe("team_invite");
+			expect(retrievedNotification?.type).toBe("team_invite");
 			expect(retrievedNotification?.userId).toBe(invitee.id);
 		});
 	});
@@ -171,7 +171,7 @@ describe("Team Invitation E2E", () => {
 
 			expect(membership).toBeDefined();
 			expect(membership?.role).toBeDefined();
-			expect(["captain", "co_captain"]).toContain(membership?.role);
+			expect(["captain"]).toContain(membership?.role);
 		});
 
 		it("should prevent existing members from being invited", () => {

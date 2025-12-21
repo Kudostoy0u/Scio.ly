@@ -1,5 +1,5 @@
 import { upsertUserProfile } from "@/lib/db/teams/utils";
-import { cockroachDBTeamsService } from "@/lib/services/cockroachdb-teams";
+import { teamsService } from "@/lib/services/teams";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import logger from "@/lib/utils/logging/logger";
 import { type NextRequest, NextResponse } from "next/server";
@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
 		await ensureDisplayName(userId, user.email);
 
 		// Create team group using CockroachDB
-		const group = await cockroachDBTeamsService.createTeamGroup({
+		const group = await teamsService.createTeamGroup({
 			school,
 			division,
 			slug,
@@ -212,9 +212,8 @@ export async function POST(request: NextRequest) {
 		});
 
 		// Create default team unit using CockroachDB
-		const team = await cockroachDBTeamsService.createTeamUnit({
-			groupId: group.id,
-			teamId: "A",
+		const team = await teamsService.createTeamUnit({
+			teamId: group.id,
 			captainCode: `CAP${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
 			userCode: `USR${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
 			description: "Team A",
@@ -222,7 +221,7 @@ export async function POST(request: NextRequest) {
 		});
 
 		// Add creator as captain using CockroachDB
-		await cockroachDBTeamsService.createTeamMembership({
+		await teamsService.createTeamMembership({
 			userId,
 			teamId: team.id,
 			role: "captain",
@@ -230,7 +229,7 @@ export async function POST(request: NextRequest) {
 		});
 
 		// Get team members for response
-		const members = await cockroachDBTeamsService.getTeamMembers(team.id);
+		const members = await teamsService.getTeamMembers(team.id);
 
 		const response = {
 			id: team.id,

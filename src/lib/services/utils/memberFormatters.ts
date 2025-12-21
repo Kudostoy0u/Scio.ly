@@ -1,4 +1,4 @@
-import type { TeamMembership } from "../cockroachdb-teams";
+import type { TeamMembership } from "../teams";
 import type { UserProfile } from "./userProfileUtils";
 
 export interface FormattedMember {

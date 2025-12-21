@@ -2,12 +2,20 @@
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
 
 @import "tailwindcss";
+
+* {
+	box-sizing: border-box;
+}
+
 body {
 	font-family: "Poppins", sans-serif !important;
+	max-width: 100vw;
 }
+
 /* Global smooth scrolling for in-page anchor navigation */
 html {
 	scroll-behavior: smooth;
+	max-width: 100vw;
 }
 /* Centralized Scrollbar Theme (auto-hide when not scrolling) */
 /* WebKit-based browsers */
@@ -383,4 +391,13 @@ select {
 	font-size: 1.2em;
 	line-height: 1;
 	vertical-align: middle;
+}
+
+/* Dialog backdrop styling */
+dialog::backdrop {
+	background-color: rgba(0, 0, 0, 0.5);
+}
+
+html.dark dialog::backdrop {
+	background-color: rgba(0, 0, 0, 0.75);
 }

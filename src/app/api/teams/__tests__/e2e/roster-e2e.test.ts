@@ -38,7 +38,7 @@ describe("Roster Management E2E", () => {
 	afterAll(() => {
 		// Cleanup
 		const userIds = testUsers.map((u) => u.id);
-		const teamGroupIds = testTeams.map((t) => t.groupId);
+		const teamGroupIds = testTeams.map((t) => t.teamId);
 		cleanupTestData(userIds, teamGroupIds);
 	});
 
@@ -64,7 +64,7 @@ describe("Roster Management E2E", () => {
 			expect(rosterEntry).toBeDefined();
 			expect(rosterEntry?.eventName).toBe(eventName);
 			expect(rosterEntry?.slotIndex).toBe(slotIndex);
-			expect(rosterEntry?.studentName).toBe(studentName);
+			expect(rosterEntry?.displayName).toBe(studentName);
 			expect(rosterEntry?.userId).toBe(testUsers[0].id);
 		});
 
@@ -106,7 +106,7 @@ describe("Roster Management E2E", () => {
 			const rosterEntry = getRosterEntry(team.subteamId, eventName, slotIndex);
 
 			expect(rosterEntry).toBeDefined();
-			expect(rosterEntry?.studentName).toBe(studentName);
+			expect(rosterEntry?.displayName).toBe(studentName);
 			expect(rosterEntry?.userId).toBeNull();
 		});
 	});
@@ -131,7 +131,7 @@ describe("Roster Management E2E", () => {
 			// Verify update
 			const rosterEntry = getRosterEntry(team.subteamId, eventName, slotIndex);
 
-			expect(rosterEntry?.studentName).toBe(updatedName);
+			expect(rosterEntry?.displayName).toBe(updatedName);
 		});
 
 		it("should link user to roster entry", () => {
@@ -172,7 +172,7 @@ describe("Roster Management E2E", () => {
 
 			// Verify structure
 			for (const entry of rosterEntries) {
-				expect(entry.teamUnitId).toBe(team.subteamId);
+				expect(entry.subteamId).toBe(team.subteamId);
 				expect(entry.eventName).toBeDefined();
 				expect(entry.slotIndex).toBeGreaterThanOrEqual(0);
 				expect(entry.slotIndex).toBeLessThanOrEqual(10);

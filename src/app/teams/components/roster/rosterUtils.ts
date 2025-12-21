@@ -168,6 +168,9 @@ export function detectConflicts(
 
 	// Check each conflict block for conflicts
 	for (const group of groups) {
+		if (group.label === "Conflict Block 7") {
+			continue;
+		}
 		const groupEvents = group.events;
 		const personToEvents: Record<string, string[]> = {};
 
@@ -175,11 +178,15 @@ export function detectConflicts(
 		for (const eventName of groupEvents) {
 			const eventRoster = rosterData[eventName] || [];
 			for (const person of eventRoster) {
-				if (person.trim()) {
-					if (!personToEvents[person]) {
-						personToEvents[person] = [];
+				if (typeof person !== "string") {
+					continue;
+				}
+				const normalized = person.trim();
+				if (normalized) {
+					if (!personToEvents[normalized]) {
+						personToEvents[normalized] = [];
 					}
-					personToEvents[person].push(eventName);
+					personToEvents[normalized].push(eventName);
 				}
 			}
 		}
@@ -216,13 +223,11 @@ export function shouldShowAssignOption(
 	isCaptain: boolean,
 	colorKey: string,
 	eventName: string,
-	isRemoved: boolean,
 ): boolean {
 	return (
 		isCaptain &&
 		colorKey !== "orange" &&
 		eventName !== "Engineering CAD" &&
-		eventName !== "Experimental Design" &&
-		!isRemoved
+		eventName !== "Experimental Design"
 	);
 }

@@ -12,6 +12,7 @@ export interface Assignment {
 	updated_at: string;
 	creator_email: string;
 	creator_name: string;
+	event_name?: string;
 	questions_count?: number;
 	roster_count?: number;
 	submitted_count?: number;
@@ -31,7 +32,8 @@ export interface Assignment {
 }
 
 export interface AssignmentsTabProps {
-	teamId: string;
+	teamSlug: string;
 	isCaptain: boolean;
 	onCreateAssignment: () => void;
+	activeSubteamId?: string | null;
 }

@@ -1,5 +1,10 @@
+import { db } from "@/app/utils/db";
 import type { Question } from "@/app/utils/geminiService";
 import type { RouterParams } from "@/app/utils/questionUtils";
+import {
+	initializeTestSession,
+	updateTimeLeft,
+} from "@/app/utils/timeManagement";
 import logger from "@/lib/utils/logging/logger";
 import type React from "react";
 import { normalizeQuestionsFull } from "../hooks/utils/normalize";
@@ -141,11 +146,11 @@ function loadFromLegacyFormat(
 	}
 }
 
-function loadFromNewFormat(
+async function loadFromNewFormat(
 	assignmentId: string,
 	stableRouterData: RouterParams,
 	callbacks: AssignmentLoaderCallbacks,
-): boolean {
+): Promise<boolean> {
 	const {
 		setData,
 		setUserAnswers,
@@ -180,8 +185,20 @@ function loadFromNewFormat(
 
 		if (session) {
 			setIsSubmitted(session.isSubmitted);
-			if (session.timeLeft !== undefined) {
-				setTimeLeft(session.timeLeft);
+			// Restore timeLeft from Dexie if available, otherwise use session data
+			let timeLeft = session.timeLeft;
+			try {
+				const storedTimeEntry = await db.assignmentTime.get(assignmentId);
+				if (storedTimeEntry && storedTimeEntry.timeLeft > 0) {
+					timeLeft = storedTimeEntry.timeLeft;
+				}
+			} catch (_error) {
+				// Ignore Dexie errors
+			}
+			if (timeLeft !== undefined) {
+				// Update the session's timeLeft to match what we loaded
+				updateTimeLeft(timeLeft);
+				setTimeLeft(timeLeft);
 			}
 		}
 
@@ -205,7 +222,13 @@ async function loadFromApi(
 	stableRouterData: RouterParams,
 	callbacks: AssignmentLoaderCallbacks,
 ): Promise<boolean> {
-	const { setData, setRouterData, setIsLoading, fetchCompletedRef } = callbacks;
+	const {
+		setData,
+		setRouterData,
+		setTimeLeft,
+		setIsLoading,
+		fetchCompletedRef,
+	} = callbacks;
 
 	clearTestLocalStorage();
 
@@ -220,13 +243,53 @@ async function loadFromApi(
 	const normalized = normalizeQuestionsFull(questions);
 	const assignmentKey = `assignment_${assignmentId}`;
 
+	// Get time limit from assignment (in minutes), default to 60 if not set
+	const timeLimitMinutes =
+		assignment.timeLimitMinutes ?? assignment.time_limit_minutes ?? 60;
+	const timeLimitSeconds = timeLimitMinutes * 60;
+
+	// Check Dexie for existing time left (for resuming)
+	let timeLeft = timeLimitSeconds;
+	try {
+		const storedTimeEntry = await db.assignmentTime.get(assignmentId);
+		if (
+			storedTimeEntry &&
+			storedTimeEntry.timeLeft > 0 &&
+			storedTimeEntry.timeLeft <= timeLimitSeconds
+		) {
+			timeLeft = storedTimeEntry.timeLeft;
+		}
+	} catch (_error) {
+		// Ignore Dexie errors
+	}
+
 	setData(normalized);
+
+	// Initialize or update the session with the correct time
+	try {
+		const session = initializeTestSession(
+			assignment.title,
+			timeLimitMinutes,
+			false,
+		);
+		// Update the session's timeLeft to match what we loaded from Dexie
+		if (session.timeState.timeLeft !== timeLeft) {
+			updateTimeLeft(timeLeft);
+		}
+	} catch (_error) {
+		// If session initialization fails, just update timeLeft
+		updateTimeLeft(timeLeft);
+	}
+
+	setTimeLeft(timeLeft);
 	setRouterData({
 		...stableRouterData,
 		eventName: assignment.title,
-		timeLimit: "60",
+		timeLimit: String(timeLimitMinutes),
 		assignmentMode: true,
 	});
+
+	// Store in localStorage
 	localStorage.setItem(
 		`${assignmentKey}_questions`,
 		JSON.stringify(normalized),
@@ -235,16 +298,31 @@ async function loadFromApi(
 		`${assignmentKey}_session`,
 		JSON.stringify({
 			eventName: assignment.title,
-			timeLimit: "60",
+			timeLimit: String(timeLimitMinutes),
 			assignmentMode: true,
 			isSubmitted: false,
-			timeLeft: 60 * 60,
+			timeLeft,
 		}),
 	);
 
+	// Store in Dexie for persistence across reloads
+	try {
+		await db.assignmentTime.put({
+			assignmentId,
+			timeLeft,
+			updatedAt: Date.now(),
+		});
+	} catch (_error) {
+		// Ignore Dexie errors
+	}
+
 	setIsLoading(false);
 	fetchCompletedRef.current = true;
-	logger.log("loaded assignment questions", { count: normalized.length });
+	logger.log("loaded assignment questions", {
+		count: normalized.length,
+		timeLimitMinutes,
+		timeLeft,
+	});
 	return true;
 }
 
@@ -272,7 +350,7 @@ export async function loadAssignment(
 		// Try loading from new format
 		if (
 			assignmentId &&
-			loadFromNewFormat(assignmentId, stableRouterData, callbacks)
+			(await loadFromNewFormat(assignmentId, stableRouterData, callbacks))
 		) {
 			return;
 		}
@@ -302,6 +380,7 @@ export function loadViewResultsData(
 		setData,
 		setUserAnswers,
 		setGradingResults,
+		setRouterData,
 		setIsLoading,
 		fetchCompletedRef,
 	} = callbacks;
@@ -311,6 +390,48 @@ export function loadViewResultsData(
 		const storedQuestions = localStorage.getItem(`${assignmentKey}_questions`);
 		const storedAnswers = localStorage.getItem(`${assignmentKey}_answers`);
 		const storedGrading = localStorage.getItem(`${assignmentKey}_grading`);
+		const storedSession = localStorage.getItem(`${assignmentKey}_session`);
+
+		// Load session data to get eventName (assignment title)
+		if (storedSession) {
+			try {
+				const parsedSession = JSON.parse(storedSession);
+				if (parsedSession.eventName) {
+					setRouterData({
+						...stableRouterData,
+						eventName: parsedSession.eventName,
+					});
+				}
+			} catch (_error) {
+				// Ignore errors
+			}
+		}
+
+		// If session doesn't have eventName, fetch from API
+		if (!storedSession || !JSON.parse(storedSession || "{}").eventName) {
+			const assignmentId = stableRouterData.assignmentId;
+			if (assignmentId) {
+				// Fetch assignment details to get the title
+				fetch(`/api/assignments/${assignmentId}`)
+					.then((response) => {
+						if (response.ok) {
+							return response.json();
+						}
+						return null;
+					})
+					.then((data) => {
+						if (data?.assignment?.title) {
+							setRouterData({
+								...stableRouterData,
+								eventName: data.assignment.title,
+							});
+						}
+					})
+					.catch(() => {
+						// Ignore errors
+					});
+			}
+		}
 
 		if (storedQuestions) {
 			try {

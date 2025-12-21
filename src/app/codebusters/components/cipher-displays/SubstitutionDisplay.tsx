@@ -93,48 +93,97 @@ export const SubstitutionDisplay = ({
 			>
 				{getCipherInfo(cipherType, caesarShift, affineA, affineB)}
 			</div>
-			<div className="flex flex-wrap gap-y-8 text-sm sm:text-base break-words whitespace-pre-wrap">
-				{(() => {
-					const charsWithPositions = text
-						.split("")
-						.map((char, i) => ({ char, position: i }));
-					return charsWithPositions.map(({ char, position }) => {
-						const isXenocrypt = cipherType.includes("Xenocrypt");
-						const isLetter = isXenocrypt
-							? XENOCRYPT_LETTER_REGEX.test(char)
-							: STANDARD_LETTER_REGEX.test(char);
-						const value = solution?.[char] || "";
-						const isCorrect = isLetter && value === correctMapping[char];
-						const isHinted = Boolean(
-							isLetter && hintedLetters[quoteIndex]?.[char],
-						);
-						const showCorrectAnswer = Boolean(isTestSubmitted && isLetter);
-						const isSameCipherLetter = Boolean(
-							isLetter && focusedCipherLetter === char,
-						);
+			{/* Group characters into blocks (consecutive letters without spaces) */}
+			{(() => {
+				const charsWithPositions = text
+					.split("")
+					.map((char, i) => ({ char, position: i }));
 
-						return (
-							<CharacterDisplay
-								key={`sub-char-${char}-${position}`}
-								char={char}
-								i={position}
-								isLetter={isLetter}
-								value={value}
-								isCorrect={isCorrect}
-								isHinted={isHinted}
-								showCorrectAnswer={showCorrectAnswer}
-								isSameCipherLetter={isSameCipherLetter}
-								correctMappingValue={correctMapping[char] || ""}
-								darkMode={darkMode}
-								quoteIndex={quoteIndex}
-								onCharChange={handleCharChange}
-								onFocus={setFocusedCipherLetter}
-								onBlur={() => setFocusedCipherLetter(null)}
-							/>
-						);
-					});
-				})()}
-			</div>
+				const isXenocrypt = cipherType.includes("Xenocrypt");
+				const blocks: Array<Array<{ char: string; position: number }>> = [];
+				let currentBlock: Array<{ char: string; position: number }> = [];
+
+				for (let i = 0; i < charsWithPositions.length; i++) {
+					const { char, position } = charsWithPositions[i] ?? {
+						char: "",
+						position: i,
+					};
+					// isLetter is computed but not used in this scope - used in CharacterDisplay component
+					// const isLetter = isXenocrypt
+					// 	? XENOCRYPT_LETTER_REGEX.test(char)
+					// 	: STANDARD_LETTER_REGEX.test(char);
+					const isSpace = char === " " || char === "\n" || char === "\t";
+
+					if (isSpace) {
+						// If we have a current block, finalize it
+						if (currentBlock.length > 0) {
+							blocks.push(currentBlock);
+							currentBlock = [];
+						}
+						// Add the space as its own "block" so it renders
+						blocks.push([{ char, position }]);
+					} else {
+						currentBlock.push({ char, position });
+					}
+				}
+				// Add any remaining characters as a final block
+				if (currentBlock.length > 0) {
+					blocks.push(currentBlock);
+				}
+
+				return (
+					<div className="flex flex-wrap gap-y-8 text-sm sm:text-base break-words whitespace-pre-wrap">
+						{blocks.map((block) => {
+							const firstPosition = block[0]?.position ?? 0;
+							return (
+								<div
+									key={`block-${firstPosition}`}
+									className="flex gap-0 flex-nowrap"
+									style={{ flexShrink: 0 }}
+								>
+									{block.map(({ char, position }) => {
+										const isLetter = isXenocrypt
+											? XENOCRYPT_LETTER_REGEX.test(char)
+											: STANDARD_LETTER_REGEX.test(char);
+										const value = solution?.[char] || "";
+										const isCorrect =
+											isLetter && value === correctMapping[char];
+										const isHinted = Boolean(
+											isLetter && hintedLetters[quoteIndex]?.[char],
+										);
+										const showCorrectAnswer = Boolean(
+											isTestSubmitted && isLetter,
+										);
+										const isSameCipherLetter = Boolean(
+											isLetter && focusedCipherLetter === char,
+										);
+
+										return (
+											<CharacterDisplay
+												key={`sub-char-${char}-${position}`}
+												char={char}
+												i={position}
+												isLetter={isLetter}
+												value={value}
+												isCorrect={isCorrect}
+												isHinted={isHinted}
+												showCorrectAnswer={showCorrectAnswer}
+												isSameCipherLetter={isSameCipherLetter}
+												correctMappingValue={correctMapping[char] || ""}
+												darkMode={darkMode}
+												quoteIndex={quoteIndex}
+												onCharChange={handleCharChange}
+												onFocus={setFocusedCipherLetter}
+												onBlur={() => setFocusedCipherLetter(null)}
+											/>
+										);
+									})}
+								</div>
+							);
+						})}
+					</div>
+				);
+			})()}
 
 			{/* Replacement Table for substitution ciphers */}
 			{[

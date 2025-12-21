@@ -24,7 +24,7 @@ interface CalendarEvent {
 
 interface RecurringMeeting {
 	id: string;
-	team_id: string;
+	team_id?: string;
 	days_of_week: number[];
 	start_time: string;
 	end_time: string;
@@ -44,7 +44,6 @@ interface MobileDayEventsProps {
 	recurringMeetings: RecurringMeeting[];
 	onEventClick: (event: CalendarEvent) => void;
 	onDeleteEvent: (eventId: string) => void;
-	isEventBlacklisted?: (eventId: string) => boolean;
 }
 
 function getEventColors(type: string, darkMode: boolean): string {
@@ -83,7 +82,6 @@ export default function MobileDayEvents({
 	recurringMeetings,
 	onEventClick,
 	onDeleteEvent,
-	isEventBlacklisted,
 }: MobileDayEventsProps) {
 	const sameDayEvents = React.useMemo(() => {
 		const dateStrParts = date.toISOString().split("T");
@@ -115,10 +113,6 @@ export default function MobileDayEvents({
 				if (m.end_date && dateStr > m.end_date) {
 					return false;
 				}
-				const eventId = `recurring-${m.id}-${dateStr}`;
-				if (isEventBlacklisted?.(eventId)) {
-					return false;
-				}
 				return true;
 			})
 			.map((m) => ({
@@ -141,7 +135,7 @@ export default function MobileDayEvents({
 			(a, b) =>
 				new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
 		);
-	}, [events, recurringMeetings, date, isEventBlacklisted]);
+	}, [events, recurringMeetings, date]);
 
 	if (sameDayEvents.length === 0) {
 		return (
@@ -191,77 +185,83 @@ export default function MobileDayEvents({
 
 	return (
 		<div className="space-y-3">
-			{sameDayEvents.map((event) => (
-				<button
-					type="button"
-					key={event.id}
-					className={`w-full text-left p-4 rounded-lg border cursor-pointer transition-colors hover:opacity-80 ${getEventColors(event.event_type, darkMode)}`}
-					onClick={() => onEventClick(event)}
-				>
-					<div className="flex items-start justify-between">
-						<div className="flex-1">
-							<div className="flex items-center gap-3 mb-2">
-								<h4 className="font-semibold text-base">{event.title}</h4>
-								<span className={getEventTypeBadgeClasses(event.event_type)}>
-									{event.event_type.charAt(0).toUpperCase() +
-										event.event_type.slice(1)}
-								</span>
+			{sameDayEvents.map((event, index) => {
+				// Create a unique key that combines event.id with start_time and index to ensure uniqueness
+				const uniqueKey = `${event.id}-${event.start_time}-${index}`;
+
+				return (
+					<button
+						type="button"
+						key={uniqueKey}
+						className={`w-full text-left p-4 rounded-lg border cursor-pointer transition-colors hover:opacity-80 ${getEventColors(event.event_type, darkMode)}`}
+						onClick={() => onEventClick(event)}
+					>
+						<div className="flex items-start justify-between">
+							<div className="flex-1">
+								<div className="flex items-center gap-3 mb-2">
+									<h4 className="font-semibold text-base">{event.title}</h4>
+									<span className={getEventTypeBadgeClasses(event.event_type)}>
+										{event.event_type.charAt(0).toUpperCase() +
+											event.event_type.slice(1)}
+									</span>
+								</div>
+								<div className="grid grid-cols-1 gap-2 text-sm">
+									{event.start_time && (
+										<div className="flex items-center gap-2">
+											<span className="font-medium">Time:</span>
+											<span>
+												{new Date(event.start_time).toLocaleTimeString([], {
+													hour: "2-digit",
+													minute: "2-digit",
+												})}
+												{event.end_time &&
+													` - ${new Date(event.end_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+											</span>
+										</div>
+									)}
+									{event.location && (
+										<div className="flex items-center gap-2">
+											<span className="font-medium">Location:</span>
+											<span>{event.location}</span>
+										</div>
+									)}
+									{event.description && (
+										<div className="flex items-start gap-2">
+											<span className="font-medium">Description:</span>
+											<span className="flex-1">{event.description}</span>
+										</div>
+									)}
+								</div>
 							</div>
-							<div className="grid grid-cols-1 gap-2 text-sm">
-								{event.start_time && (
-									<div className="flex items-center gap-2">
-										<span className="font-medium">Time:</span>
-										<span>
-											{new Date(event.start_time).toLocaleTimeString([], {
-												hour: "2-digit",
-												minute: "2-digit",
-											})}
-											{event.end_time &&
-												` - ${new Date(event.end_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
-										</span>
-									</div>
-								)}
-								{event.location && (
-									<div className="flex items-center gap-2">
-										<span className="font-medium">Location:</span>
-										<span>{event.location}</span>
-									</div>
-								)}
-								{event.description && (
-									<div className="flex items-start gap-2">
-										<span className="font-medium">Description:</span>
-										<span className="flex-1">{event.description}</span>
-									</div>
-								)}
-							</div>
-						</div>
-						<button
-							type="button"
-							onClick={(e) => {
-								e.stopPropagation();
-								onDeleteEvent(event.id);
-							}}
-							className={`ml-4 p-2 rounded-full transition-colors ${darkMode ? "text-red-400 hover:bg-red-900/30 hover:text-red-300" : "text-red-500 hover:bg-red-100 hover:text-red-700"}`}
-							title="Delete event"
-						>
-							<svg
-								className="w-5 h-5"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
+							<button
+								type="button"
+								onClick={(e) => {
+									e.stopPropagation();
+									onDeleteEvent(event.id);
+								}}
+								className={`ml-4 p-2 rounded-full transition-colors cursor-pointer ${darkMode ? "text-red-400 hover:bg-red-900/30 hover:text-red-300" : "text-red-500 hover:bg-red-100 hover:text-red-700"}`}
+								title="Delete event"
+								aria-label="Delete event"
 							>
-								<title>Delete event</title>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-								/>
-							</svg>
-						</button>
-					</div>
-				</button>
-			))}
+								<svg
+									className="w-5 h-5"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<title>Delete event</title>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+									/>
+								</svg>
+							</button>
+						</div>
+					</button>
+				);
+			})}
 		</div>
 	);
 }

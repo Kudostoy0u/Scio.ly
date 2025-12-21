@@ -118,7 +118,7 @@ export default async function RootLayout({
 				) : null}
 			</head>
 			<body
-				className={"font-sans antialiased overflow-x-hidden"}
+				className={"font-sans antialiased"}
 				data-scio-display-name={initialDisplayFirstName || undefined}
 				suppressHydrationWarning={true}
 			>

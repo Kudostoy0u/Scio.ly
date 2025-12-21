@@ -9,6 +9,7 @@ export interface TestUser {
 
 export interface TestTeam {
 	groupId: string;
+	teamId: string; // Unified team ID
 	subteamId: string;
 	slug: string;
 	captainCode: string;
@@ -28,8 +29,8 @@ export type TeamGroupRecord = {
 
 export type TeamUnitRecord = {
 	id: string;
-	groupId: string;
-	teamId: string;
+	teamId: string; // The parent team group ID
+	name: string; // The subteam name (e.g. 'A')
 	description: string;
 	captainCode: string;
 	userCode: string;
@@ -39,35 +40,40 @@ export type TeamUnitRecord = {
 export type TeamMembershipRecord = {
 	userId: string;
 	teamId: string;
-	role: "captain" | "co_captain" | "member";
+	role: "captain" | "member";
 	status: "active" | "inactive";
 };
 
 export type TeamRosterRecord = {
-	teamUnitId: string;
+	id: string;
+	teamId: string;
+	subteamId: string;
 	eventName: string;
 	slotIndex: number;
+	displayName: string;
 	studentName: string;
 	userId: string | null;
 };
 
 export type TeamStreamPostRecord = {
 	id: string;
-	teamUnitId: string;
+	teamId: string;
+	subteamId: string;
 	authorId: string;
 	content: string;
 };
 
 export type TeamEventRecord = {
 	id: string;
-	teamId: string | null;
+	teamId: string;
+	subteamId?: string | null;
 	createdBy: string;
 	title: string;
 	eventType: string;
 	startTime: Date;
 	endTime?: Date;
 	location?: string;
-	isAllDay?: boolean;
+	allDay?: boolean;
 	isRecurring?: boolean;
 	recurrencePattern?: unknown;
 	description?: string;
@@ -84,6 +90,7 @@ export type TeamEventAttendeeRecord = {
 export type AssignmentRecord = {
 	id: string;
 	teamId: string;
+	subteamId?: string | null;
 	createdBy: string;
 	title: string;
 	description?: string;
@@ -105,6 +112,7 @@ export type AssignmentRosterRecord = {
 	id: string;
 	assignmentId: string;
 	studentName: string;
+	displayName: string;
 	userId?: string;
 	subteamId: string;
 };
@@ -134,17 +142,17 @@ export type TeamNotificationRecord = {
 	id: string;
 	userId: string;
 	teamId: string;
-	notificationType: string;
+	type: string;
 	title: string;
-	message: string;
+	content: string;
 	isRead: boolean;
-	readAt?: Date;
 	createdAt: Date;
 };
 
 export type TeamActiveTimerRecord = {
 	id: string;
-	teamUnitId: string;
+	teamId: string;
+	subteamId: string;
 	eventId: string;
 	addedBy: string;
 	addedAt: Date;

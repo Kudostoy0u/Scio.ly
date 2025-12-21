@@ -1,13 +1,13 @@
 import { dbPg } from "@/lib/db";
-import { users } from "@/lib/db/schema/core";
+import { users } from "@/lib/db/schema";
 import {
-	newTeamEvents,
-	newTeamGroups,
-	newTeamMemberships,
-	newTeamStreamComments,
-	newTeamStreamPosts,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+	teamEvents,
+	teamMemberships,
+	teamStreamComments,
+	teamStreamPosts,
+	teamSubteams,
+	teams,
+} from "@/lib/db/schema";
 import {
 	type PostStreamRequest,
 	PostStreamRequestSchema,
@@ -20,7 +20,7 @@ import {
 } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
 import logger from "@/lib/utils/logging/logger";
-import { getTeamAccessCockroach } from "@/lib/utils/teams/access";
+import { getTeamAccess } from "@/lib/utils/teams/access";
 import {
 	// handleError,
 	handleForbiddenError,
@@ -83,9 +83,9 @@ export async function GET(
 
 		// Resolve the slug to team group using Drizzle ORM
 		const groupResult = await dbPg
-			.select({ id: newTeamGroups.id })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.select({ id: teams.id })
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (groupResult.length === 0) {
@@ -104,7 +104,7 @@ export async function GET(
 		}
 
 		// Check if user has access to this team group (membership OR roster entry)
-		const access = await getTeamAccessCockroach(user.id, groupId);
+		const access = await getTeamAccess(user.id, groupId);
 		if (!access.hasAccess) {
 			return handleForbiddenError("Not authorized to access this team");
 		}
@@ -112,26 +112,23 @@ export async function GET(
 		// Get stream posts with author information and tournament details using Drizzle ORM
 		const streamResult = await dbPg
 			.select({
-				id: newTeamStreamPosts.id,
-				content: newTeamStreamPosts.content,
-				show_tournament_timer: newTeamStreamPosts.showTournamentTimer,
-				tournament_id: newTeamStreamPosts.tournamentId,
-				tournament_title: newTeamEvents.title,
-				tournament_start_time: newTeamEvents.startTime,
+				id: teamStreamPosts.id,
+				content: teamStreamPosts.content,
+				show_tournament_timer: teamStreamPosts.showTournamentTimer,
+				tournament_id: teamStreamPosts.tournamentId,
+				tournament_title: teamEvents.title,
+				tournament_start_time: teamEvents.startTime,
 				author_name: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}))`,
 				author_email: users.email,
-				created_at: newTeamStreamPosts.createdAt,
-				attachment_url: newTeamStreamPosts.attachmentUrl,
-				attachment_title: newTeamStreamPosts.attachmentTitle,
+				created_at: teamStreamPosts.createdAt,
+				attachment_url: teamStreamPosts.attachmentUrl,
+				attachment_title: teamStreamPosts.attachmentTitle,
 			})
-			.from(newTeamStreamPosts)
-			.innerJoin(users, eq(newTeamStreamPosts.authorId, users.id))
-			.leftJoin(
-				newTeamEvents,
-				eq(newTeamStreamPosts.tournamentId, newTeamEvents.id),
-			)
-			.where(eq(newTeamStreamPosts.teamUnitId, subteamId))
-			.orderBy(desc(newTeamStreamPosts.createdAt))
+			.from(teamStreamPosts)
+			.innerJoin(users, eq(teamStreamPosts.authorId, users.id))
+			.leftJoin(teamEvents, eq(teamStreamPosts.tournamentId, teamEvents.id))
+			.where(eq(teamStreamPosts.subteamId, subteamId))
+			.orderBy(desc(teamStreamPosts.createdAt))
 			.limit(50);
 
 		// Get comments for each post using Drizzle ORM
@@ -139,16 +136,16 @@ export async function GET(
 			streamResult.map(async (post) => {
 				const commentsResult = await dbPg
 					.select({
-						id: newTeamStreamComments.id,
-						content: newTeamStreamComments.content,
+						id: teamStreamComments.id,
+						content: teamStreamComments.content,
 						author_name: sql<string>`COALESCE(${users.displayName}, CONCAT(${users.firstName}, ' ', ${users.lastName}))`,
 						author_email: users.email,
-						created_at: newTeamStreamComments.createdAt,
+						created_at: teamStreamComments.createdAt,
 					})
-					.from(newTeamStreamComments)
-					.innerJoin(users, eq(newTeamStreamComments.authorId, users.id))
-					.where(eq(newTeamStreamComments.postId, post.id))
-					.orderBy(asc(newTeamStreamComments.createdAt));
+					.from(teamStreamComments)
+					.innerJoin(users, eq(teamStreamComments.authorId, users.id))
+					.where(eq(teamStreamComments.postId, post.id))
+					.orderBy(asc(teamStreamComments.createdAt));
 
 				return {
 					...post,
@@ -240,9 +237,9 @@ export async function POST(
 
 		// Resolve the slug to team group using Drizzle ORM
 		const groupResult = await dbPg
-			.select({ id: newTeamGroups.id })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.select({ id: teams.id })
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (groupResult.length === 0) {
@@ -262,14 +259,14 @@ export async function POST(
 
 		// Check if user is a captain/leader of this team group using Drizzle ORM
 		const membershipResult = await dbPg
-			.select({ role: newTeamMemberships.role })
-			.from(newTeamMemberships)
-			.innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+			.select({ role: teamMemberships.role })
+			.from(teamMemberships)
+			.innerJoin(teamSubteams, eq(teamMemberships.teamId, teamSubteams.id))
 			.where(
 				and(
-					eq(newTeamMemberships.userId, user.id),
-					eq(newTeamUnits.groupId, groupId),
-					eq(newTeamMemberships.status, "active"),
+					eq(teamMemberships.userId, user.id),
+					eq(teamSubteams.teamId, groupId),
+					eq(teamMemberships.status, "active"),
 				),
 			)
 			.limit(1);
@@ -282,22 +279,22 @@ export async function POST(
 		if (!userRole) {
 			return NextResponse.json({ error: "Not a team member" }, { status: 403 });
 		}
-		if (!["captain", "co_captain"].includes(userRole)) {
+		if (userRole !== "captain") {
 			return NextResponse.json(
-				{ error: "Only captains and co-captains can post to the stream" },
+				{ error: "Only captains can post to the stream" },
 				{ status: 403 },
 			);
 		}
 
 		// Check if the subteam belongs to this group using Drizzle ORM
 		const subteamResult = await dbPg
-			.select({ id: newTeamUnits.id })
-			.from(newTeamUnits)
+			.select({ id: teamSubteams.id })
+			.from(teamSubteams)
 			.where(
 				and(
-					eq(newTeamUnits.id, subteamId),
-					eq(newTeamUnits.groupId, groupId),
-					eq(newTeamUnits.status, "active"),
+					eq(teamSubteams.id, subteamId),
+					eq(teamSubteams.teamId, groupId),
+					eq(teamSubteams.status, "active"),
 				),
 			)
 			.limit(1);
@@ -309,13 +306,13 @@ export async function POST(
 		// If tournament timer is enabled, validate tournament using Drizzle ORM
 		if (showTournamentTimer && tournamentId) {
 			const tournamentResult = await dbPg
-				.select({ id: newTeamEvents.id })
-				.from(newTeamEvents)
+				.select({ id: teamEvents.id })
+				.from(teamEvents)
 				.where(
 					and(
-						eq(newTeamEvents.id, tournamentId),
-						eq(newTeamEvents.teamId, subteamId),
-						eq(newTeamEvents.eventType, "tournament"),
+						eq(teamEvents.id, tournamentId),
+						eq(teamEvents.teamId, subteamId),
+						eq(teamEvents.eventType, "tournament"),
 					),
 				)
 				.limit(1);
@@ -330,9 +327,10 @@ export async function POST(
 
 		// Insert stream post using Drizzle ORM
 		const [postResult] = await dbPg
-			.insert(newTeamStreamPosts)
+			.insert(teamStreamPosts)
 			.values({
-				teamUnitId: subteamId,
+				teamId: groupId,
+				subteamId: subteamId,
 				authorId: user.id,
 				content,
 				showTournamentTimer: showTournamentTimer,
@@ -340,7 +338,7 @@ export async function POST(
 				attachmentUrl: attachmentUrl || null,
 				attachmentTitle: attachmentTitle || null,
 			})
-			.returning({ id: newTeamStreamPosts.id });
+			.returning({ id: teamStreamPosts.id });
 
 		return NextResponse.json({
 			message: "Post created successfully",
@@ -412,9 +410,9 @@ export async function PUT(
 
 		// Resolve the slug to team group using Drizzle ORM
 		const groupResult = await dbPg
-			.select({ id: newTeamGroups.id })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.select({ id: teams.id })
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (groupResult.length === 0) {
@@ -434,14 +432,14 @@ export async function PUT(
 
 		// Check if user is a captain/leader of this team group using Drizzle ORM
 		const membershipResult = await dbPg
-			.select({ role: newTeamMemberships.role })
-			.from(newTeamMemberships)
-			.innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+			.select({ role: teamMemberships.role })
+			.from(teamMemberships)
+			.innerJoin(teamSubteams, eq(teamMemberships.teamId, teamSubteams.id))
 			.where(
 				and(
-					eq(newTeamMemberships.userId, user.id),
-					eq(newTeamUnits.groupId, groupId),
-					eq(newTeamMemberships.status, "active"),
+					eq(teamMemberships.userId, user.id),
+					eq(teamSubteams.teamId, groupId),
+					eq(teamMemberships.status, "active"),
 				),
 			)
 			.limit(1);
@@ -454,26 +452,20 @@ export async function PUT(
 		if (!userRole) {
 			return NextResponse.json({ error: "Not a team member" }, { status: 403 });
 		}
-		if (!["captain", "co_captain"].includes(userRole)) {
+		if (userRole !== "captain") {
 			return NextResponse.json(
-				{ error: "Only captains and co-captains can edit posts" },
+				{ error: "Only captains can edit posts" },
 				{ status: 403 },
 			);
 		}
 
 		// Verify the post exists and belongs to this team using Drizzle ORM
 		const postResult = await dbPg
-			.select({ id: newTeamStreamPosts.id })
-			.from(newTeamStreamPosts)
-			.innerJoin(
-				newTeamUnits,
-				eq(newTeamStreamPosts.teamUnitId, newTeamUnits.id),
-			)
+			.select({ id: teamStreamPosts.id })
+			.from(teamStreamPosts)
+			.innerJoin(teamSubteams, eq(teamStreamPosts.subteamId, teamSubteams.id))
 			.where(
-				and(
-					eq(newTeamStreamPosts.id, postId),
-					eq(newTeamUnits.groupId, groupId),
-				),
+				and(eq(teamStreamPosts.id, postId), eq(teamSubteams.teamId, groupId)),
 			)
 			.limit(1);
 
@@ -483,14 +475,14 @@ export async function PUT(
 
 		// Update the post using Drizzle ORM
 		await dbPg
-			.update(newTeamStreamPosts)
+			.update(teamStreamPosts)
 			.set({
 				content,
 				attachmentUrl: attachmentUrl || null,
 				attachmentTitle: attachmentTitle || null,
 				updatedAt: new Date().toISOString(),
 			})
-			.where(eq(newTeamStreamPosts.id, postId));
+			.where(eq(teamStreamPosts.id, postId));
 
 		return NextResponse.json({
 			message: "Post updated successfully",
@@ -557,9 +549,9 @@ export async function DELETE(
 
 		// Resolve the slug to team group using Drizzle ORM
 		const groupResult = await dbPg
-			.select({ id: newTeamGroups.id })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.select({ id: teams.id })
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (groupResult.length === 0) {
@@ -579,14 +571,14 @@ export async function DELETE(
 
 		// Check if user is a captain/leader of this team group using Drizzle ORM
 		const membershipResult = await dbPg
-			.select({ role: newTeamMemberships.role })
-			.from(newTeamMemberships)
-			.innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+			.select({ role: teamMemberships.role })
+			.from(teamMemberships)
+			.innerJoin(teamSubteams, eq(teamMemberships.teamId, teamSubteams.id))
 			.where(
 				and(
-					eq(newTeamMemberships.userId, user.id),
-					eq(newTeamUnits.groupId, groupId),
-					eq(newTeamMemberships.status, "active"),
+					eq(teamMemberships.userId, user.id),
+					eq(teamSubteams.teamId, groupId),
+					eq(teamMemberships.status, "active"),
 				),
 			)
 			.limit(1);
@@ -599,26 +591,20 @@ export async function DELETE(
 		if (!userRole) {
 			return NextResponse.json({ error: "Not a team member" }, { status: 403 });
 		}
-		if (!["captain", "co_captain"].includes(userRole)) {
+		if (userRole !== "captain") {
 			return NextResponse.json(
-				{ error: "Only captains and co-captains can delete posts" },
+				{ error: "Only captains can delete posts" },
 				{ status: 403 },
 			);
 		}
 
 		// Verify the post exists and belongs to this team using Drizzle ORM
 		const postResult = await dbPg
-			.select({ id: newTeamStreamPosts.id })
-			.from(newTeamStreamPosts)
-			.innerJoin(
-				newTeamUnits,
-				eq(newTeamStreamPosts.teamUnitId, newTeamUnits.id),
-			)
+			.select({ id: teamStreamPosts.id })
+			.from(teamStreamPosts)
+			.innerJoin(teamSubteams, eq(teamStreamPosts.subteamId, teamSubteams.id))
 			.where(
-				and(
-					eq(newTeamStreamPosts.id, postId),
-					eq(newTeamUnits.groupId, groupId),
-				),
+				and(eq(teamStreamPosts.id, postId), eq(teamSubteams.teamId, groupId)),
 			)
 			.limit(1);
 
@@ -627,9 +613,7 @@ export async function DELETE(
 		}
 
 		// Delete the post using Drizzle ORM (this will cascade delete comments due to foreign key constraints)
-		await dbPg
-			.delete(newTeamStreamPosts)
-			.where(eq(newTeamStreamPosts.id, postId));
+		await dbPg.delete(teamStreamPosts).where(eq(teamStreamPosts.id, postId));
 
 		return NextResponse.json({
 			message: "Post deleted successfully",

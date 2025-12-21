@@ -1,12 +1,9 @@
 import { dbPg } from "@/lib/db";
-import { newTeamMemberships, newTeamUnits } from "@/lib/db/schema/teams";
+import { teamMemberships, teamSubteams } from "@/lib/db/schema";
 import { upsertUserProfile } from "@/lib/db/teams/utils";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import logger from "@/lib/utils/logging/logger";
-import {
-	getTeamAccess,
-	getTeamAccessCockroach,
-} from "@/lib/utils/teams/access";
+import { getTeamAccess } from "@/lib/utils/teams/access";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { getTeamMembersForGroup } from "./data-access";
@@ -26,7 +23,7 @@ export async function checkTeamGroupAccessOrThrow(
 	userId: string,
 	groupId: string,
 ) {
-	const access = await getTeamAccessCockroach(userId, groupId);
+	const access = await getTeamAccess(userId, groupId);
 	if (!access.hasAccess) {
 		throw new TRPCError({
 			code: "FORBIDDEN",
@@ -40,13 +37,13 @@ export async function validateSubteamBelongsToGroup(
 	groupId: string,
 ) {
 	const subteamResult = await dbPg
-		.select({ id: newTeamUnits.id })
-		.from(newTeamUnits)
+		.select({ id: teamSubteams.id })
+		.from(teamSubteams)
 		.where(
 			and(
-				eq(newTeamUnits.id, subteamId),
-				eq(newTeamUnits.groupId, groupId),
-				eq(newTeamUnits.status, "active"),
+				eq(teamSubteams.id, subteamId),
+				eq(teamSubteams.teamId, groupId),
+				eq(teamSubteams.status, "active"),
 			),
 		);
 
@@ -80,13 +77,13 @@ export function buildSubteamWhereCondition(
 	subteamId?: string,
 ) {
 	const baseConditions = [
-		eq(newTeamUnits.groupId, groupId),
-		eq(newTeamUnits.status, "active"),
-		eq(newTeamMemberships.status, "active"),
+		eq(teamSubteams.teamId, groupId),
+		eq(teamSubteams.status, "active"),
+		eq(teamMemberships.status, "active"),
 	];
 
 	if (subteamId && subteamId !== "all") {
-		return and(...baseConditions, eq(newTeamMemberships.teamId, subteamId));
+		return and(...baseConditions, eq(teamMemberships.teamId, subteamId));
 	}
 
 	return and(...baseConditions);

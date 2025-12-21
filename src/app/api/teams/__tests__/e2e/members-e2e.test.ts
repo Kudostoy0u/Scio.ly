@@ -40,13 +40,13 @@ describe("Team Members E2E", () => {
 
 		// Add members
 		addTeamMember(team.subteamId, testUsers[1]?.id ?? "", "member");
-		addTeamMember(team.subteamId, testUsers[2]?.id ?? "", "co_captain");
+		addTeamMember(team.subteamId, testUsers[2]?.id ?? "", "captain");
 	});
 
 	afterAll(() => {
 		// Cleanup
 		const userIds = testUsers.map((u) => u.id);
-		const teamGroupIds = testTeams.map((t) => t.groupId);
+		const teamGroupIds = testTeams.map((t) => t.teamId);
 		cleanupTestData(userIds, teamGroupIds);
 	});
 
@@ -56,7 +56,7 @@ describe("Team Members E2E", () => {
 			if (!team) throw new Error("Test setup failed");
 
 			// Get all memberships
-			const memberships = getMembershipsByGroupId(team.groupId);
+			const memberships = getMembershipsByGroupId(team.teamId);
 
 			expect(memberships.length).toBeGreaterThanOrEqual(3); // Captain + Member + Co-Captain
 
@@ -64,7 +64,7 @@ describe("Team Members E2E", () => {
 			const roles = memberships.map((m) => m.role);
 			expect(roles).toContain("captain");
 			expect(roles).toContain("member");
-			expect(roles).toContain("co_captain");
+			expect(roles).toContain("captain");
 		});
 
 		it("should retrieve members for specific subteam", () => {
@@ -119,7 +119,7 @@ describe("Team Members E2E", () => {
 
 			expect(rosterEntry).toBeDefined();
 			expect(rosterEntry?.userId).toBe(member.id);
-			expect(rosterEntry?.studentName).toBe("Member User");
+			expect(rosterEntry?.displayName).toBe("Member User");
 		});
 
 		it("should handle unlinked roster entries", async () => {

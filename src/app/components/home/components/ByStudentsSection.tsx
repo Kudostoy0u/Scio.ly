@@ -56,7 +56,7 @@ export function ByStudentsSection({ darkMode }: ByStudentsSectionProps) {
 							className="absolute top-0 left-0 w-48 h-48 lg:w-64 lg:h-64 z-30"
 						>
 							<Image
-								src="/scrapbook/scrapbook-1.png"
+								src="https://res.cloudinary.com/djilwi4nh/image/upload/v1766271387/scrapbook-1_njgpvs.png"
 								alt="Naperville North Science Olympiad team"
 								fill={true}
 								sizes="(min-width: 1024px) 16rem, 12rem"
@@ -71,7 +71,7 @@ export function ByStudentsSection({ darkMode }: ByStudentsSectionProps) {
 							className="absolute top-16 right-0 w-48 h-48 lg:w-64 lg:h-64 z-20"
 						>
 							<Image
-								src="/scrapbook/scrapbook-2.png"
+								src="https://res.cloudinary.com/djilwi4nh/image/upload/v1766271379/scrapbook-2_ie29kd.png"
 								alt="Neuqua Valley Science Olympiad team"
 								fill={true}
 								sizes="(min-width: 1024px) 16rem, 12rem"
@@ -86,7 +86,7 @@ export function ByStudentsSection({ darkMode }: ByStudentsSectionProps) {
 							className="absolute bottom-[-50px] left-16 w-48 h-48 lg:w-64 lg:h-64 z-10"
 						>
 							<Image
-								src="/scrapbook/scrapbook-3.jpg"
+								src="https://res.cloudinary.com/djilwi4nh/image/upload/v1766271364/scrapbook-3_xh5gig.jpg"
 								alt="Neuqua Valley Science Olympiad competition"
 								fill={true}
 								sizes="(min-width: 1024px) 16rem, 12rem"

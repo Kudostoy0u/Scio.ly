@@ -6,7 +6,7 @@ import {
 } from "@/lib/api/utils";
 import { db } from "@/lib/db";
 import { idEvents, questions } from "@/lib/db/schema";
-import { shareLinks } from "@/lib/db/schema/core";
+import { shareLinks } from "@/lib/db/schema";
 import type { ShareCodeRequest, ShareCodeResponse } from "@/lib/types/api";
 import logger from "@/lib/utils/logging/logger";
 import { eq, inArray } from "drizzle-orm";

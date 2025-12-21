@@ -1,9 +1,5 @@
 import { dbPg } from "@/lib/db";
-import {
-	newTeamGroups,
-	newTeamMemberships,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+import { teamMemberships, teamSubteams, teams } from "@/lib/db/schema";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
 	handleError,
@@ -35,9 +31,9 @@ export async function POST(
 
 		// Resolve the slug to team group using Drizzle ORM
 		const [groupResult] = await dbPg
-			.select({ id: newTeamGroups.id, createdBy: newTeamGroups.createdBy })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.select({ id: teams.id, createdBy: teams.createdBy })
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (!groupResult) {
@@ -49,9 +45,9 @@ export async function POST(
 
 		// Get team units for this group using Drizzle ORM
 		const unitsResult = await dbPg
-			.select({ id: newTeamUnits.id })
-			.from(newTeamUnits)
-			.where(eq(newTeamUnits.groupId, groupId));
+			.select({ id: teamSubteams.id })
+			.from(teamSubteams)
+			.where(eq(teamSubteams.teamId, groupId));
 
 		if (unitsResult.length === 0) {
 			return handleNotFoundError("No team units found for this group");
@@ -63,14 +59,14 @@ export async function POST(
 		if (groupCreator !== user.id) {
 			// Check if user is a captain of any team unit in this group using Drizzle ORM
 			const captainCheckResult = await dbPg
-				.select({ role: newTeamMemberships.role })
-				.from(newTeamMemberships)
-				.innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+				.select({ role: teamMemberships.role })
+				.from(teamMemberships)
+				.innerJoin(teamSubteams, eq(teamMemberships.teamId, teamSubteams.id))
 				.where(
 					and(
-						eq(newTeamMemberships.userId, user.id),
-						eq(newTeamUnits.groupId, groupId),
-						eq(newTeamMemberships.status, "active"),
+						eq(teamMemberships.userId, user.id),
+						eq(teamSubteams.teamId, groupId),
+						eq(teamMemberships.status, "active"),
 					),
 				)
 				.limit(1);
@@ -82,7 +78,7 @@ export async function POST(
 			}
 
 			const userRole = captainCheckResult[0]?.role;
-			if (!(userRole && ["captain", "co_captain"].includes(userRole))) {
+			if (!(userRole && userRole === "captain")) {
 				return handleForbiddenError(
 					"Only the team creator or captains can archive the team",
 				);
@@ -93,27 +89,27 @@ export async function POST(
 		await dbPg.transaction(async (tx) => {
 			// Archive the team group
 			await tx
-				.update(newTeamGroups)
+				.update(teams)
 				.set({
 					status: "archived",
 					updatedAt: new Date().toISOString(),
 				})
-				.where(eq(newTeamGroups.id, groupId));
+				.where(eq(teams.id, groupId));
 
 			// Archive all team units
 			await tx
-				.update(newTeamUnits)
+				.update(teamSubteams)
 				.set({
 					status: "archived",
 					updatedAt: new Date().toISOString(),
 				})
-				.where(eq(newTeamUnits.groupId, groupId));
+				.where(eq(teamSubteams.teamId, groupId));
 
 			// Archive all memberships
 			await tx
-				.update(newTeamMemberships)
+				.update(teamMemberships)
 				.set({ status: "archived" })
-				.where(inArray(newTeamMemberships.teamId, teamUnitIds));
+				.where(inArray(teamMemberships.teamId, teamUnitIds));
 		});
 
 		return NextResponse.json({ message: "Team successfully archived" });

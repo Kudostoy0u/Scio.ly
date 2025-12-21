@@ -1,13 +1,13 @@
 import { dbPg } from "@/lib/db";
-import { newTeamUnits } from "@/lib/db/schema/teams";
+import { teamSubteams } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export async function generateNextTeamId(groupId: string): Promise<string> {
 	const existingTeams = await dbPg
-		.select({ teamId: newTeamUnits.teamId })
-		.from(newTeamUnits)
-		.where(eq(newTeamUnits.groupId, groupId))
-		.orderBy(newTeamUnits.teamId);
+		.select({ teamId: teamSubteams.teamId })
+		.from(teamSubteams)
+		.where(eq(teamSubteams.teamId, groupId))
+		.orderBy(teamSubteams.teamId);
 
 	const existingTeamIds = existingTeams.map((t) => t.teamId);
 	let nextTeamId = "A";

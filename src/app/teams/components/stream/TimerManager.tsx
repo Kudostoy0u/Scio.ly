@@ -32,9 +32,19 @@ export default function TimerManager({
 		);
 	};
 
-	const availableEvents = getFilteredEvents().filter(
-		(event) => !event.has_timer,
-	);
+	const availableEvents = getFilteredEvents()
+		.filter((event) => !event.has_timer)
+		.sort((a, b) => {
+			if (a.event_type === "tournament" && b.event_type !== "tournament") {
+				return -1;
+			}
+			if (a.event_type !== "tournament" && b.event_type === "tournament") {
+				return 1;
+			}
+			return (
+				new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+			);
+		});
 
 	return (
 		<div
@@ -72,52 +82,54 @@ export default function TimerManager({
 					</p>
 				</div>
 			) : (
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-					{availableEvents.map((event) => (
-						<button
-							type="button"
-							key={event.id}
-							onClick={() => onAddTimer(event)}
-							className={`p-3 rounded-lg border text-left transition-colors ${
-								darkMode
-									? "bg-gray-700 border-gray-600 hover:bg-gray-600"
-									: "bg-gray-50 border-gray-300 hover:bg-gray-100"
-							}`}
-						>
-							<div className="flex items-center space-x-2 mb-1">
-								<Calendar className="w-4 h-4 text-blue-500" />
-								<span
-									className={`font-medium text-sm ${darkMode ? "text-white" : "text-gray-900"}`}
-								>
-									{event.title}
-								</span>
-								<span
-									className={`text-xs px-2 py-1 rounded-full ${getEventTypeColor(event.event_type, darkMode)}`}
-								>
-									{event.event_type}
-								</span>
-							</div>
-							{event.location && (
-								<div className="flex items-center space-x-1 mb-1">
-									<MapPin className="w-3 h-3 text-gray-400" />
+				<div className="max-h-[280px] overflow-y-auto pr-1">
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+						{availableEvents.map((event) => (
+							<button
+								type="button"
+								key={event.id}
+								onClick={() => onAddTimer(event)}
+								className={`p-3 rounded-lg border text-left transition-colors ${
+									darkMode
+										? "bg-gray-700 border-gray-600 hover:bg-gray-600"
+										: "bg-gray-50 border-gray-300 hover:bg-gray-100"
+								}`}
+							>
+								<div className="flex items-center space-x-2 mb-1">
+									<Calendar className="w-4 h-4 text-blue-500" />
 									<span
-										className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+										className={`font-medium text-sm ${darkMode ? "text-white" : "text-gray-900"}`}
 									>
-										{event.location}
+										{event.title}
+									</span>
+									<span
+										className={`text-xs px-2 py-1 rounded-full ${getEventTypeColor(event.event_type, darkMode)}`}
+									>
+										{event.event_type}
 									</span>
 								</div>
-							)}
-							<div
-								className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-							>
-								{new Date(event.start_time).toLocaleDateString()} at{" "}
-								{new Date(event.start_time).toLocaleTimeString([], {
-									hour: "2-digit",
-									minute: "2-digit",
-								})}
-							</div>
-						</button>
-					))}
+								{event.location && (
+									<div className="flex items-center space-x-1 mb-1">
+										<MapPin className="w-3 h-3 text-gray-400" />
+										<span
+											className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+										>
+											{event.location}
+										</span>
+									</div>
+								)}
+								<div
+									className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+								>
+									{new Date(event.start_time).toLocaleDateString()} at{" "}
+									{new Date(event.start_time).toLocaleTimeString([], {
+										hour: "2-digit",
+										minute: "2-digit",
+									})}
+								</div>
+							</button>
+						))}
+					</div>
 				</div>
 			)}
 		</div>

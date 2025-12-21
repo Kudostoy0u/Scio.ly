@@ -44,7 +44,7 @@ describe("Timer Management E2E", () => {
 	afterAll(() => {
 		// Cleanup
 		const userIds = testUsers.map((u) => u.id);
-		const teamGroupIds = testTeams.map((t) => t.groupId);
+		const teamGroupIds = testTeams.map((t) => t.teamId);
 		cleanupTestData(userIds, teamGroupIds);
 	});
 
@@ -66,7 +66,8 @@ describe("Timer Management E2E", () => {
 			expect(event.id).toBeDefined();
 
 			const timer = addActiveTimer({
-				teamUnitId: team.subteamId,
+				teamId: team.teamId,
+				subteamId: team.subteamId,
 				eventId: event.id,
 				addedBy: captain.id,
 			});
@@ -79,7 +80,7 @@ describe("Timer Management E2E", () => {
 			);
 
 			expect(retrievedTimer).toBeDefined();
-			expect(retrievedTimer?.teamUnitId).toBe(team.subteamId);
+			expect(retrievedTimer?.subteamId).toBe(team.subteamId);
 			expect(retrievedTimer?.eventId).toBe(event.id);
 			expect(retrievedTimer?.addedBy).toBe(captain.id);
 		});
@@ -98,7 +99,8 @@ describe("Timer Management E2E", () => {
 			});
 
 			addActiveTimer({
-				teamUnitId: team.subteamId,
+				teamId: team.teamId,
+				subteamId: team.subteamId,
 				eventId: event.id,
 				addedBy: captain.id,
 			});
@@ -136,13 +138,15 @@ describe("Timer Management E2E", () => {
 			});
 
 			addActiveTimer({
-				teamUnitId: team.subteamId,
+				teamId: team.teamId,
+				subteamId: team.subteamId,
 				eventId: event1.id,
 				addedBy: captain.id,
 			});
 
 			addActiveTimer({
-				teamUnitId: team.subteamId,
+				teamId: team.teamId,
+				subteamId: team.subteamId,
 				eventId: event2.id,
 				addedBy: captain.id,
 			});
@@ -168,7 +172,8 @@ describe("Timer Management E2E", () => {
 			});
 
 			const timer = addActiveTimer({
-				teamUnitId: team.subteamId,
+				teamId: team.teamId,
+				subteamId: team.subteamId,
 				eventId: event.id,
 				addedBy: captain.id,
 			});

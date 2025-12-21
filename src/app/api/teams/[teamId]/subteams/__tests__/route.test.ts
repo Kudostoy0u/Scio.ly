@@ -1,7 +1,7 @@
 import { GET, POST } from "@/app/api/teams/[teamId]/subteams/route";
 import { dbPg } from "@/lib/db";
 import { getServerUser } from "@/lib/supabaseServer";
-import { getTeamAccessCockroach } from "@/lib/utils/teams/access";
+import { getTeamAccess } from "@/lib/utils/teams/access";
 import type { User } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,7 +12,7 @@ vi.mock("@/lib/supabaseServer", () => ({
 }));
 
 vi.mock("@/lib/utils/teams/access", () => ({
-	getTeamAccessCockroach: vi.fn(),
+	getTeamAccess: vi.fn(),
 }));
 
 // Create a proper Drizzle ORM chain mock
@@ -47,7 +47,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 const mockGetServerUser = vi.mocked(getServerUser);
-const mockGetTeamAccessCockroach = vi.mocked(getTeamAccessCockroach);
+const mockGetTeamAccess = vi.mocked(getTeamAccess);
 const mockDbPg = vi.mocked(dbPg) as typeof dbPg & {
 	select: ReturnType<typeof vi.fn>;
 	insert: ReturnType<typeof vi.fn>;
@@ -121,13 +121,11 @@ describe("/api/teams/[teamId]/subteams", () => {
 				createDrizzleChain([{ id: mockGroupId }], false),
 			);
 
-			mockGetTeamAccessCockroach.mockResolvedValue({
+			mockGetTeamAccess.mockResolvedValue({
 				hasAccess: false,
 				isCreator: false,
-				hasSubteamMembership: false,
 				hasRosterEntries: false,
-				subteamMemberships: [],
-				rosterSubteams: [],
+				memberships: [],
 			});
 
 			const request = new NextRequest(
@@ -150,13 +148,11 @@ describe("/api/teams/[teamId]/subteams", () => {
 				createDrizzleChain([{ id: mockGroupId }], false),
 			);
 
-			mockGetTeamAccessCockroach.mockResolvedValue({
+			mockGetTeamAccess.mockResolvedValue({
 				hasAccess: true,
 				isCreator: false,
-				hasSubteamMembership: true,
 				hasRosterEntries: false,
-				subteamMemberships: [],
-				rosterSubteams: [],
+				memberships: [],
 			});
 
 			// Mock subteams query (has orderBy, so where returns chain)
@@ -264,15 +260,12 @@ describe("/api/teams/[teamId]/subteams", () => {
 				createDrizzleChain([{ id: mockGroupId }]),
 			);
 
-			mockGetTeamAccessCockroach.mockResolvedValue({
+			mockGetTeamAccess.mockResolvedValue({
 				hasAccess: true,
 				isCreator: false,
-				hasSubteamMembership: true,
 				hasRosterEntries: false,
-				subteamMemberships: [
-					{ subteamId: mockSubteamId, teamId: mockTeamId, role: "member" },
-				], // Not a leader
-				rosterSubteams: [],
+				role: "member",
+				memberships: [{ teamId: mockTeamId, role: "member" }],
 			});
 
 			const request = new NextRequest(
@@ -301,13 +294,12 @@ describe("/api/teams/[teamId]/subteams", () => {
 				createDrizzleChain([{ id: mockGroupId }]),
 			);
 
-			mockGetTeamAccessCockroach.mockResolvedValue({
+			mockGetTeamAccess.mockResolvedValue({
 				hasAccess: true,
 				isCreator: true, // Creator has leadership
-				hasSubteamMembership: false,
 				hasRosterEntries: false,
-				subteamMemberships: [],
-				rosterSubteams: [],
+				role: "captain",
+				memberships: [],
 			});
 
 			// Mock existing subteams query (to determine next team ID)

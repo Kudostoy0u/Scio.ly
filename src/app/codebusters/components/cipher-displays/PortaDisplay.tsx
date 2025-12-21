@@ -310,41 +310,84 @@ export const PortaDisplay = ({
 			</div>
 
 			{/* Cipher text with keyword above each letter */}
-			<div className="flex flex-wrap gap-y-8 text-sm sm:text-base break-words whitespace-pre-wrap mb-6">
-				{(() => {
-					const charsWithPositions = text
-						.split("")
-						.map((char, i) => ({ char, position: i }));
-					return charsWithPositions.map(({ char, position }) => {
-						const isLetter = UPPERCASE_LETTER_REGEX.test(char);
-						const value = solution?.[`${char}-${position}`] || "";
-						const correctLetter = correctMapping[position] ?? undefined;
-						const isCorrect = isLetter && value.toUpperCase() === correctLetter;
-						const letterCount = text
-							.substring(0, position)
-							.replace(/[^A-Z]/g, "").length;
-						const keywordChar = isLetter
-							? (keyword[letterCount % keyword.length] ?? "")
-							: "";
+			{/* Group characters into blocks (consecutive letters without spaces) */}
+			{(() => {
+				const charsWithPositions = text
+					.split("")
+					.map((char, i) => ({ char, position: i }));
 
-						return (
-							<CharacterDisplay
-								key={`porta-char-${char}-${position}`}
-								char={char}
-								i={position}
-								isLetter={isLetter}
-								value={value}
-								correctLetter={correctLetter}
-								isCorrect={isCorrect}
-								keywordChar={keywordChar}
-								quoteIndex={quoteIndex}
-								isTestSubmitted={isTestSubmitted}
-								darkMode={darkMode}
-							/>
-						);
-					});
-				})()}
-			</div>
+				const blocks: Array<Array<{ char: string; position: number }>> = [];
+				let currentBlock: Array<{ char: string; position: number }> = [];
+
+				for (let i = 0; i < charsWithPositions.length; i++) {
+					const { char, position } = charsWithPositions[i] ?? {
+						char: "",
+						position: i,
+					};
+					const isSpace = char === " " || char === "\n" || char === "\t";
+
+					if (isSpace) {
+						// If we have a current block, finalize it
+						if (currentBlock.length > 0) {
+							blocks.push(currentBlock);
+							currentBlock = [];
+						}
+						// Add the space as its own "block" so it renders
+						blocks.push([{ char, position }]);
+					} else {
+						currentBlock.push({ char, position });
+					}
+				}
+				// Add any remaining characters as a final block
+				if (currentBlock.length > 0) {
+					blocks.push(currentBlock);
+				}
+
+				return (
+					<div className="flex flex-wrap gap-y-8 text-sm sm:text-base break-words whitespace-pre-wrap mb-6">
+						{blocks.map((block) => {
+							const firstPosition = block[0]?.position ?? 0;
+							return (
+								<div
+									key={`block-${firstPosition}`}
+									className="flex gap-0 flex-nowrap"
+									style={{ flexShrink: 0 }}
+								>
+									{block.map(({ char, position }) => {
+										const isLetter = UPPERCASE_LETTER_REGEX.test(char);
+										const value = solution?.[`${char}-${position}`] || "";
+										const correctLetter = correctMapping[position] ?? undefined;
+										const isCorrect =
+											isLetter && value.toUpperCase() === correctLetter;
+										const letterCount = text
+											.substring(0, position)
+											.replace(/[^A-Z]/g, "").length;
+										const keywordChar = isLetter
+											? (keyword[letterCount % keyword.length] ?? "")
+											: "";
+
+										return (
+											<CharacterDisplay
+												key={`porta-char-${char}-${position}`}
+												char={char}
+												i={position}
+												isLetter={isLetter}
+												value={value}
+												correctLetter={correctLetter}
+												isCorrect={isCorrect}
+												keywordChar={keywordChar}
+												quoteIndex={quoteIndex}
+												isTestSubmitted={isTestSubmitted}
+												darkMode={darkMode}
+											/>
+										);
+									})}
+								</div>
+							);
+						})}
+					</div>
+				);
+			})()}
 
 			{/* Porta Table - collapsible */}
 			<div

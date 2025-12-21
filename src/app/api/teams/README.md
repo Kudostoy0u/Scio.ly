@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `src/app/api/teams/` directory contains the comprehensive teams API endpoints for the Scio.ly platform. This system provides extensive team management functionality including team creation, roster management, assignments, calendar integration, and team collaboration features.
+The `src/app/api/teams/` directory contains the comprehensive teams API endpoints for the Scio.ly platform. This system provides extensive team management functionality including team creation, roster management, assignments, and team collaboration features.
 
 ## Directory Structure
 
@@ -19,18 +19,6 @@ The `src/app/api/teams/` directory contains the comprehensive teams API endpoint
 - **Methods**: GET, POST
 - **Request**: Team code, user context
 - **Response**: Team information, access permissions
-
-#### `calendar/`
-- **Purpose**: Team calendar management
-- **Features**:
-  - Calendar event creation
-  - Event management
-  - Personal calendar integration
-  - Recurring meetings
-- **Dependencies**: Calendar system, event management
-- **Methods**: GET, POST, PUT, DELETE
-- **Request**: Event data, calendar parameters
-- **Response**: Calendar events, event details
 
 #### `create/`
 - **Purpose**: Team creation
@@ -592,7 +580,7 @@ PUT /api/teams/v2/[teamId]
 POST /api/teams/v2/[teamId]/members
 {
   "userId": "string",
-  "role": "member" | "captain" | "co_captain"
+  "role": "member" | "captain"
 }
 
 // Remove member
@@ -601,7 +589,7 @@ DELETE /api/teams/v2/[teamId]/members/[userId]
 // Update member role
 PUT /api/teams/v2/[teamId]/members/[userId]
 {
-  "role": "member" | "captain" | "co_captain"
+  "role": "member" | "captain"
 }
 ```
 
@@ -622,22 +610,6 @@ POST /api/teams/v2/[teamId]/assignments/[assignmentId]/submit
   "answers": "object[]",
   "submissionTime": "string"
 }
-```
-
-### Calendar Management
-```typescript
-// Create event
-POST /api/teams/calendar/events
-{
-  "title": "string",
-  "description": "string",
-  "startTime": "string",
-  "endTime": "string",
-  "location": "string"
-}
-
-// Get team events
-GET /api/teams/calendar/events?teamId=TEAM123
 ```
 
 ## Error Handling

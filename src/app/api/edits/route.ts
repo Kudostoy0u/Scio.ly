@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { edits as editsTable } from "@/lib/db/schema/core";
+import { edits as editsTable } from "@/lib/db/schema";
 import { geminiService } from "@/lib/services/gemini";
 import type { ApiResponse, EditRequest } from "@/lib/types/api";
 import { and, desc, eq } from "drizzle-orm";

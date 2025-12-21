@@ -1,7 +1,7 @@
 import { dbPg } from "@/lib/db";
-import { newTeamGroups, newTeamUnits } from "@/lib/db/schema/teams";
+import { teamSubteams, teams } from "@/lib/db/schema";
 import { getServerUser } from "@/lib/supabaseServer";
-import { getTeamAccessCockroach } from "@/lib/utils/teams/access";
+import { getTeamAccess } from "@/lib/utils/teams/access";
 import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 
@@ -27,9 +27,9 @@ export async function GET(
 		const { teamId: paramTeamId } = await params;
 		teamId = paramTeamId;
 		const groupResult = await dbPg
-			.select({ id: newTeamGroups.id })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId));
+			.select({ id: teams.id })
+			.from(teams)
+			.where(eq(teams.slug, teamId));
 
 		if (groupResult.length === 0) {
 			return NextResponse.json(
@@ -46,7 +46,7 @@ export async function GET(
 			);
 		}
 		const groupId = firstGroup.id;
-		const teamAccess = await getTeamAccessCockroach(userId, groupId);
+		const teamAccess = await getTeamAccess(userId, groupId);
 
 		if (!teamAccess.hasAccess) {
 			return NextResponse.json(
@@ -56,19 +56,19 @@ export async function GET(
 		}
 		const subteamsResult = await dbPg
 			.select({
-				id: newTeamUnits.id,
-				teamId: newTeamUnits.teamId,
-				description: newTeamUnits.description,
-				createdAt: newTeamUnits.createdAt,
+				id: teamSubteams.id,
+				teamId: teamSubteams.teamId,
+				description: teamSubteams.description,
+				createdAt: teamSubteams.createdAt,
 			})
-			.from(newTeamUnits)
+			.from(teamSubteams)
 			.where(
 				and(
-					eq(newTeamUnits.groupId, groupId),
-					eq(newTeamUnits.status, "active"),
+					eq(teamSubteams.teamId, groupId),
+					eq(teamSubteams.status, "active"),
 				),
 			)
-			.orderBy(newTeamUnits.createdAt);
+			.orderBy(teamSubteams.createdAt);
 
 		const subteams = subteamsResult.map((subteam) => ({
 			id: subteam.id,
@@ -122,9 +122,9 @@ export async function POST(
 			);
 		}
 		const groupResult = await dbPg
-			.select({ id: newTeamGroups.id })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId));
+			.select({ id: teams.id })
+			.from(teams)
+			.where(eq(teams.slug, teamId));
 
 		if (groupResult.length === 0) {
 			return NextResponse.json(
@@ -141,11 +141,11 @@ export async function POST(
 			);
 		}
 		const groupId = firstGroup.id;
-		const teamAccess = await getTeamAccessCockroach(userId, groupId);
+		const teamAccess = await getTeamAccess(userId, groupId);
 		const hasLeadership =
 			teamAccess.isCreator ||
-			teamAccess.subteamMemberships.some((m) =>
-				["captain", "co_captain"].includes(m.role),
+			(teamAccess.memberships ?? []).some(
+				(m) => m.role === "captain" || m.role === "admin",
 			);
 
 		if (!hasLeadership) {
@@ -160,9 +160,9 @@ export async function POST(
 		// Get existing subteams to determine the next available team ID
 		// Check ALL subteams regardless of status since the unique constraint applies to all
 		const existingSubteams = await dbPg
-			.select({ teamId: newTeamUnits.teamId })
-			.from(newTeamUnits)
-			.where(eq(newTeamUnits.groupId, groupId));
+			.select({ teamId: teamSubteams.teamId })
+			.from(teamSubteams)
+			.where(eq(teamSubteams.teamId, groupId));
 
 		const existingTeamIds = new Set(existingSubteams.map((s) => s.teamId));
 
@@ -183,10 +183,10 @@ export async function POST(
 		}
 
 		const [newSubteam] = await dbPg
-			.insert(newTeamUnits)
+			.insert(teamSubteams)
 			.values({
-				groupId: groupId,
-				teamId: teamIdLetter,
+				teamId: groupId,
+				name: teamIdLetter,
 				description: description || name, // Use provided description or fallback to name
 				captainCode: `CAP${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
 				userCode: `USR${Math.random().toString(36).substring(2, 10).toUpperCase()}`,

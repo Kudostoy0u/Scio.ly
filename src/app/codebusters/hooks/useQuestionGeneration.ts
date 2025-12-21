@@ -25,6 +25,7 @@ import {
 	encryptRandomPatristocrat,
 	encryptRandomXenocrypt,
 } from "../cipher-utils";
+import { getAvailableCipherTypes } from "../services/utils/cipherMapping";
 import type { CipherResult, QuoteData } from "../types";
 import { cleanQuote } from "../utils/quoteCleaner";
 
@@ -122,13 +123,19 @@ export function useQuestionGeneration() {
 				throw new Error("No quotes available");
 			}
 			const generatedQuestions: QuoteData[] = [];
-			const cipherTypes = params.cipherTypes || ["Caesar"];
+			const availableCipherTypes = getAvailableCipherTypes(
+				params.cipherTypes || [],
+				params.division || "any",
+			);
 			for (let i = 0; i < params.questionCount; i++) {
 				const quote = quotes[i % quotes.length];
 				if (!quote?.quote) {
 					continue;
 				}
-				const cipherType = cipherTypes[i % cipherTypes.length];
+				const cipherType =
+					availableCipherTypes[
+						Math.floor(Math.random() * availableCipherTypes.length)
+					];
 				if (!cipherType) {
 					continue;
 				}

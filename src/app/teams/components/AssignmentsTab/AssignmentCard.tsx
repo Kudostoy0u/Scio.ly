@@ -1,9 +1,11 @@
 import { useAuth } from "@/app/contexts/AuthContext";
+import { trpc } from "@/lib/trpc/client";
 import {
 	AlertTriangle,
 	BarChart3,
 	Calendar,
 	Clock,
+	Hash,
 	Trash2,
 } from "lucide-react";
 import {
@@ -21,7 +23,6 @@ interface AssignmentCardProps {
 	hasProgress: boolean;
 	onStartAssignment: () => void;
 	onViewAssignment: () => void;
-	onDeclineAssignment: () => void;
 	onViewAnalytics: () => void;
 	onDelete: () => void;
 	showDeleteConfirm: boolean;
@@ -36,7 +37,6 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
 	hasProgress,
 	onStartAssignment,
 	onViewAssignment,
-	onDeclineAssignment,
 	onViewAnalytics,
 	onDelete,
 	showDeleteConfirm,
@@ -45,7 +45,45 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
 }) => {
 	const { user } = useAuth();
 	const everyoneDeclined = hasEveryoneDeclined(assignment);
-	const status = getAssignmentStatus(assignment, isCaptain);
+
+	// Fetch analytics data for this assignment to get accurate submission status
+	const { data: analyticsData } = trpc.teams.getAssignmentAnalytics.useQuery(
+		{ assignmentId: assignment.id },
+		{
+			enabled: !!user?.id && !isCaptain, // Only fetch for non-captains (their own data)
+			refetchOnMount: true,
+			refetchOnWindowFocus: true,
+		},
+	);
+
+	// Use analytics data if available, otherwise fall back to assignment data
+	const userSubmissionFromAnalytics = analyticsData?.roster?.find(
+		(member) => member.user_id === user?.id,
+	)?.submission;
+
+	const effectiveUserSubmission =
+		userSubmissionFromAnalytics || assignment.user_submission;
+
+	// Calculate submitted count from analytics if available
+	const effectiveSubmittedCount = analyticsData
+		? analyticsData.submitted_count
+		: assignment.submitted_count;
+
+	// Create a merged assignment object with analytics data
+	const mergedAssignment: Assignment = {
+		...assignment,
+		user_submission: effectiveUserSubmission
+			? {
+					status: effectiveUserSubmission.status,
+					submitted_at: effectiveUserSubmission.submitted_at || "",
+					grade: effectiveUserSubmission.grade || 0,
+					attempt_number: effectiveUserSubmission.attempt_number || 1,
+				}
+			: assignment.user_submission,
+		submitted_count: effectiveSubmittedCount,
+	};
+
+	const status = getAssignmentStatus(mergedAssignment, isCaptain);
 
 	const isUserAssigned = !!(
 		user?.id &&
@@ -64,11 +102,33 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
 			<div className="flex items-start justify-between">
 				<div className="flex-1">
 					<div className="flex items-start justify-between mb-2">
-						<h3
-							className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
-						>
-							{assignment.title}
-						</h3>
+						<div className="flex flex-col md:flex-row md:items-center gap-2 flex-1">
+							<h3
+								className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}
+							>
+								{assignment.title}
+							</h3>
+							<div className="flex items-center gap-2 flex-wrap">
+								{assignment.event_name && (
+									<span
+										className={`text-xs px-2 py-0.5 rounded-full ${
+											darkMode
+												? "bg-gray-700 text-gray-200"
+												: "bg-gray-100 text-gray-700"
+										}`}
+									>
+										{assignment.event_name}
+									</span>
+								)}
+								{!everyoneDeclined && (
+									<AssignmentStatusBadge
+										assignment={mergedAssignment}
+										isCaptain={isCaptain}
+										darkMode={darkMode}
+									/>
+								)}
+							</div>
+						</div>
 						<div className="ml-4 flex items-center space-x-2">
 							{everyoneDeclined ? (
 								<div title="Everyone declined this assignment">
@@ -131,18 +191,6 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
 						</div>
 					) : (
 						<>
-							<div className="flex flex-wrap items-center gap-2 mb-2">
-								<AssignmentStatusBadge
-									assignment={assignment}
-									isCaptain={isCaptain}
-									darkMode={darkMode}
-								/>
-								<span
-									className={`text-xs px-2 py-1 rounded ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}
-								>
-									{assignment.assignment_type}
-								</span>
-							</div>
 							<p
 								className={`mb-3 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
 							>
@@ -205,29 +253,18 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
 								)}
 								{assignment.questions_count && (
 									<div className="flex items-center space-x-1">
+										<Hash className="w-4 h-4" />
 										<span>{assignment.questions_count} questions</span>
-									</div>
-								)}
-								{isCaptain && assignment.roster_count && (
-									<div className="flex items-center space-x-1">
-										<span>
-											{assignment.submitted_count || 0}/
-											{assignment.roster_count}{" "}
-											{(assignment.submitted_count || 0) ===
-											assignment.roster_count
-												? "completed"
-												: "submitted"}
-										</span>
 									</div>
 								)}
 							</div>
 
-							{assignment.user_submission && (
+							{mergedAssignment.user_submission && (
 								<div
 									className={`mt-2 text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
 								>
 									Submitted:{" "}
-									{formatDate(assignment.user_submission.submitted_at)}
+									{formatDate(mergedAssignment.user_submission.submitted_at)}
 								</div>
 							)}
 						</>
@@ -236,7 +273,7 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
 					{!everyoneDeclined &&
 						(!isCaptain || (isCaptain && isUserAssigned)) && (
 							<div className="mt-3 flex items-center gap-2">
-								{assignment.user_submission ? (
+								{mergedAssignment.user_submission ? (
 									<button
 										type="button"
 										onClick={onViewAssignment}
@@ -248,53 +285,53 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
 									>
 										My Results
 									</button>
+								) : hasProgress ? (
+									<button
+										type="button"
+										onClick={onStartAssignment}
+										className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+											darkMode
+												? "bg-green-600 hover:bg-green-700 text-white"
+												: "bg-green-100 hover:bg-green-200 text-green-700"
+										}`}
+									>
+										Continue Assignment
+									</button>
 								) : (
-									<>
-										<button
-											type="button"
-											onClick={onStartAssignment}
-											className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-												darkMode
-													? "bg-green-600 hover:bg-green-700 text-white"
-													: "bg-green-100 hover:bg-green-200 text-green-700"
-											}`}
-										>
-											{hasProgress ? "Continue Assignment" : "Start Assignment"}
-										</button>
-										<button
-											type="button"
-											onClick={onDeclineAssignment}
-											className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-												darkMode
-													? "bg-gray-600 hover:bg-gray-700 text-white"
-													: "bg-gray-100 hover:bg-gray-200 text-gray-700"
-											}`}
-										>
-											Decline
-										</button>
-									</>
+									<button
+										type="button"
+										onClick={onStartAssignment}
+										className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+											darkMode
+												? "bg-green-600 hover:bg-green-700 text-white"
+												: "bg-green-100 hover:bg-green-200 text-green-700"
+										}`}
+									>
+										Start Assignment
+									</button>
 								)}
 							</div>
 						)}
 
 					{!everyoneDeclined &&
 						isCaptain &&
-						assignment.roster_count &&
-						assignment.roster_count > 0 && (
+						mergedAssignment.roster_count &&
+						mergedAssignment.roster_count > 0 && (
 							<div className="mt-3">
 								<div className="flex justify-between text-xs mb-1">
 									<span
 										className={darkMode ? "text-gray-400" : "text-gray-500"}
 									>
-										{(assignment.submitted_count || 0) ===
-										assignment.roster_count
+										{(mergedAssignment.submitted_count || 0) ===
+										mergedAssignment.roster_count
 											? "Completed"
 											: "Submissions"}
 									</span>
 									<span
 										className={darkMode ? "text-gray-400" : "text-gray-500"}
 									>
-										{assignment.submitted_count || 0}/{assignment.roster_count}
+										{mergedAssignment.submitted_count || 0}/
+										{mergedAssignment.roster_count}
 									</span>
 								</div>
 								<div
@@ -303,12 +340,12 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
 									<div
 										className="bg-blue-600 h-2 rounded-full transition-all duration-300"
 										style={{
-											width: `${((assignment.submitted_count || 0) / assignment.roster_count) * 100}%`,
+											width: `${((mergedAssignment.submitted_count || 0) / mergedAssignment.roster_count) * 100}%`,
 										}}
 									/>
 								</div>
 
-								{(assignment.submitted_count || 0) > 0 && (
+								{(mergedAssignment.submitted_count || 0) > 0 && (
 									<button
 										type="button"
 										onClick={onViewAnalytics}

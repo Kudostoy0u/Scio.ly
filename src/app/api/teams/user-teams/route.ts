@@ -1,4 +1,4 @@
-import { cockroachDBTeamsService } from "@/lib/services/cockroachdb-teams";
+import { teamsService } from "@/lib/services/teams";
 import { getServerUser } from "@/lib/supabaseServer";
 import { type NextRequest, NextResponse } from "next/server";
 
@@ -32,7 +32,7 @@ export async function GET(_request: NextRequest) {
 		}
 
 		// Get user's teams using CockroachDB
-		const teams = await cockroachDBTeamsService.getUserTeams(user.id);
+		const teams = await teamsService.getUserTeams(user.id);
 
 		return NextResponse.json({ teams });
 	} catch (error) {

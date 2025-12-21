@@ -24,6 +24,7 @@ export interface StreamPost {
 	tournament_start_time: string | null;
 	author_name: string;
 	author_email: string;
+	author_photo_url?: string | null;
 	created_at: string;
 	attachment_url?: string | null;
 	attachment_title?: string | null;
@@ -36,6 +37,7 @@ export interface StreamComment {
 	content: string;
 	author_name: string;
 	author_email: string;
+	author_photo_url?: string | null;
 	created_at: string;
 }
 

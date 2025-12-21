@@ -7,7 +7,6 @@ import type {
 	CryptarithmResult,
 } from "@/app/codebusters/ciphers/types/cipherTypes";
 import { attemptGenerateCryptarithm } from "./utils/equationGeneration";
-import { generateFallbackCryptarithm } from "./utils/fallbackCryptarithm";
 import { getUniqueWords, pickWord } from "./utils/wordBank";
 
 // Helper function to create transposition matrix
@@ -64,12 +63,27 @@ export const encryptColumnarTransposition = (
 	text: string,
 ): ColumnarTranspositionResult => {
 	const cleanText = text.toUpperCase().replace(/[^A-Z]/g, "");
-	const keyLength = Math.floor(Math.random() * 5) + 3; // 3-7 characters
 
-	const key = Array.from({ length: keyLength }, () =>
-		String.fromCharCode(65 + Math.floor(Math.random() * 26)),
-	).join("");
+	// Get words from the word pool and pick one with length 3-7
+	const uniqueWords = getUniqueWords();
+	const wordsOfValidLength = uniqueWords.filter(
+		(w) => w.length >= 3 && w.length <= 7,
+	);
 
+	// Pick a random word from the pool, or fallback to random letters if no words available
+	let key: string;
+	if (wordsOfValidLength.length > 0) {
+		const randomIndex = Math.floor(Math.random() * wordsOfValidLength.length);
+		key = wordsOfValidLength[randomIndex] ?? "";
+	} else {
+		// Fallback to random letters if no words available (shouldn't happen in practice)
+		const keyLength = Math.floor(Math.random() * 5) + 3; // 3-7 characters
+		key = Array.from({ length: keyLength }, () =>
+			String.fromCharCode(65 + Math.floor(Math.random() * 26)),
+		).join("");
+	}
+
+	const keyLength = key.length;
 	const matrix = createTranspositionMatrix(cleanText, keyLength);
 	const keyOrder = getKeyOrder(key);
 	const encrypted = encryptWithMatrix(matrix, keyOrder);
@@ -93,32 +107,54 @@ export const encryptCryptarithm = (_text: string): CryptarithmResult => {
 		digitGroups: Array<{ digits: string; word: string }>;
 		operation: "+" | "-";
 	} => {
-		const isSubtraction = Math.random() < 0.5;
-		const attempts = 200;
+		// 75% chance addition, 25% chance subtraction
+		const isSubtraction = Math.random() < 0.25;
+		const attempts = 100000; // Significantly increased attempts
 
-		const result = attemptGenerateCryptarithm(
-			isSubtraction ? "-" : "+",
-			attempts,
-			uniqueWords,
-			pickWordFn,
-		);
-		if (result) {
-			return result;
-		}
-
-		if (isSubtraction) {
-			const additionResult = attemptGenerateCryptarithm(
-				"+",
+		// Try multiple rounds with different random shuffles
+		const maxRounds = 10;
+		for (let round = 0; round < maxRounds; round++) {
+			// Try the preferred operation first
+			const result = attemptGenerateCryptarithm(
+				isSubtraction ? "-" : "+",
 				attempts,
 				uniqueWords,
 				pickWordFn,
 			);
-			if (additionResult) {
-				return additionResult;
+			if (result) {
+				return result;
+			}
+
+			// If subtraction failed, try addition as fallback
+			if (isSubtraction) {
+				const additionResult = attemptGenerateCryptarithm(
+					"+",
+					attempts,
+					uniqueWords,
+					pickWordFn,
+				);
+				if (additionResult) {
+					return additionResult;
+				}
+			}
+
+			// Try the other operation if preferred one failed
+			const otherOperation = isSubtraction ? "+" : "-";
+			const otherResult = attemptGenerateCryptarithm(
+				otherOperation,
+				attempts,
+				uniqueWords,
+				pickWordFn,
+			);
+			if (otherResult) {
+				return otherResult;
 			}
 		}
 
-		return generateFallbackCryptarithm(uniqueWords);
+		// If all rounds failed, throw an error instead of using fallback
+		throw new Error(
+			"Failed to generate cryptarithm after multiple attempts. Please try again.",
+		);
 	};
 
 	const cryptarithmData = generateCryptarithm();

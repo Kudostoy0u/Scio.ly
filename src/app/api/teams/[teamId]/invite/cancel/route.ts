@@ -1,5 +1,5 @@
 import { dbPg } from "@/lib/db";
-import { newTeamInvitations, newTeamMemberships } from "@/lib/db/schema/teams";
+import { teamInvitations, teamMemberships } from "@/lib/db/schema";
 import { validateRequest } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
 import {
@@ -71,7 +71,7 @@ export async function POST(
 		let teamUnitIds: string[];
 		try {
 			const teamInfo = await resolveTeamSlugToUnits(teamId);
-			teamUnitIds = teamInfo.teamUnitIds;
+			teamUnitIds = teamInfo.subteamIds;
 		} catch {
 			return handleNotFoundError("Team");
 		}
@@ -79,16 +79,16 @@ export async function POST(
 		// Check if user is captain or co-captain in any of the team units using Drizzle ORM
 		const membershipResult = await dbPg
 			.select({
-				id: newTeamMemberships.id,
-				role: newTeamMemberships.role,
-				teamId: newTeamMemberships.teamId,
+				id: teamMemberships.id,
+				role: teamMemberships.role,
+				teamId: teamMemberships.teamId,
 			})
-			.from(newTeamMemberships)
+			.from(teamMemberships)
 			.where(
 				and(
-					eq(newTeamMemberships.userId, user.id),
-					inArray(newTeamMemberships.teamId, teamUnitIds),
-					eq(newTeamMemberships.status, "active"),
+					eq(teamMemberships.userId, user.id),
+					inArray(teamMemberships.teamId, teamUnitIds),
+					eq(teamMemberships.status, "active"),
 				),
 			);
 
@@ -97,8 +97,8 @@ export async function POST(
 		}
 
 		// Check if user has captain or co-captain role in any team unit
-		const hasCaptainRole = membershipResult.some((membership) =>
-			["captain", "co_captain"].includes(membership.role),
+		const hasCaptainRole = membershipResult.some(
+			(membership) => membership.role === "captain",
 		);
 
 		if (!hasCaptainRole) {
@@ -107,13 +107,13 @@ export async function POST(
 
 		// Find and cancel the invitation using Drizzle ORM
 		const [invitationResult] = await dbPg
-			.select({ id: newTeamInvitations.id, email: newTeamInvitations.email })
-			.from(newTeamInvitations)
+			.select({ id: teamInvitations.id, email: teamInvitations.email })
+			.from(teamInvitations)
 			.where(
 				and(
-					eq(newTeamInvitations.invitationCode, invitationCode),
-					inArray(newTeamInvitations.teamId, teamUnitIds),
-					eq(newTeamInvitations.status, "pending"),
+					eq(teamInvitations.invitationCode, invitationCode),
+					inArray(teamInvitations.teamId, teamUnitIds),
+					eq(teamInvitations.status, "pending"),
 				),
 			)
 			.limit(1);
@@ -124,12 +124,12 @@ export async function POST(
 
 		// Update invitation status to cancelled using Drizzle ORM
 		await dbPg
-			.update(newTeamInvitations)
+			.update(teamInvitations)
 			.set({
 				status: "declined",
 				acceptedAt: new Date().toISOString(),
 			})
-			.where(eq(newTeamInvitations.id, invitationResult.id));
+			.where(eq(teamInvitations.id, invitationResult.id));
 
 		return NextResponse.json({
 			message: "Invitation cancelled successfully",

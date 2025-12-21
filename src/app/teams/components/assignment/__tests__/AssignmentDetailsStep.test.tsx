@@ -23,7 +23,6 @@ describe("AssignmentDetailsStep", () => {
 			eventName: "",
 		} as AssignmentDetails,
 		onDetailsChange: vi.fn(),
-		prefillEventName: "",
 		availableEvents: ["Test Event 1", "Test Event 2"],
 	};
 
@@ -37,20 +36,9 @@ describe("AssignmentDetailsStep", () => {
 
 			expect(screen.getByLabelText(TITLE_REGEX)).toBeInTheDocument();
 			expect(screen.getByLabelText(EVENT_REGEX)).toBeInTheDocument();
-			expect(screen.getByLabelText("Type")).toBeInTheDocument();
+			expect(screen.getByLabelText(/Time Limit/)).toBeInTheDocument();
 			expect(screen.getByLabelText("Due Date")).toBeInTheDocument();
 			expect(screen.getByLabelText("Description")).toBeInTheDocument();
-		});
-
-		it("renders with prefill event name", () => {
-			render(
-				<AssignmentDetailsStep
-					{...mockProps}
-					prefillEventName="Prefilled Event"
-				/>,
-			);
-
-			expect(screen.queryByLabelText("Event")).not.toBeInTheDocument();
 		});
 
 		it("renders available events in dropdown", () => {
@@ -88,14 +76,14 @@ describe("AssignmentDetailsStep", () => {
 			});
 		});
 
-		it("calls onDetailsChange when assignment type is changed", () => {
+		it("calls onDetailsChange when time limit is updated", () => {
 			render(<AssignmentDetailsStep {...mockProps} />);
 
-			const typeSelect = screen.getByLabelText("Type");
-			fireEvent.change(typeSelect, { target: { value: "project" } });
+			const timeLimitInput = screen.getByLabelText(/Time Limit/);
+			fireEvent.change(timeLimitInput, { target: { value: "60" } });
 
 			expect(mockProps.onDetailsChange).toHaveBeenCalledWith({
-				assignmentType: "project",
+				timeLimitMinutes: 60,
 			});
 		});
 
@@ -108,16 +96,6 @@ describe("AssignmentDetailsStep", () => {
 			expect(mockProps.onDetailsChange).toHaveBeenCalledWith({
 				dueDate: "2023-12-31",
 			});
-		});
-
-		// Points field was removed from the component
-		it("calls onDetailsChange when points are updated", () => {
-			render(<AssignmentDetailsStep {...mockProps} />);
-
-			const pointsInput = screen.getByLabelText("Points");
-			fireEvent.change(pointsInput, { target: { value: "150" } });
-
-			expect(mockProps.onDetailsChange).toHaveBeenCalledWith({ points: 150 });
 		});
 
 		it("calls onDetailsChange when description is updated", () => {
@@ -217,7 +195,7 @@ describe("AssignmentDetailsStep", () => {
 
 			expect(screen.getByLabelText(TITLE_REGEX)).toBeInTheDocument();
 			expect(screen.getByLabelText(EVENT_REGEX)).toBeInTheDocument();
-			expect(screen.getByLabelText("Type")).toBeInTheDocument();
+			expect(screen.getByLabelText(/Time Limit/)).toBeInTheDocument();
 			expect(screen.getByLabelText("Due Date")).toBeInTheDocument();
 			expect(screen.getByLabelText("Description")).toBeInTheDocument();
 		});

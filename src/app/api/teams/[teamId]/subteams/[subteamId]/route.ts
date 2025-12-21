@@ -1,19 +1,16 @@
 import { dbPg } from "@/lib/db";
+import { teamAssignmentRoster, teamAssignments } from "@/lib/db/schema";
 import {
-	newTeamAssignmentRoster,
-	newTeamAssignments,
-} from "@/lib/db/schema/assignments";
-import {
-	newTeamActiveTimers,
-	newTeamEvents,
-	newTeamGroups,
-	newTeamMemberships,
-	newTeamRemovedEvents,
-	newTeamRosterData,
-	newTeamStreamComments,
-	newTeamStreamPosts,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+	teamActiveTimers,
+	teamEvents,
+	teamMemberships,
+	teamRemovedEvents,
+	teamRoster,
+	teamStreamComments,
+	teamStreamPosts,
+	teamSubteams,
+	teams,
+} from "@/lib/db/schema";
 import { getServerUser } from "@/lib/supabaseServer";
 import { and, eq, inArray } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
@@ -54,9 +51,9 @@ export async function PUT(
 
 		// Resolve the slug to team group using Drizzle ORM
 		const groupResult = await dbPg
-			.select({ id: newTeamGroups.id })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.select({ id: teams.id })
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (groupResult.length === 0) {
@@ -76,10 +73,10 @@ export async function PUT(
 
 		// Check if the subteam exists and belongs to this group using Drizzle ORM
 		const subteamResult = await dbPg
-			.select({ id: newTeamUnits.id, groupId: newTeamUnits.groupId })
-			.from(newTeamUnits)
+			.select({ id: teamSubteams.id, groupId: teamSubteams.teamId })
+			.from(teamSubteams)
 			.where(
-				and(eq(newTeamUnits.id, subteamId), eq(newTeamUnits.groupId, groupId)),
+				and(eq(teamSubteams.id, subteamId), eq(teamSubteams.teamId, groupId)),
 			)
 			.limit(1);
 
@@ -89,14 +86,14 @@ export async function PUT(
 
 		// Check if user is a captain of this team group using Drizzle ORM
 		const membershipResult = await dbPg
-			.select({ role: newTeamMemberships.role })
-			.from(newTeamMemberships)
-			.innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+			.select({ role: teamMemberships.role })
+			.from(teamMemberships)
+			.innerJoin(teamSubteams, eq(teamMemberships.teamId, teamSubteams.id))
 			.where(
 				and(
-					eq(newTeamMemberships.userId, user.id),
-					eq(newTeamUnits.groupId, groupId),
-					eq(newTeamMemberships.status, "active"),
+					eq(teamMemberships.userId, user.id),
+					eq(teamSubteams.teamId, groupId),
+					eq(teamMemberships.status, "active"),
 				),
 			)
 			.limit(1);
@@ -109,7 +106,7 @@ export async function PUT(
 		if (!membership) {
 			return NextResponse.json({ error: "Not a team member" }, { status: 403 });
 		}
-		if (!["captain", "co_captain"].includes(membership.role)) {
+		if (membership.role !== "captain") {
 			return NextResponse.json(
 				{ error: "Only captains can update subteams" },
 				{ status: 403 },
@@ -118,16 +115,16 @@ export async function PUT(
 
 		// Update the subteam name (description field) using Drizzle ORM
 		const [updateResult] = await dbPg
-			.update(newTeamUnits)
+			.update(teamSubteams)
 			.set({
 				description: name.trim(),
 				updatedAt: new Date().toISOString(),
 			})
-			.where(eq(newTeamUnits.id, subteamId))
+			.where(eq(teamSubteams.id, subteamId))
 			.returning({
-				id: newTeamUnits.id,
-				teamId: newTeamUnits.teamId,
-				description: newTeamUnits.description,
+				id: teamSubteams.id,
+				teamId: teamSubteams.teamId,
+				description: teamSubteams.description,
 			});
 
 		if (!updateResult) {
@@ -181,9 +178,9 @@ export async function DELETE(
 
 		// Resolve the slug to team group using Drizzle ORM
 		const groupResult = await dbPg
-			.select({ id: newTeamGroups.id })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.select({ id: teams.id })
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (groupResult.length === 0) {
@@ -203,10 +200,10 @@ export async function DELETE(
 
 		// Check if the subteam exists and belongs to this group using Drizzle ORM
 		const subteamResult = await dbPg
-			.select({ id: newTeamUnits.id, groupId: newTeamUnits.groupId })
-			.from(newTeamUnits)
+			.select({ id: teamSubteams.id, groupId: teamSubteams.teamId })
+			.from(teamSubteams)
 			.where(
-				and(eq(newTeamUnits.id, subteamId), eq(newTeamUnits.groupId, groupId)),
+				and(eq(teamSubteams.id, subteamId), eq(teamSubteams.teamId, groupId)),
 			)
 			.limit(1);
 
@@ -216,14 +213,14 @@ export async function DELETE(
 
 		// Check if user is a captain of this team group using Drizzle ORM
 		const membershipResult = await dbPg
-			.select({ role: newTeamMemberships.role })
-			.from(newTeamMemberships)
-			.innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+			.select({ role: teamMemberships.role })
+			.from(teamMemberships)
+			.innerJoin(teamSubteams, eq(teamMemberships.teamId, teamSubteams.id))
 			.where(
 				and(
-					eq(newTeamMemberships.userId, user.id),
-					eq(newTeamUnits.groupId, groupId),
-					eq(newTeamMemberships.status, "active"),
+					eq(teamMemberships.userId, user.id),
+					eq(teamSubteams.teamId, groupId),
+					eq(teamMemberships.status, "active"),
 				),
 			)
 			.limit(1);
@@ -236,7 +233,7 @@ export async function DELETE(
 		if (!membership) {
 			return NextResponse.json({ error: "Not a team member" }, { status: 403 });
 		}
-		if (!["captain", "co_captain"].includes(membership.role)) {
+		if (membership.role !== "captain") {
 			return NextResponse.json(
 				{ error: "Only captains can delete subteams" },
 				{ status: 403 },
@@ -247,46 +244,44 @@ export async function DELETE(
 		await dbPg.transaction(async (tx) => {
 			// Get all stream post IDs for this subteam
 			const streamPostIds = await tx
-				.select({ id: newTeamStreamPosts.id })
-				.from(newTeamStreamPosts)
-				.where(eq(newTeamStreamPosts.teamUnitId, subteamId));
+				.select({ id: teamStreamPosts.id })
+				.from(teamStreamPosts)
+				.where(eq(teamStreamPosts.subteamId, subteamId));
 
 			const postIds = streamPostIds.map((p) => p.id);
 
 			// Delete related data (most will cascade, but being explicit for safety)
 			if (postIds.length > 0) {
 				await tx
-					.delete(newTeamStreamComments)
-					.where(inArray(newTeamStreamComments.postId, postIds));
+					.delete(teamStreamComments)
+					.where(inArray(teamStreamComments.postId, postIds));
 			}
 			await tx
-				.delete(newTeamMemberships)
-				.where(eq(newTeamMemberships.teamId, subteamId));
+				.delete(teamMemberships)
+				.where(eq(teamMemberships.teamId, subteamId));
+			await tx.delete(teamRoster).where(eq(teamRoster.subteamId, subteamId));
 			await tx
-				.delete(newTeamRosterData)
-				.where(eq(newTeamRosterData.teamUnitId, subteamId));
+				.delete(teamStreamPosts)
+				.where(eq(teamStreamPosts.subteamId, subteamId));
 			await tx
-				.delete(newTeamStreamPosts)
-				.where(eq(newTeamStreamPosts.teamUnitId, subteamId));
+				.delete(teamActiveTimers)
+				.where(eq(teamActiveTimers.subteamId, subteamId));
 			await tx
-				.delete(newTeamActiveTimers)
-				.where(eq(newTeamActiveTimers.teamUnitId, subteamId));
+				.delete(teamRemovedEvents)
+				.where(eq(teamRemovedEvents.subteamId, subteamId));
 			await tx
-				.delete(newTeamRemovedEvents)
-				.where(eq(newTeamRemovedEvents.teamUnitId, subteamId));
+				.delete(teamAssignmentRoster)
+				.where(eq(teamAssignmentRoster.subteamId, subteamId));
 			await tx
-				.delete(newTeamAssignmentRoster)
-				.where(eq(newTeamAssignmentRoster.subteamId, subteamId));
-			await tx
-				.delete(newTeamAssignments)
-				.where(eq(newTeamAssignments.teamId, subteamId));
-			await tx.delete(newTeamEvents).where(eq(newTeamEvents.teamId, subteamId));
+				.delete(teamAssignments)
+				.where(eq(teamAssignments.teamId, subteamId));
+			await tx.delete(teamEvents).where(eq(teamEvents.teamId, subteamId));
 
 			// Delete the subteam itself
 			const deleteResult = await tx
-				.delete(newTeamUnits)
-				.where(eq(newTeamUnits.id, subteamId))
-				.returning({ id: newTeamUnits.id });
+				.delete(teamSubteams)
+				.where(eq(teamSubteams.id, subteamId))
+				.returning({ id: teamSubteams.id });
 
 			if (deleteResult.length === 0) {
 				throw new Error("Failed to delete subteam");

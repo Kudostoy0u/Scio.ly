@@ -1,9 +1,5 @@
 import { dbPg } from "@/lib/db";
-import {
-	newTeamAssignments,
-	newTeamGroups,
-	newTeamUnits,
-} from "@/lib/db/schema";
+import { teamAssignments, teamSubteams, teams } from "@/lib/db/schema";
 import { getServerUser } from "@/lib/supabaseServer";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
@@ -26,16 +22,16 @@ export async function GET(request: NextRequest) {
 		}
 
 		// Find the assignment and get the team group slug
-		// newTeamAssignments.teamId -> newTeamUnits.id -> newTeamGroups.id
+		// teamAssignments.teamId -> teamSubteams.id -> teams.id
 		const result = await dbPg
 			.select({
-				teamId: newTeamAssignments.teamId,
-				groupSlug: newTeamGroups.slug,
+				teamId: teamAssignments.teamId,
+				groupSlug: teams.slug,
 			})
-			.from(newTeamAssignments)
-			.innerJoin(newTeamUnits, eq(newTeamAssignments.teamId, newTeamUnits.id))
-			.innerJoin(newTeamGroups, eq(newTeamUnits.groupId, newTeamGroups.id))
-			.where(eq(newTeamAssignments.id, assignmentId))
+			.from(teamAssignments)
+			.innerJoin(teamSubteams, eq(teamAssignments.teamId, teamSubteams.id))
+			.innerJoin(teams, eq(teamSubteams.teamId, teams.id))
+			.where(eq(teamAssignments.id, assignmentId))
 			.limit(1);
 
 		if (result.length === 0) {

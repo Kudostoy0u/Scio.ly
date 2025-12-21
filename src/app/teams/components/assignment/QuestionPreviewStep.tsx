@@ -74,6 +74,20 @@ export default function QuestionPreviewStep({
 			>
 				{question.question_text}
 			</p>
+			{question.question_type === "codebusters" && question.author && (
+				<div
+					className={`text-xs mb-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+				>
+					- {question.author}
+				</div>
+			)}
+			{question.question_type === "codebusters" && question.cipherType && (
+				<div
+					className={`text-xs mb-2 ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+				>
+					Cipher: {question.cipherType}
+				</div>
+			)}
 			{question.imageData && (
 				<Image
 					src={question.imageData}
@@ -99,10 +113,22 @@ export default function QuestionPreviewStep({
 						optIndex: number,
 					) => {
 						// Handle both old format (objects with isCorrect) and new format (strings with answers array)
-						const isCorrect =
-							showAnswers &&
-							((typeof option === "object" && option.isCorrect) ||
-								question.answers?.includes(optIndex.toString()));
+						let isCorrect = false;
+						if (showAnswers) {
+							if (typeof option === "object" && option.isCorrect) {
+								isCorrect = true;
+							} else if (question.answers) {
+								// Check if answers array contains this option index
+								const answersArray = Array.isArray(question.answers)
+									? question.answers
+									: [question.answers];
+								// Check both string and number formats
+								isCorrect =
+									answersArray.includes(optIndex) ||
+									answersArray.includes(optIndex.toString()) ||
+									answersArray.includes(String(optIndex));
+							}
+						}
 
 						const optionText =
 							typeof option === "object" ? option.text : option;

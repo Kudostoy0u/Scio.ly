@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { questions as questionsTable } from "@/lib/db/schema";
-import { edits as editsTable } from "@/lib/db/schema/core";
+import { edits as editsTable } from "@/lib/db/schema";
 import type { ApiResponse } from "@/lib/types/api";
 import { desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";

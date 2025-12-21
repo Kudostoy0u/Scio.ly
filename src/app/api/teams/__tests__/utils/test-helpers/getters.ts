@@ -30,27 +30,27 @@ export function getMembership(userId: string, teamId: string) {
 	return mockDb.memberships.get(`${userId}:${teamId}`);
 }
 
-export function getRosterEntries(teamUnitId: string) {
+export function getRosterEntries(subteamId: string) {
 	return Array.from(mockDb.rosterEntries.values()).filter(
-		(entry) => entry.teamUnitId === teamUnitId,
+		(entry) => entry.subteamId === subteamId,
 	);
 }
 
 export function getRosterEntry(
-	teamUnitId: string,
+	subteamId: string,
 	eventName: string,
 	slotIndex: number,
 ) {
-	return mockDb.rosterEntries.get(rosterKey(teamUnitId, eventName, slotIndex));
+	return mockDb.rosterEntries.get(rosterKey(subteamId, eventName, slotIndex));
 }
 
 export function updateRosterEntry(
-	teamUnitId: string,
+	subteamId: string,
 	eventName: string,
 	slotIndex: number,
 	updates: Partial<TeamRosterRecord>,
 ) {
-	const key = rosterKey(teamUnitId, eventName, slotIndex);
+	const key = rosterKey(subteamId, eventName, slotIndex);
 	const entry = mockDb.rosterEntries.get(key);
 	if (entry) {
 		mockDb.rosterEntries.set(key, { ...entry, ...updates });
@@ -263,9 +263,9 @@ export function addActiveTimer(
 	return { id };
 }
 
-export function getActiveTimersByTeamUnit(teamUnitId: string) {
+export function getActiveTimersByTeamUnit(subteamId: string) {
 	return Array.from(mockDb.activeTimers.values()).filter(
-		(timer) => timer.teamUnitId === teamUnitId,
+		(timer) => timer.subteamId === subteamId,
 	);
 }
 
@@ -281,7 +281,7 @@ export function getMembershipsByTeamId(teamId: string) {
 
 export function getMembershipsByGroupId(groupId: string) {
 	const teamUnitIds = Array.from(mockDb.teamUnits.values())
-		.filter((unit) => unit.groupId === groupId)
+		.filter((unit) => unit.teamId === groupId)
 		.map((unit) => unit.id);
 
 	return Array.from(mockDb.memberships.values()).filter((membership) =>

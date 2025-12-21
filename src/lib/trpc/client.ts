@@ -1,4 +1,8 @@
-import { createTRPCReact, httpBatchLink } from "@trpc/react-query";
+import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
+import {
+	createTRPCReact,
+	httpBatchLink as httpBatchLinkReact,
+} from "@trpc/react-query";
 import superjson from "superjson";
 import type { AppRouter } from "./routers/_app";
 
@@ -8,7 +12,7 @@ export type TRPCUtils = ReturnType<typeof trpc.useUtils>;
 export function getTRPCClient() {
 	return trpc.createClient({
 		links: [
-			httpBatchLink({
+			httpBatchLinkReact({
 				url: "/api/trpc",
 				transformer: superjson,
 				// Enable batching with a small delay to collect multiple requests
@@ -25,6 +29,26 @@ export function getTRPCClient() {
 					return fetch(url, {
 						...options,
 						credentials: "include", // This ensures cookies are sent with the request
+					});
+				},
+			}),
+		],
+	});
+}
+
+export function getTRPCProxyClient() {
+	return createTRPCProxyClient<AppRouter>({
+		links: [
+			httpBatchLink({
+				url: "/api/trpc",
+				transformer: superjson,
+				headers: () => ({
+					"Content-Type": "application/json",
+				}),
+				fetch: (url, options) => {
+					return fetch(url, {
+						...options,
+						credentials: "include",
 					});
 				},
 			}),

@@ -14,20 +14,10 @@
     "eslint-config-next",
     "tailwindcss"
   ],
-  "ignore": [
-    "src/test-utils/index.tsx:mockNavigation",
-    "src/test-utils/index.tsx:cleanupTestEnvironment"
-  ],
-  "ignoreUnresolved": [
-    "@/app/api/teams/[teamId]/invite/route",
-    "@/app/api/teams/[teamId]/roster/invite/route",
-    "@/app/teams/components/TeamDashboard"
-  ],
   "rules": {
     "exports": "error",
     "files": "error",
     "unlisted": "warn",
-    "dependencies": "off",
     "types": "error",
     "binaries": "off",
     "enumMembers": "warn"

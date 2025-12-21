@@ -1,14 +1,14 @@
 import { dbPg } from "@/lib/db";
 import {
-	newTeamGroups,
-	newTeamMemberships,
-	newTeamRosterData,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+	teamMemberships,
+	teamRoster,
+	teamSubteams,
+	teams,
+} from "@/lib/db/schema";
 import { UUIDSchema, validateRequest } from "@/lib/schemas/teams-validation";
 import { getServerUser } from "@/lib/supabaseServer";
 import { syncPeopleFromRosterForSubteam } from "@/lib/trpc/routers/teams/helpers/people-sync";
-import { hasLeadershipAccessCockroach } from "@/lib/utils/teams/access";
+import { hasLeadershipAccess } from "@/lib/utils/teams/access";
 import {
 	handleError,
 	handleForbiddenError,
@@ -77,9 +77,9 @@ export async function POST(
 
 		// Resolve slug to group id using Drizzle ORM
 		const [groupResult] = await dbPg
-			.select({ id: newTeamGroups.id })
-			.from(newTeamGroups)
-			.where(eq(newTeamGroups.slug, teamId))
+			.select({ id: teams.id })
+			.from(teams)
+			.where(eq(teams.slug, teamId))
 			.limit(1);
 
 		if (!groupResult) {
@@ -89,7 +89,7 @@ export async function POST(
 		const groupId = groupResult.id;
 
 		// Ensure requester has leadership privileges in this group
-		const hasLeadership = await hasLeadershipAccessCockroach(user.id, groupId);
+		const hasLeadership = await hasLeadershipAccess(user.id, groupId);
 		if (!hasLeadership) {
 			return handleForbiddenError(
 				"Only captains and co-captains can remove members",
@@ -98,9 +98,9 @@ export async function POST(
 
 		// Get all team units for this group using Drizzle ORM
 		const teamUnits = await dbPg
-			.select({ id: newTeamUnits.id })
-			.from(newTeamUnits)
-			.where(eq(newTeamUnits.groupId, groupId));
+			.select({ id: teamSubteams.id })
+			.from(teamSubteams)
+			.where(eq(teamSubteams.teamId, groupId));
 
 		const teamUnitIds = teamUnits.map((u) => u.id);
 
@@ -110,28 +110,32 @@ export async function POST(
 
 		// Remove team memberships for this user within the group using Drizzle ORM
 		await dbPg
-			.delete(newTeamMemberships)
+			.delete(teamMemberships)
 			.where(
 				and(
-					eq(newTeamMemberships.userId, userId),
-					inArray(newTeamMemberships.teamId, teamUnitIds),
+					eq(teamMemberships.userId, userId),
+					inArray(teamMemberships.teamId, teamUnitIds),
 				),
 			);
 
 		// Purge their roster entries across the group using Drizzle ORM
 		const deletedRoster = await dbPg
-			.delete(newTeamRosterData)
+			.delete(teamRoster)
 			.where(
 				and(
-					eq(newTeamRosterData.userId, userId),
-					inArray(newTeamRosterData.teamUnitId, teamUnitIds),
+					eq(teamRoster.userId, userId),
+					inArray(teamRoster.subteamId, teamUnitIds),
 				),
 			)
-			.returning({ teamUnitId: newTeamRosterData.teamUnitId });
+			.returning({ subteamId: teamRoster.subteamId });
 
 		// Sync people table for all affected subteams
 		const affectedSubteamIds = [
-			...new Set(deletedRoster.map((r) => r.teamUnitId)),
+			...new Set(
+				deletedRoster
+					.map((r) => r.subteamId)
+					.filter((id): id is string => id !== null),
+			),
 		];
 		for (const subteamIdToSync of affectedSubteamIds) {
 			await syncPeopleFromRosterForSubteam(subteamIdToSync);

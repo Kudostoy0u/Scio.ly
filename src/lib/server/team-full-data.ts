@@ -8,14 +8,14 @@
 "use server";
 
 import { dbPg } from "@/lib/db";
-import { newTeamAssignments } from "@/lib/db/schema/assignments";
-import { users } from "@/lib/db/schema/core";
+import { teamAssignments } from "@/lib/db/schema";
+import { users } from "@/lib/db/schema";
 import {
-	newTeamGroups,
-	newTeamMemberships,
-	newTeamRosterData,
-	newTeamUnits,
-} from "@/lib/db/schema/teams";
+	teamMemberships,
+	teamRoster,
+	teamSubteams,
+	teams,
+} from "@/lib/db/schema";
 import { getServerUser } from "@/lib/supabaseServer";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
@@ -73,6 +73,7 @@ export interface TeamAssignment {
 	dueDate: string | null;
 	createdBy: string;
 	createdAt: string;
+	updatedAt: string;
 }
 
 export interface TeamFullData {
@@ -99,14 +100,14 @@ export async function getTeamMeta(teamSlug: string): Promise<TeamMeta | null> {
 
 	const [group] = await dbPg
 		.select({
-			id: newTeamGroups.id,
-			slug: newTeamGroups.slug,
-			school: newTeamGroups.school,
-			division: newTeamGroups.division,
-			updatedAt: sql<string>`COALESCE(${newTeamGroups.updatedAt}, ${newTeamGroups.createdAt})::text`,
+			id: teams.id,
+			slug: teams.slug,
+			school: teams.school,
+			division: teams.division,
+			updatedAt: sql<string>`COALESCE(${teams.updatedAt}, ${teams.createdAt})::text`,
 		})
-		.from(newTeamGroups)
-		.where(eq(newTeamGroups.slug, teamSlug));
+		.from(teams)
+		.where(eq(teams.slug, teamSlug));
 
 	if (!group) {
 		return null;
@@ -114,14 +115,14 @@ export async function getTeamMeta(teamSlug: string): Promise<TeamMeta | null> {
 
 	// Check user access and get role
 	const [membership] = await dbPg
-		.select({ role: newTeamMemberships.role })
-		.from(newTeamMemberships)
-		.innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+		.select({ role: teamMemberships.role })
+		.from(teamMemberships)
+		.innerJoin(teamSubteams, eq(teamMemberships.teamId, teamSubteams.id))
 		.where(
 			and(
-				eq(newTeamUnits.groupId, group.id),
-				eq(newTeamMemberships.userId, user.id),
-				eq(newTeamMemberships.status, "active"),
+				eq(teamSubteams.teamId, group.id),
+				eq(teamMemberships.userId, user.id),
+				eq(teamMemberships.status, "active"),
 			),
 		)
 		.limit(1);
@@ -159,14 +160,14 @@ export async function getTeamFullData(
 	// 1. Get team group with version
 	const [group] = await dbPg
 		.select({
-			id: newTeamGroups.id,
-			slug: newTeamGroups.slug,
-			school: newTeamGroups.school,
-			division: newTeamGroups.division,
-			updatedAt: sql<string>`COALESCE(${newTeamGroups.updatedAt}, ${newTeamGroups.createdAt})::text`,
+			id: teams.id,
+			slug: teams.slug,
+			school: teams.school,
+			division: teams.division,
+			updatedAt: sql<string>`COALESCE(${teams.updatedAt}, ${teams.createdAt})::text`,
 		})
-		.from(newTeamGroups)
-		.where(eq(newTeamGroups.slug, teamSlug));
+		.from(teams)
+		.where(eq(teams.slug, teamSlug));
 
 	if (!group) {
 		throw new Error("Team not found");
@@ -174,14 +175,14 @@ export async function getTeamFullData(
 
 	// 2. Check user access
 	const [membership] = await dbPg
-		.select({ role: newTeamMemberships.role })
-		.from(newTeamMemberships)
-		.innerJoin(newTeamUnits, eq(newTeamMemberships.teamId, newTeamUnits.id))
+		.select({ role: teamMemberships.role })
+		.from(teamMemberships)
+		.innerJoin(teamSubteams, eq(teamMemberships.teamId, teamSubteams.id))
 		.where(
 			and(
-				eq(newTeamUnits.groupId, group.id),
-				eq(newTeamMemberships.userId, user.id),
-				eq(newTeamMemberships.status, "active"),
+				eq(teamSubteams.teamId, group.id),
+				eq(teamMemberships.userId, user.id),
+				eq(teamMemberships.status, "active"),
 			),
 		)
 		.limit(1);
@@ -193,21 +194,19 @@ export async function getTeamFullData(
 	// 3. Get all subteams
 	const subteams = await dbPg
 		.select({
-			id: newTeamUnits.id,
-			groupId: newTeamUnits.groupId,
-			teamId: newTeamUnits.teamId,
-			description: newTeamUnits.description,
-			displayOrder: newTeamUnits.displayOrder,
-			createdAt: sql<string>`${newTeamUnits.createdAt}::text`,
+			id: teamSubteams.id,
+			groupId: teamSubteams.teamId,
+			teamId: teamSubteams.teamId,
+			description: teamSubteams.description,
+			rosterNotes: teamSubteams.rosterNotes,
+			displayOrder: teamSubteams.displayOrder,
+			createdAt: sql<string>`${teamSubteams.createdAt}::text`,
 		})
-		.from(newTeamUnits)
+		.from(teamSubteams)
 		.where(
-			and(
-				eq(newTeamUnits.groupId, group.id),
-				eq(newTeamUnits.status, "active"),
-			),
+			and(eq(teamSubteams.teamId, group.id), eq(teamSubteams.status, "active")),
 		)
-		.orderBy(newTeamUnits.displayOrder, newTeamUnits.createdAt);
+		.orderBy(teamSubteams.displayOrder, teamSubteams.createdAt);
 
 	const unitIds = subteams.map((u) => u.id);
 
@@ -234,51 +233,52 @@ export async function getTeamFullData(
 		// Memberships with user data
 		dbPg
 			.select({
-				id: newTeamMemberships.id,
-				userId: newTeamMemberships.userId,
-				teamId: newTeamMemberships.teamId,
-				role: newTeamMemberships.role,
-				status: newTeamMemberships.status,
-				joinedAt: sql<string>`${newTeamMemberships.joinedAt}::text`,
+				id: teamMemberships.id,
+				userId: teamMemberships.userId,
+				teamId: teamMemberships.teamId,
+				role: teamMemberships.role,
+				status: teamMemberships.status,
+				joinedAt: sql<string>`${teamMemberships.joinedAt}::text`,
 				displayName: users.displayName,
 				firstName: users.firstName,
 				lastName: users.lastName,
 				email: users.email,
 				username: users.username,
 			})
-			.from(newTeamMemberships)
-			.leftJoin(users, eq(newTeamMemberships.userId, users.id))
-			.where(inArray(newTeamMemberships.teamId, unitIds)),
+			.from(teamMemberships)
+			.leftJoin(users, eq(teamMemberships.userId, users.id))
+			.where(inArray(teamMemberships.teamId, unitIds)),
 
 		// Roster entries
 		dbPg
 			.select({
-				id: newTeamRosterData.id,
-				teamUnitId: newTeamRosterData.teamUnitId,
-				eventName: newTeamRosterData.eventName,
-				slotIndex: newTeamRosterData.slotIndex,
-				studentName: newTeamRosterData.studentName,
-				userId: newTeamRosterData.userId,
+				id: teamRoster.id,
+				teamUnitId: teamRoster.subteamId,
+				eventName: teamRoster.eventName,
+				slotIndex: teamRoster.slotIndex,
+				studentName: teamRoster.displayName,
+				userId: teamRoster.userId,
 			})
-			.from(newTeamRosterData)
-			.where(inArray(newTeamRosterData.teamUnitId, unitIds)),
+			.from(teamRoster)
+			.where(inArray(teamRoster.subteamId, unitIds)),
 
 		// Assignments
 		dbPg
 			.select({
-				id: newTeamAssignments.id,
-				teamId: newTeamAssignments.teamId,
-				title: newTeamAssignments.title,
-				description: newTeamAssignments.description,
-				dueDate: sql<string | null>`${newTeamAssignments.dueDate}::text`,
-				createdBy: newTeamAssignments.createdBy,
-				createdAt: sql<string>`${newTeamAssignments.createdAt}::text`,
+				id: teamAssignments.id,
+				teamId: teamAssignments.teamId,
+				title: teamAssignments.title,
+				description: teamAssignments.description,
+				dueDate: sql<string | null>`${teamAssignments.dueDate}::text`,
+				createdBy: teamAssignments.createdBy,
+				createdAt: sql<string>`${teamAssignments.createdAt}::text`,
+				updatedAt: sql<string>`COALESCE(${teamAssignments.updatedAt}, ${teamAssignments.createdAt})::text`,
 			})
-			.from(newTeamAssignments)
-			.where(inArray(newTeamAssignments.teamId, unitIds))
+			.from(teamAssignments)
+			.where(inArray(teamAssignments.teamId, unitIds))
 			.orderBy(
-				sql`${newTeamAssignments.dueDate} ASC NULLS LAST`,
-				sql`${newTeamAssignments.createdAt} DESC`,
+				sql`${teamAssignments.dueDate} ASC NULLS LAST`,
+				sql`${teamAssignments.createdAt} DESC`,
 			),
 	]);
 
@@ -348,7 +348,7 @@ export async function getTeamFullData(
 				unlinkedPeople.set(key, {
 					name: entry.studentName,
 					events: [],
-					subteamId: entry.teamUnitId,
+					subteamId: entry.teamUnitId || "",
 				});
 			}
 			const person = unlinkedPeople.get(key);
@@ -390,13 +390,14 @@ export async function getTeamFullData(
 			teamId: s.teamId,
 			name: s.description || "Unnamed Subteam",
 			description: s.description || "",
+			rosterNotes: s.rosterNotes || null,
 			displayOrder: s.displayOrder,
 			createdAt: s.createdAt,
 		})),
 		members,
 		rosterEntries: rosterEntriesRaw.map((r) => ({
 			id: r.id,
-			teamUnitId: r.teamUnitId,
+			teamUnitId: r.teamUnitId || "",
 			eventName: r.eventName,
 			slotIndex: r.slotIndex,
 			studentName: r.studentName,
@@ -410,6 +411,7 @@ export async function getTeamFullData(
 			dueDate: a.dueDate,
 			createdBy: a.createdBy,
 			createdAt: a.createdAt,
+			updatedAt: a.updatedAt,
 		})),
 	};
 }

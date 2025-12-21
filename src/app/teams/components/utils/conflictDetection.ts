@@ -46,6 +46,9 @@ export function detectMemberConflicts(
 
 		// Check each conflict block for conflicts
 		for (const group of groups) {
+			if (group.label === "Conflict Block 7") {
+				continue;
+			}
 			const groupEvents = group.events;
 			const memberEventsInBlock = member.events.filter((event) =>
 				groupEvents.includes(event),
