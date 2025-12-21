@@ -21,21 +21,15 @@ export default function AuthButton() {
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 	const [showSignInModal, setShowSignInModal] = useState(false);
 	const [isOffline, setIsOffline] = useState(false);
-	const [authMode, setAuthMode] = useState<"signin" | "signup" | "reset">(
-		"signin",
-	);
+	const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [authError, setAuthError] = useState("");
-	const [authSuccess, setAuthSuccess] = useState("");
 	const [authLoading, setAuthLoading] = useState(false);
 	const [showPassword, setShowPassword] = useState(false);
-	const [resetEmailSent, setResetEmailSent] = useState(false);
 	const [displayName, setDisplayName] = useState<string | null>(null);
 	const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 	const [oauthLoading, setOauthLoading] = useState(false);
-	const [firstName, setFirstName] = useState("");
-	const [lastName, setLastName] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
 	const dropdownRef = useRef<HTMLDivElement>(null);
 	const triggerRef = useRef<HTMLButtonElement>(null);
@@ -207,7 +201,7 @@ export default function AuthButton() {
 
 			const { data: profile } = await supabaseClient
 				.from("users")
-				.select("display_name, first_name, photo_url, username")
+				.select("display_name, photo_url, username")
 				.eq("id", userId)
 				.maybeSingle();
 
@@ -236,9 +230,6 @@ export default function AuthButton() {
 
 	// Helper function to validate signup inputs
 	const validateSignupInputs = (): string | null => {
-		if (!(firstName && lastName)) {
-			return "Please enter your first and last name";
-		}
 		if (!confirmPassword) {
 			return "Please confirm your password";
 		}
@@ -294,12 +285,6 @@ export default function AuthButton() {
 			password,
 			options: {
 				emailRedirectTo: `${window.location.origin}${window.location.pathname}`,
-				data: {
-					first_name: firstName,
-					last_name: lastName,
-					name: `${firstName} ${lastName}`.trim(),
-					full_name: `${firstName} ${lastName}`.trim(),
-				},
 			},
 		});
 
@@ -308,14 +293,9 @@ export default function AuthButton() {
 		} else if (data.user?.email_confirmed_at) {
 			setAuthError("Email is already in use.");
 		} else {
-			setAuthSuccess(
-				"Check your email for the confirmation link. Don't forget to check your spam folder.",
-			);
-			setEmail("");
-			setPassword("");
-			setConfirmPassword("");
-			setFirstName("");
-			setLastName("");
+			// Signup successful - close the modal
+			setShowSignInModal(false);
+			resetForm();
 		}
 	};
 
@@ -375,41 +355,12 @@ export default function AuthButton() {
 
 		setAuthLoading(true);
 		setAuthError("");
-		setAuthSuccess("");
 
 		try {
 			if (authMode === "signup") {
 				await handleSignup();
 			} else {
 				await handleSignin();
-			}
-		} catch (error) {
-			setAuthError(
-				`An unexpected error occurred: ${error instanceof Error ? error.message : "Unknown error"}`,
-			);
-		} finally {
-			setAuthLoading(false);
-		}
-	};
-
-	const handlePasswordReset = async () => {
-		if (!email) {
-			setAuthError("Please enter your email address");
-			return;
-		}
-
-		setAuthLoading(true);
-		setAuthError("");
-
-		try {
-			const { error } = await client.auth.resetPasswordForEmail(email, {
-				redirectTo: `${window.location.origin}/auth/reset-password`,
-			});
-
-			if (error) {
-				setAuthError(error.message);
-			} else {
-				setResetEmailSent(true);
 			}
 		} catch (error) {
 			setAuthError(
@@ -473,11 +424,7 @@ export default function AuthButton() {
 		setEmail("");
 		setPassword("");
 		setAuthError("");
-		setAuthSuccess("");
-		setResetEmailSent(false);
 		setAuthMode("signin");
-		setFirstName("");
-		setLastName("");
 		setConfirmPassword("");
 	};
 
@@ -549,24 +496,17 @@ export default function AuthButton() {
 				setPassword={setPassword}
 				confirmPassword={confirmPassword}
 				setConfirmPassword={setConfirmPassword}
-				firstName={firstName}
-				setFirstName={setFirstName}
-				lastName={lastName}
-				setLastName={setLastName}
 				showPassword={showPassword}
 				setShowPassword={setShowPassword}
 				authError={authError}
-				authSuccess={authSuccess}
 				authLoading={authLoading}
 				oauthLoading={oauthLoading}
 				isOffline={isOffline}
 				subtleLinkClass={subtleLinkClass}
-				resetEmailSent={resetEmailSent}
 				onClose={() => {
 					setShowSignInModal(false);
 					resetForm();
 				}}
-				handlePasswordReset={handlePasswordReset}
 				handleEmailPasswordAuth={handleEmailPasswordAuth}
 				handleGoogleSignIn={handleGoogleSignIn}
 			/>

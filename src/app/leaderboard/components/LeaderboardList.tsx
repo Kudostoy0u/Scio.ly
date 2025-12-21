@@ -24,10 +24,16 @@ function LeaderboardItem({
 	onCopy,
 }: LeaderboardItemProps) {
 	return (
-		<button
-			key={lb.id}
-			type="button"
+		<div
+			role="button"
+			tabIndex={0}
 			onClick={() => onSelect(lb.id)}
+			onKeyDown={(e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					onSelect(lb.id);
+				}
+			}}
 			className={`p-3 rounded-lg cursor-pointer transition-colors border text-left w-full ${
 				selectedLeaderboard === lb.id
 					? darkMode
@@ -76,7 +82,7 @@ function LeaderboardItem({
 					</button>
 				</div>
 			)}
-		</button>
+		</div>
 	);
 }
 

@@ -124,8 +124,8 @@ export function RankingsTable({
 										<span>
 											{member.display_name ||
 												(member.email?.includes("@")
-													? `@${member.email.split("@")[0]}`
-													: "@unknown")}
+													? member.email.split("@")[0]
+													: "unknown")}
 											{member.user_id === user?.id && " (You)"}
 										</span>
 									</div>

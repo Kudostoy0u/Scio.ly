@@ -9,6 +9,7 @@ const USER_PREFIX_REGEX = /^@user-/;
 
 export interface UserProfile {
 	displayName?: string | null;
+	// firstName and lastName are deprecated and will be removed
 	firstName?: string | null;
 	lastName?: string | null;
 	username?: string | null;
@@ -23,14 +24,14 @@ export interface UserProfile {
  */
 export function generateDisplayName(
 	profile: UserProfile | null,
-	userId?: string,
+	_userId?: string,
 ): {
 	name: string;
 	needsNamePrompt: boolean;
 } {
 	if (!profile) {
 		return {
-			name: userId ? "@unknown" : "@unknown",
+			name: "unknown",
 			needsNamePrompt: true,
 		};
 	}
@@ -43,30 +44,9 @@ export function generateDisplayName(
 		};
 	}
 
-	if (profile.firstName && profile.lastName) {
-		return {
-			name: `${profile.firstName.trim()} ${profile.lastName.trim()}`,
-			needsNamePrompt: false,
-		};
-	}
-
-	if (profile.firstName?.trim()) {
-		return {
-			name: profile.firstName.trim(),
-			needsNamePrompt: false,
-		};
-	}
-
-	if (profile.lastName?.trim()) {
-		return {
-			name: profile.lastName.trim(),
-			needsNamePrompt: false,
-		};
-	}
-
 	if (profile.username?.trim() && !profile.username.startsWith("user_")) {
 		return {
-			name: `@${profile.username.trim()}`,
+			name: profile.username.trim(),
 			needsNamePrompt: false,
 		};
 	}
@@ -75,7 +55,7 @@ export function generateDisplayName(
 		const emailLocal = profile.email.split("@")[0];
 		if (emailLocal && emailLocal.length > 2 && !emailLocal.match(HEX_8_REGEX)) {
 			return {
-				name: `@${emailLocal}`,
+				name: emailLocal,
 				needsNamePrompt: false,
 			};
 		}
@@ -84,13 +64,13 @@ export function generateDisplayName(
 	// Check for auto-generated names that should prompt for better names
 	if (profile.username?.startsWith("user_")) {
 		return {
-			name: "@unknown",
+			name: "unknown",
 			needsNamePrompt: true,
 		};
 	}
 
 	return {
-		name: "@unknown",
+		name: "unknown",
 		needsNamePrompt: true,
 	};
 }
@@ -109,7 +89,8 @@ export function needsNamePrompt(name: string | null | undefined): boolean {
 	}
 
 	return (
-		name === "@unknown" ||
+		name === "unknown" ||
+		name === "@unknown" || // legacy support
 		name.startsWith("User ") ||
 		Boolean(name.match(HEX_8_REGEX)) ||
 		name.startsWith("user_") ||
@@ -124,8 +105,8 @@ export function needsNamePrompt(name: string | null | undefined): boolean {
  * @returns Single character for avatar
  */
 export function getAvatarInitial(name: string, email?: string): string {
-	if (name && name !== "@unknown") {
-		// Remove @ prefix for initials
+	if (name && name !== "unknown" && name !== "@unknown") {
+		// Remove @ prefix for initials (legacy support)
 		const cleanName = name.startsWith("@") ? name.slice(1) : name;
 		if (cleanName && cleanName.length > 0 && cleanName[0]) {
 			return cleanName[0].toUpperCase();
