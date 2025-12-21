@@ -7,22 +7,11 @@ import { type NextRequest, NextResponse } from "next/server";
 // Helper function to derive display name from user profile
 function deriveDisplayName(
 	currentDisplay: string | undefined,
-	firstName: string | undefined,
-	lastName: string | undefined,
 	username: string | undefined,
 	emailLocal: string | undefined,
 ): string | undefined {
 	if (currentDisplay?.trim()) {
 		return undefined;
-	}
-	if (firstName && lastName) {
-		return `${firstName.trim()} ${lastName.trim()}`;
-	}
-	if (firstName?.trim()) {
-		return firstName.trim();
-	}
-	if (lastName?.trim()) {
-		return lastName.trim();
 	}
 	if (username?.trim()) {
 		return username.trim();
@@ -42,7 +31,7 @@ async function ensureDisplayName(
 		const supabase = await createSupabaseServerClient();
 		const { data: existingProfile } = await supabase
 			.from("users")
-			.select("id, email, display_name, first_name, last_name, username")
+			.select("id, email, display_name, username")
 			.eq("id", userId)
 			.maybeSingle();
 
@@ -52,18 +41,12 @@ async function ensureDisplayName(
 			undefined;
 		const currentDisplay = (existingProfile as { display_name?: string } | null)
 			?.display_name;
-		const firstName = (existingProfile as { first_name?: string } | null)
-			?.first_name;
-		const lastName = (existingProfile as { last_name?: string } | null)
-			?.last_name;
 		const username = (existingProfile as { username?: string } | null)
 			?.username;
 
 		const emailLocal = email?.includes("@") ? email.split("@")[0] : undefined;
 		const derivedDisplayName = deriveDisplayName(
 			currentDisplay,
-			firstName,
-			lastName,
 			username,
 			emailLocal,
 		);

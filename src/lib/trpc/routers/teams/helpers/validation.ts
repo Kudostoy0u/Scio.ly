@@ -100,36 +100,23 @@ export async function ensureUserDisplayName(
 		const supabase = await createSupabaseServerClient();
 		const { data: existingProfile } = await supabase
 			.from("users")
-			.select("id, email, display_name, first_name, last_name, username")
+			.select("id, email, display_name, username")
 			.eq("id", userId)
 			.maybeSingle();
 
 		const existingProfileTyped = existingProfile as {
 			email?: string;
 			display_name?: string;
-			first_name?: string;
-			last_name?: string;
 			username?: string;
 		} | null;
 		const email = existingProfileTyped?.email || userEmail;
 		const currentDisplay = existingProfileTyped?.display_name;
-		const firstName = existingProfileTyped?.first_name;
-		const lastName = existingProfileTyped?.last_name;
 		const username = existingProfileTyped?.username;
 
 		const emailLocal = email?.includes("@") ? email.split("@")[0] : undefined;
 		const derivedDisplayName = (() => {
 			if (currentDisplay?.trim()) {
 				return undefined;
-			}
-			if (firstName && lastName) {
-				return `${firstName.trim()} ${lastName.trim()}`;
-			}
-			if (firstName?.trim()) {
-				return firstName.trim();
-			}
-			if (lastName?.trim()) {
-				return lastName.trim();
 			}
 			if (username?.trim()) {
 				return username.trim();

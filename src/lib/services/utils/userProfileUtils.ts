@@ -5,8 +5,6 @@ export interface UserProfile {
 	id: string;
 	email: string;
 	display_name: string | null;
-	first_name: string | null;
-	last_name: string | null;
 	username: string | null;
 }
 
@@ -17,7 +15,7 @@ export async function getUserProfile(
 		const supabase = await createSupabaseServerClient();
 		const { data, error } = await supabase
 			.from("users")
-			.select("id, email, display_name, first_name, last_name, username")
+			.select("id, email, display_name, username")
 			.eq("id", userId)
 			.single();
 

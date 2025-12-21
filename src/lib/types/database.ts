@@ -6,8 +6,6 @@ export interface Database {
 					id: string;
 					email: string;
 					username: string;
-					first_name: string | null;
-					last_name: string | null;
 					display_name: string | null;
 					photo_url: string | null;
 					team_code: string | null;
@@ -17,8 +15,6 @@ export interface Database {
 					id: string;
 					email: string;
 					username: string;
-					first_name?: string | null;
-					last_name?: string | null;
 					display_name?: string | null;
 					photo_url?: string | null;
 					team_code?: string | null;
@@ -28,8 +24,6 @@ export interface Database {
 					id?: string;
 					email?: string;
 					username?: string;
-					first_name?: string | null;
-					last_name?: string | null;
 					display_name?: string | null;
 					photo_url?: string | null;
 					team_code?: string | null;

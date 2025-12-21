@@ -5,7 +5,7 @@ import type React from "react";
 import { createPortal } from "react-dom";
 import GoogleSignInButton from "./GoogleSignInButton";
 
-type AuthMode = "signin" | "signup" | "reset";
+type AuthMode = "signin" | "signup";
 
 type AuthModalProps = {
 	open: boolean;
@@ -18,45 +18,28 @@ type AuthModalProps = {
 	setPassword: (v: string) => void;
 	confirmPassword: string;
 	setConfirmPassword: (v: string) => void;
-	firstName: string;
-	setFirstName: (v: string) => void;
-	lastName: string;
-	setLastName: (v: string) => void;
 	showPassword: boolean;
 	setShowPassword: (v: boolean) => void;
 	authError: string;
-	authSuccess: string;
 	authLoading: boolean;
 	oauthLoading: boolean;
 	isOffline: boolean;
 	subtleLinkClass: string;
-	resetEmailSent: boolean;
 	onClose: () => void;
-	handlePasswordReset: () => void | Promise<void>;
 	handleEmailPasswordAuth: () => void | Promise<void>;
 	handleGoogleSignIn: () => void | Promise<void>;
 };
 
 // Helper function to get modal title
 function getModalTitle(authMode: AuthMode): string {
-	if (authMode === "signin") {
-		return "Sign In";
-	}
-	if (authMode === "signup") {
-		return "Sign Up";
-	}
-	return "Reset Password";
+	return authMode === "signin" ? "Sign In" : "Sign Up";
 }
 
 // Helper function to get modal description
 function getModalDescription(authMode: AuthMode): string {
-	if (authMode === "signin") {
-		return "Welcome back! Sign in to continue your learning journey.";
-	}
-	if (authMode === "signup") {
-		return "Join Scio.ly to start practicing Science Olympiad questions.";
-	}
-	return "Enter your email to receive a password reset link.";
+	return authMode === "signin"
+		? "Welcome back! Sign in to continue your learning journey."
+		: "Join Scio.ly to start practicing Science Olympiad questions.";
 }
 
 // Helper function to render modal header
@@ -135,83 +118,10 @@ function renderPasswordInput(
 	);
 }
 
-// Helper function to render reset password form
-function renderResetPasswordForm(props: AuthModalProps) {
-	const {
-		email,
-		setEmail,
-		authError,
-		resetEmailSent,
-		authLoading,
-		handlePasswordReset,
-		setAuthMode,
-		subtleLinkClass,
-		darkMode,
-	} = props;
-
-	return (
-		<form
-			onSubmit={(e) => {
-				e.preventDefault();
-				handlePasswordReset();
-			}}
-			className="space-y-4"
-		>
-			<div>
-				{renderInput(
-					"email",
-					"Email",
-					email,
-					(e) => setEmail(e.target.value),
-					darkMode,
-					true,
-				)}
-			</div>
-			{authError && (
-				<div className="text-red-500 text-sm bg-red-400 p-3 rounded-lg">
-					{authError}
-				</div>
-			)}
-			{resetEmailSent && (
-				<div className="text-green-600 text-sm bg-green-50 p-3 rounded-lg">
-					Password reset email sent! Check your inbox.
-				</div>
-			)}
-			<button
-				type="submit"
-				disabled={authLoading}
-				className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
-			>
-				{authLoading ? (
-					<div className="flex items-center justify-center">
-						<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-						Sending Reset Email...
-					</div>
-				) : (
-					"Send Reset Email"
-				)}
-			</button>
-			<div className="text-center">
-				<button
-					type="button"
-					onClick={() => setAuthMode("signin")}
-					className={`${subtleLinkClass} text-sm`}
-				>
-					Back to Sign In
-				</button>
-			</div>
-		</form>
-	);
-}
-
 // Helper function to render signin/signup form
 function renderSignInSignUpForm(props: AuthModalProps) {
 	const {
 		authMode,
-		firstName,
-		setFirstName,
-		lastName,
-		setLastName,
 		email,
 		setEmail,
 		password,
@@ -221,11 +131,8 @@ function renderSignInSignUpForm(props: AuthModalProps) {
 		showPassword,
 		setShowPassword,
 		authError,
-		authSuccess,
 		authLoading,
 		handleEmailPasswordAuth,
-		setAuthMode,
-		subtleLinkClass,
 		darkMode,
 	} = props;
 
@@ -237,26 +144,6 @@ function renderSignInSignUpForm(props: AuthModalProps) {
 			}}
 			className="space-y-4"
 		>
-			{authMode === "signup" && (
-				<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-					{renderInput(
-						"text",
-						"First name",
-						firstName,
-						(e) => setFirstName(e.target.value),
-						darkMode,
-						true,
-					)}
-					{renderInput(
-						"text",
-						"Last name",
-						lastName,
-						(e) => setLastName(e.target.value),
-						darkMode,
-						true,
-					)}
-				</div>
-			)}
 			<div>
 				{renderInput(
 					"email",
@@ -294,11 +181,6 @@ function renderSignInSignUpForm(props: AuthModalProps) {
 					{authError}
 				</div>
 			)}
-			{authSuccess && (
-				<div className="text-green-700 text-sm bg-green-50 p-3 rounded-lg">
-					{authSuccess}
-				</div>
-			)}
 			<button
 				type="submit"
 				disabled={authLoading}
@@ -315,17 +197,6 @@ function renderSignInSignUpForm(props: AuthModalProps) {
 					"Sign Up"
 				)}
 			</button>
-			{authMode === "signin" && (
-				<div className="text-center">
-					<button
-						type="button"
-						onClick={() => setAuthMode("reset")}
-						className={`${subtleLinkClass} text-sm`}
-					>
-						Forgot your password?
-					</button>
-				</div>
-			)}
 		</form>
 	);
 }
@@ -394,21 +265,14 @@ export default function AuthModal({
 	setPassword,
 	confirmPassword,
 	setConfirmPassword,
-	firstName,
-	setFirstName,
-	lastName,
-	setLastName,
 	showPassword,
 	setShowPassword,
 	authError,
-	authSuccess,
 	authLoading,
 	oauthLoading,
 	isOffline,
 	subtleLinkClass,
-	resetEmailSent,
 	onClose,
-	handlePasswordReset,
 	handleEmailPasswordAuth,
 	handleGoogleSignIn,
 }: AuthModalProps) {
@@ -447,127 +311,72 @@ export default function AuthModal({
 
 				{renderModalHeader(authMode, darkMode)}
 
-				{authMode === "reset" ? (
-					renderResetPasswordForm({
-						open,
-						darkMode,
-						authMode,
-						setAuthMode,
-						email,
-						setEmail,
-						password,
-						setPassword,
-						confirmPassword,
-						setConfirmPassword,
-						firstName,
-						setFirstName,
-						lastName,
-						setLastName,
-						showPassword,
-						setShowPassword,
-						authError,
-						authSuccess,
-						authLoading,
-						oauthLoading,
-						isOffline,
-						subtleLinkClass,
-						resetEmailSent,
-						onClose,
-						handlePasswordReset,
-						handleEmailPasswordAuth,
-						handleGoogleSignIn,
-					})
-				) : (
-					<>
-						{renderSignInSignUpForm({
-							open,
-							darkMode,
-							authMode,
-							setAuthMode,
-							email,
-							setEmail,
-							password,
-							setPassword,
-							confirmPassword,
-							setConfirmPassword,
-							firstName,
-							setFirstName,
-							lastName,
-							setLastName,
-							showPassword,
-							setShowPassword,
-							authError,
-							authSuccess,
-							authLoading,
-							oauthLoading,
-							isOffline,
-							subtleLinkClass,
-							resetEmailSent,
-							onClose,
-							handlePasswordReset,
-							handleEmailPasswordAuth,
-							handleGoogleSignIn,
-						})}
-						{renderOAuthSection({
-							open,
-							darkMode,
-							authMode,
-							setAuthMode,
-							email,
-							setEmail,
-							password,
-							setPassword,
-							confirmPassword,
-							setConfirmPassword,
-							firstName,
-							setFirstName,
-							lastName,
-							setLastName,
-							showPassword,
-							setShowPassword,
-							authError,
-							authSuccess,
-							authLoading,
-							oauthLoading,
-							isOffline,
-							subtleLinkClass,
-							resetEmailSent,
-							onClose,
-							handlePasswordReset,
-							handleEmailPasswordAuth,
-							handleGoogleSignIn,
-						})}
-						{renderAuthModeToggle({
-							open,
-							darkMode,
-							authMode,
-							setAuthMode,
-							email,
-							setEmail,
-							password,
-							setPassword,
-							confirmPassword,
-							setConfirmPassword,
-							firstName,
-							setFirstName,
-							lastName,
-							setLastName,
-							showPassword,
-							setShowPassword,
-							authError,
-							authSuccess,
-							authLoading,
-							oauthLoading,
-							isOffline,
-							subtleLinkClass,
-							resetEmailSent,
-							onClose,
-							handlePasswordReset,
-							handleEmailPasswordAuth,
-							handleGoogleSignIn,
-						})}
-					</>
-				)}
+				{renderSignInSignUpForm({
+					open,
+					darkMode,
+					authMode,
+					setAuthMode,
+					email,
+					setEmail,
+					password,
+					setPassword,
+					confirmPassword,
+					setConfirmPassword,
+					showPassword,
+					setShowPassword,
+					authError,
+					authLoading,
+					oauthLoading,
+					isOffline,
+					subtleLinkClass,
+					onClose,
+					handleEmailPasswordAuth,
+					handleGoogleSignIn,
+				})}
+				{renderOAuthSection({
+					open,
+					darkMode,
+					authMode,
+					setAuthMode,
+					email,
+					setEmail,
+					password,
+					setPassword,
+					confirmPassword,
+					setConfirmPassword,
+					showPassword,
+					setShowPassword,
+					authError,
+					authLoading,
+					oauthLoading,
+					isOffline,
+					subtleLinkClass,
+					onClose,
+					handleEmailPasswordAuth,
+					handleGoogleSignIn,
+				})}
+				{renderAuthModeToggle({
+					open,
+					darkMode,
+					authMode,
+					setAuthMode,
+					email,
+					setEmail,
+					password,
+					setPassword,
+					confirmPassword,
+					setConfirmPassword,
+					showPassword,
+					setShowPassword,
+					authError,
+					authLoading,
+					oauthLoading,
+					isOffline,
+					subtleLinkClass,
+					onClose,
+					handleEmailPasswordAuth,
+					handleGoogleSignIn,
+				})}
 			</div>
 		</div>
 	);

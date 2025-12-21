@@ -201,8 +201,6 @@ export async function getUserDisplayInfo(userId: string): Promise<{
 		const userResult = await dbPg
 			.select({
 				displayName: users.displayName,
-				firstName: users.firstName,
-				lastName: users.lastName,
 				email: users.email,
 				username: users.username,
 			})

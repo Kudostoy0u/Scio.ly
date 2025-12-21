@@ -14,59 +14,27 @@ import {
 } from "react";
 
 // Top-level regex patterns for performance
-const WHITESPACE_REGEX = /\s+/;
 const HEX_PATTERN_REGEX = /^[a-f0-9]{8}$/;
 
-// Helper function to check if user is from Google
-function isGoogleUser(user: User): boolean {
-	return (
-		user?.app_metadata?.provider === "google" ||
-		(Array.isArray(user?.identities) &&
-			user.identities.some((i) => i.provider === "google"))
-	);
-}
-
-// Helper function to extract names from user metadata
-function extractNamesFromMetadata(meta: Record<string, unknown>): {
-	firstName: string | null;
-	lastName: string | null;
-	full: string;
-	given: string;
-	family: string;
-} {
+// Helper function to extract display name from user metadata
+function extractDisplayNameFromMetadata(meta: Record<string, unknown>): string {
 	const given = (meta.given_name || meta.givenName || "").toString().trim();
 	const family = (meta.family_name || meta.familyName || "").toString().trim();
 	const full = (meta.name || meta.full_name || meta.fullName || "")
 		.toString()
 		.trim();
 
-	let firstName: string | null = null;
-	let lastName: string | null = null;
-
-	if (given || family) {
-		firstName = given || null;
-		lastName = family || null;
-	} else if (full) {
-		const parts = full.split(WHITESPACE_REGEX).filter(Boolean);
-		if (parts.length >= 2) {
-			const first = parts[0];
-			firstName =
-				first !== undefined && typeof first === "string" ? first : null;
-			const lastNameStr = parts.slice(1).join(" ");
-			if (typeof lastNameStr === "string" && lastNameStr.length > 0) {
-				lastName = lastNameStr;
-			} else {
-				lastName = null;
-			}
-		} else if (parts.length === 1) {
-			const first = parts[0];
-			firstName =
-				first !== undefined && typeof first === "string" ? first : null;
-			lastName = null;
-		}
+	// Prefer full name, then construct from given/family
+	if (full) {
+		return full;
 	}
-
-	return { firstName, lastName, full, given, family };
+	if (given && family) {
+		return `${given} ${family}`;
+	}
+	if (given) {
+		return given;
+	}
+	return "";
 }
 
 // Helper function to generate username
@@ -92,31 +60,16 @@ function generateUsername(
 }
 
 // Helper function to generate display name
-function generateDisplayName(
+function generateDisplayNameFromMeta(
 	existingDisplayName: string | undefined,
-	full: string,
-	given: string,
-	firstName: string | null,
-	lastName: string | null,
+	metaDisplayName: string,
 	email: string | null | undefined,
 ): string | null {
 	if (existingDisplayName?.trim()) {
 		return existingDisplayName.trim();
 	}
-	if (full?.trim()) {
-		return full.trim();
-	}
-	if (given?.trim()) {
-		return given.trim();
-	}
-	if (firstName && lastName) {
-		return `${firstName.trim()} ${lastName.trim()}`;
-	}
-	if (firstName?.trim()) {
-		return firstName.trim();
-	}
-	if (lastName?.trim()) {
-		return lastName.trim();
+	if (metaDisplayName?.trim()) {
+		return metaDisplayName.trim();
 	}
 	if (email?.includes("@")) {
 		const emailLocal = email.split("@")[0];
@@ -125,7 +78,7 @@ function generateDisplayName(
 			emailLocal.length > 2 &&
 			!emailLocal.match(HEX_PATTERN_REGEX)
 		) {
-			return `@${emailLocal}`;
+			return emailLocal;
 		}
 	}
 	return null;
@@ -179,44 +132,6 @@ function calculateBasicChanges(
 	return changes;
 }
 
-// Helper function to calculate name changes
-function calculateNameChanges(
-	existing: {
-		first_name?: string;
-		last_name?: string;
-	} | null,
-	firstName: string | null,
-	lastName: string | null,
-	shouldForceUpdateNames: boolean,
-): Record<string, unknown> {
-	const changes: Record<string, unknown> = {};
-
-	const shouldWriteFirst =
-		shouldForceUpdateNames ||
-		(!existing?.first_name && firstName !== null && firstName !== undefined);
-	if (
-		shouldWriteFirst &&
-		firstName !== null &&
-		firstName !== undefined &&
-		existing?.first_name !== firstName
-	) {
-		changes.first_name = firstName;
-	}
-
-	const shouldWriteLast =
-		shouldForceUpdateNames ||
-		(!existing?.last_name && lastName !== null && lastName !== undefined);
-	if (
-		shouldWriteLast &&
-		lastName !== null &&
-		lastName !== undefined &&
-		existing?.last_name !== lastName
-	) {
-		changes.last_name = lastName;
-	}
-
-	return changes;
-}
 
 // Helper function to calculate display name and photo changes
 function calculateDisplayChanges(
@@ -250,32 +165,21 @@ function calculateChanges(
 	existing: {
 		username?: string;
 		email?: string;
-		first_name?: string;
-		last_name?: string;
 		display_name?: string;
 		photo_url?: string;
 	} | null,
 	upsertPayload: { id: string; email: string; username: string },
-	firstName: string | null,
-	lastName: string | null,
 	displayName: string | null,
 	photoUrl: string | null,
-	shouldForceUpdateNames: boolean,
 ): Record<string, unknown> {
 	const basicChanges = calculateBasicChanges(existing, upsertPayload);
-	const nameChanges = calculateNameChanges(
-		existing,
-		firstName,
-		lastName,
-		shouldForceUpdateNames,
-	);
 	const displayChanges = calculateDisplayChanges(
 		existing,
 		displayName,
 		photoUrl,
 	);
 
-	return { ...basicChanges, ...nameChanges, ...displayChanges };
+	return { ...basicChanges, ...displayChanges };
 }
 
 // Helper function to perform user profile upsert
@@ -308,15 +212,11 @@ async function fetchExistingProfile(userId: string): Promise<{
 	username?: string;
 	email?: string;
 	display_name?: string;
-	first_name?: string;
-	last_name?: string;
 	photo_url?: string;
 } | null> {
 	const { data: existing, error: readError } = await supabase
 		.from("users")
-		.select(
-			"id, email, first_name, last_name, display_name, username, photo_url",
-		)
+		.select("id, email, display_name, username, photo_url")
 		.eq("id", userId)
 		.maybeSingle();
 
@@ -328,8 +228,6 @@ async function fetchExistingProfile(userId: string): Promise<{
 		username?: string;
 		email?: string;
 		display_name?: string;
-		first_name?: string;
-		last_name?: string;
 		photo_url?: string;
 	} | null;
 }
@@ -341,8 +239,6 @@ function processUserProfileData(
 		username?: string;
 		email?: string;
 		display_name?: string;
-		first_name?: string;
-		last_name?: string;
 		photo_url?: string;
 	} | null,
 ): {
@@ -350,21 +246,15 @@ function processUserProfileData(
 	username: string;
 	displayName: string | null;
 	photoUrl: string | null;
-	firstName: string | null;
-	lastName: string | null;
-	shouldForceUpdateNames: boolean;
 } {
 	const meta: Record<string, unknown> = user.user_metadata || {};
-	const { firstName, lastName, full, given } = extractNamesFromMetadata(meta);
+	const metaDisplayName = extractDisplayNameFromMetadata(meta);
 
 	const email = user.email || existing?.email || null;
 	const username = generateUsername(existing?.username, email, user.id);
-	const displayName = generateDisplayName(
+	const displayName = generateDisplayNameFromMeta(
 		existing?.display_name,
-		full,
-		given,
-		firstName,
-		lastName,
+		metaDisplayName,
 		email,
 	);
 	const photoUrlRaw: unknown =
@@ -372,17 +262,11 @@ function processUserProfileData(
 	const photoUrl: string | null =
 		typeof photoUrlRaw === "string" ? photoUrlRaw : null;
 
-	const isGoogle = isGoogleUser(user);
-	const shouldForceUpdateNames = Boolean(isGoogle && (firstName || lastName));
-
 	return {
 		email: email || "",
 		username,
 		displayName,
 		photoUrl,
-		firstName,
-		lastName,
-		shouldForceUpdateNames,
 	};
 }
 
@@ -393,8 +277,6 @@ async function syncUserProfile(
 		username?: string;
 		email?: string;
 		display_name?: string;
-		first_name?: string;
-		last_name?: string;
 		photo_url?: string;
 	} | null,
 ): Promise<void> {
@@ -418,11 +300,8 @@ async function syncUserProfile(
 	const changes = calculateChanges(
 		existing,
 		upsertPayload,
-		profileData.firstName,
-		profileData.lastName,
 		profileData.displayName,
 		profileData.photoUrl,
-		profileData.shouldForceUpdateNames,
 	);
 
 	const hasMeaningfulChanges = !existing || Object.keys(changes).length > 0;

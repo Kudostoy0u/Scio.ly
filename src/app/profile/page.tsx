@@ -8,7 +8,7 @@ import { useTheme } from "@/app/contexts/ThemeContext";
 import type { Database } from "@/lib/types/database";
 import { generateDisplayName } from "@/lib/utils/content/displayNameUtils";
 import type { User } from "@supabase/supabase-js";
-import { Save, User as UserIcon } from "lucide-react";
+import { AlertTriangle, Save, Trash2, User as UserIcon } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { ChangeEvent } from "react";
@@ -21,55 +21,52 @@ export default function ProfilePage() {
 	const { user: ctxUser, client } = useAuth();
 	const [user, setUser] = useState<User | null>(null);
 	const [displayName, setDisplayName] = useState("");
-	const [firstName, setFirstName] = useState("");
-	const [lastName, setLastName] = useState("");
 	const [username, setUsername] = useState("");
 	const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 	const [uploadingPhoto, setUploadingPhoto] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [authInitialized, setAuthInitialized] = useState(false);
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+	const [deleteConfirmText, setDeleteConfirmText] = useState("");
+	const [deleting, setDeleting] = useState(false);
 
 	useEffect(() => {
 		const supabase = client;
 		const currentUser = ctxUser || null;
 		setUser(currentUser);
 		(async () => {
-			if (currentUser) {
-				const { data } = await supabase
-					.from("users")
-					.select("display_name, first_name, last_name, username, photo_url")
-					.eq("id", currentUser.id)
-					.maybeSingle();
-				const profileData = data as {
-					display_name?: string | null;
-					first_name?: string | null;
-					last_name?: string | null;
-					username?: string | null;
-					photo_url?: string | null;
-				} | null;
-				const { name: robustName } = generateDisplayName(
-					{
-						displayName: profileData?.display_name || null,
-						firstName: profileData?.first_name || null,
-						lastName: profileData?.last_name || null,
-						username: profileData?.username || null,
-						email: currentUser.email || null,
-					},
-					currentUser.id,
-				);
-				setDisplayName(robustName || "");
-				setFirstName(profileData?.first_name || "");
-				setLastName(profileData?.last_name || "");
-				setUsername(
-					profileData?.username || currentUser.email?.split("@")[0] || "",
-				);
-				setPhotoUrl(
-					profileData?.photo_url ||
-						currentUser.user_metadata?.avatar_url ||
-						currentUser.user_metadata?.picture ||
-						null,
-				);
+		if (currentUser) {
+			const { data } = await supabase
+				.from("users")
+				.select("display_name, username, photo_url")
+				.eq("id", currentUser.id)
+				.maybeSingle();
+			const profileData = data as {
+				display_name?: string | null;
+				username?: string | null;
+				photo_url?: string | null;
+			} | null;
+			const { name: robustName } = generateDisplayName(
+				{
+					displayName: profileData?.display_name || null,
+					firstName: null,
+					lastName: null,
+					username: profileData?.username || null,
+					email: currentUser.email || null,
+				},
+				currentUser.id,
+			);
+			setDisplayName(robustName || "");
+			setUsername(
+				profileData?.username || currentUser.email?.split("@")[0] || "",
+			);
+			setPhotoUrl(
+				profileData?.photo_url ||
+					currentUser.user_metadata?.avatar_url ||
+					currentUser.user_metadata?.picture ||
+					null,
+			);
 			} else {
 				router.push("/");
 			}
@@ -95,8 +92,6 @@ export default function ProfilePage() {
 				id: user.id,
 				email: user.email || "",
 				username: username || user.email?.split("@")[0] || "user",
-				first_name: firstName || null,
-				last_name: lastName || null,
 				display_name: displayName || null,
 				photo_url: photoUrl || null,
 				created_at: new Date().toISOString(),
@@ -211,6 +206,39 @@ export default function ProfilePage() {
 			toast.error("Photo upload failed.");
 		} finally {
 			setUploadingPhoto(false);
+		}
+	};
+
+	const handleDeleteAccount = async () => {
+		if (deleteConfirmText !== "DELETE") {
+			toast.error('Please type "DELETE" to confirm');
+			return;
+		}
+
+		setDeleting(true);
+		try {
+			const response = await fetch("/api/account/delete", {
+				method: "DELETE",
+			});
+
+			if (!response.ok) {
+				const data = await response.json();
+				throw new Error(data.error || "Failed to delete account");
+			}
+
+			// Sign out and redirect
+			await client.auth.signOut();
+			toast.success("Account deleted successfully");
+			router.push("/");
+		} catch (error) {
+			logger.error("Failed to delete account:", error);
+			toast.error(
+				error instanceof Error ? error.message : "Failed to delete account",
+			);
+		} finally {
+			setDeleting(false);
+			setShowDeleteConfirm(false);
+			setDeleteConfirmText("");
 		}
 	};
 
@@ -364,48 +392,6 @@ export default function ProfilePage() {
 							</p>
 						</div>
 
-						{/* First / Last Name */}
-						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-							<div>
-								<label
-									htmlFor="first-name"
-									className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-								>
-									First Name
-								</label>
-								<input
-									id="first-name"
-									type="text"
-									value={firstName}
-									onChange={(e) => setFirstName(e.target.value)}
-									className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-										darkMode
-											? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-											: "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-									}`}
-								/>
-							</div>
-							<div>
-								<label
-									htmlFor="last-name"
-									className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-								>
-									Last Name
-								</label>
-								<input
-									id="last-name"
-									type="text"
-									value={lastName}
-									onChange={(e) => setLastName(e.target.value)}
-									className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-										darkMode
-											? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-											: "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-									}`}
-								/>
-							</div>
-						</div>
-
 						{/* Username */}
 						<div className="mb-6">
 							<label
@@ -519,8 +505,157 @@ export default function ProfilePage() {
 							</div>
 						</div>
 					</div>
+
+					{/* Danger Zone */}
+					<div
+						className={`mt-6 rounded-lg p-6 border-2 ${
+							darkMode
+								? "bg-gray-800 border-red-900"
+								: "bg-white border-red-200"
+						}`}
+					>
+						<div className="flex items-center gap-2 mb-4">
+							<AlertTriangle
+								className={`w-5 h-5 ${darkMode ? "text-red-400" : "text-red-600"}`}
+							/>
+							<h3
+								className={`text-lg font-medium ${darkMode ? "text-red-400" : "text-red-600"}`}
+							>
+								Danger Zone
+							</h3>
+						</div>
+
+						<p
+							className={`text-sm mb-4 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+						>
+							Permanently delete your account and all associated data. This
+							action cannot be undone.
+						</p>
+
+						<button
+							type="button"
+							onClick={() => setShowDeleteConfirm(true)}
+							className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors duration-200"
+						>
+							<Trash2 className="w-4 h-4" />
+							Delete Account
+						</button>
+					</div>
 				</div>
 			</div>
+
+			{/* Delete Confirmation Modal */}
+			{showDeleteConfirm && (
+				<div
+					className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+					onMouseDown={() => setShowDeleteConfirm(false)}
+				>
+					<div
+						className={`w-full max-w-md rounded-lg p-6 ${
+							darkMode ? "bg-gray-800" : "bg-white"
+						}`}
+						onMouseDown={(e) => e.stopPropagation()}
+					>
+						<div className="flex items-center gap-3 mb-4">
+							<div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-100">
+								<AlertTriangle className="w-5 h-5 text-red-600" />
+							</div>
+							<h3
+								className={`text-lg font-semibold ${
+									darkMode ? "text-white" : "text-gray-900"
+								}`}
+							>
+								Delete Account
+							</h3>
+						</div>
+
+						<p
+							className={`mb-4 ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+						>
+							This will permanently delete your account and all associated
+							data, including:
+						</p>
+
+						<ul
+							className={`list-disc list-inside mb-4 text-sm ${
+								darkMode ? "text-gray-400" : "text-gray-600"
+							}`}
+						>
+							<li>Your profile and settings</li>
+							<li>Team memberships and roster entries</li>
+							<li>Assignment submissions</li>
+							<li>All other personal data</li>
+						</ul>
+
+						<p
+							className={`mb-4 font-medium ${
+								darkMode ? "text-red-400" : "text-red-600"
+							}`}
+						>
+							This action cannot be undone.
+						</p>
+
+						<div className="mb-4">
+							<label
+								htmlFor="delete-confirm"
+								className={`block text-sm font-medium mb-2 ${
+									darkMode ? "text-gray-300" : "text-gray-700"
+								}`}
+							>
+								Type <span className="font-bold">DELETE</span> to confirm
+							</label>
+							<input
+								id="delete-confirm"
+								type="text"
+								value={deleteConfirmText}
+								onChange={(e) => setDeleteConfirmText(e.target.value)}
+								placeholder="DELETE"
+								className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-red-500 ${
+									darkMode
+										? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+										: "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+								}`}
+							/>
+						</div>
+
+						<div className="flex gap-3 justify-end">
+							<button
+								type="button"
+								onClick={() => {
+									setShowDeleteConfirm(false);
+									setDeleteConfirmText("");
+								}}
+								className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+									darkMode
+										? "bg-gray-700 hover:bg-gray-600 text-gray-200"
+										: "bg-gray-100 hover:bg-gray-200 text-gray-800"
+								}`}
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								onClick={handleDeleteAccount}
+								disabled={deleting || deleteConfirmText !== "DELETE"}
+								className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors duration-200"
+							>
+								{deleting ? (
+									<>
+										<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+										Deleting...
+									</>
+								) : (
+									<>
+										<Trash2 className="w-4 h-4" />
+										Delete Account
+									</>
+								)}
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
 			<div className="pb-8" />
 		</div>
 	);

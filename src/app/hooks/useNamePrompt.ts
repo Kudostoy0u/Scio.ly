@@ -78,7 +78,7 @@ export function useNamePrompt(): NamePromptState {
 					profileData?.username?.trim() &&
 					!profileData.username.startsWith("user_")
 				) {
-					currentName = `@${profileData.username.trim()}`;
+					currentName = profileData.username.trim();
 				} else if (email?.includes("@")) {
 					const emailLocal = email.split("@")[0];
 					if (
@@ -86,13 +86,13 @@ export function useNamePrompt(): NamePromptState {
 						emailLocal.length > 2 &&
 						!emailLocal.match(HEX_ID_REGEX)
 					) {
-						currentName = `@${emailLocal}`;
+						currentName = emailLocal;
 					} else {
-						currentName = "@unknown";
+						currentName = "unknown";
 						needsPrompt = true;
 					}
 				} else {
-					currentName = "@unknown";
+					currentName = "unknown";
 					needsPrompt = true;
 				}
 

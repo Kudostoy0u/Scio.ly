@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 			trimmedDisplayName && trimmedDisplayName.length > 0
 				? trimmedDisplayName
 				: trimmedUsername && trimmedUsername.length > 0
-					? `@${trimmedUsername}`
+					? trimmedUsername
 					: undefined;
 
 		try {

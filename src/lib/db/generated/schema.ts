@@ -1954,8 +1954,6 @@ export const users = cockroachTable(
 		id: uuid().primaryKey(),
 		email: string().notNull(),
 		username: string().notNull(),
-		firstName: string("first_name"),
-		lastName: string("last_name"),
 		displayName: string("display_name"),
 		photoUrl: string("photo_url"),
 		createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
