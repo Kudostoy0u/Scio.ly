@@ -27,12 +27,14 @@ export function getTokenInputClassName(
 export function getCorrectLetterDisplay(
 	solutionValue: string,
 	correctValue: string,
+	darkMode: boolean,
 ): { text: string; className: string } {
+	const redClass = darkMode ? "text-red-400" : "text-red-600";
 	if (solutionValue.length === 0) {
-		return { text: correctValue.toUpperCase(), className: "text-red-600" };
+		return { text: correctValue.toUpperCase(), className: redClass };
 	}
 	if (solutionValue.toUpperCase() !== correctValue) {
-		return { text: correctValue.toUpperCase(), className: "text-red-600" };
+		return { text: correctValue.toUpperCase(), className: redClass };
 	}
 	return { text: ".", className: "text-transparent" };
 }
@@ -40,17 +42,20 @@ export function getCorrectLetterDisplay(
 export function renderLabelDisplay(
 	expected: string,
 	user: string,
+	darkMode: boolean,
 ): React.ReactNode {
+	const redClass = darkMode ? "text-red-400" : "text-red-600";
+	const greenClass = darkMode ? "text-green-400" : "text-green-600";
 	if (!user) {
-		return <span className="text-red-600 font-mono">{expected}</span>;
+		return <span className={`${redClass} font-mono`}>{expected}</span>;
 	}
 	if (user === expected) {
-		return <span className="text-green-600 font-mono">{expected}</span>;
+		return <span className={`${greenClass} font-mono`}>{expected}</span>;
 	}
 	return (
 		<span className="font-mono text-[11px]">
-			<span className="text-red-600 line-through mr-1">{user}</span>
-			<span className="text-green-600">{expected}</span>
+			<span className={`${redClass} line-through mr-1`}>{user}</span>
+			<span className={greenClass}>{expected}</span>
 		</span>
 	);
 }

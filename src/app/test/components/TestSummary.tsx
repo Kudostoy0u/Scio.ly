@@ -25,7 +25,7 @@ function NonCompactSummary({
 	darkMode: boolean;
 }) {
 	return (
-		<div className="sticky top-4 z-10 w-full max-w-3xl mb-6">
+		<div className="sticky top-4 z-10 w-full max-w-3xl mx-auto mb-6">
 			<div
 				className={`rounded-lg shadow-lg p-4 md:p-5 ${darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"} border ${darkMode ? "border-gray-600" : "border-gray-200"}`}
 			>
@@ -74,9 +74,9 @@ function CompactSummary({
 	darkMode: boolean;
 }) {
 	return (
-		<div className="fixed top-4 right-6 w-80 ml-auto z-10">
+		<div className="fixed top-4 right-4 w-64 ml-auto z-10">
 			<div
-				className={`rounded-lg shadow-lg p-4 md:p-5 ${darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"} border ${darkMode ? "border-gray-600" : "border-gray-200"}`}
+				className={`rounded-lg shadow-lg p-3 md:p-4 ${darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"} border ${darkMode ? "border-gray-600" : "border-gray-200"}`}
 			>
 				<SummaryGrid
 					items={items}
@@ -98,7 +98,7 @@ function MobileCompactSummary({
 	return (
 		<div className="fixed top-4 left-1/2 transform -translate-x-1/2 w-4/5 z-50">
 			<div
-				className={`rounded-lg shadow-lg p-4 md:p-5 ${darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"} border ${darkMode ? "border-gray-600" : "border-gray-200"}`}
+				className={`rounded-lg shadow-lg p-3 md:p-5 ${darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"} border ${darkMode ? "border-gray-600" : "border-gray-200"}`}
 			>
 				<SummaryGrid
 					items={items}

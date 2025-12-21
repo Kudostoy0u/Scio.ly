@@ -2,6 +2,7 @@
  * Nihilist cipher encryption function
  */
 
+import wordsJson from "@/../public/words.json";
 import type { NihilistCipherResult } from "@/app/codebusters/ciphers/types/cipherTypes";
 import {
 	createPolybiusSquare,
@@ -11,11 +12,53 @@ import {
 // Top-level regex for performance
 const LETTER_REGEX = /^[A-Za-z]$/;
 
-// Helper function to generate random key
-function generateRandomKey(length: number): string {
-	return Array.from({ length }, () =>
-		String.fromCharCode(65 + Math.floor(Math.random() * 26)),
-	).join("");
+// Cache processed words
+let cachedWords: string[] | null = null;
+
+// Helper function to get words from words.json
+function getWords(): string[] {
+	if (cachedWords !== null) {
+		return cachedWords;
+	}
+	const words = (wordsJson as string[])
+		.map((w) => w.toUpperCase().replace(/[^A-Z]/g, ""))
+		.filter((w) => w.length >= 3 && w.length <= 15);
+	cachedWords = words;
+	return words;
+}
+
+// Helper function to generate a key from real words
+function generateWordKey(minLength: number, maxLength: number): string {
+	const words = getWords();
+	const suitableWords = words.filter(
+		(w) => w.length >= minLength && w.length <= maxLength,
+	);
+
+	if (suitableWords.length === 0) {
+		// Fallback: combine shorter words
+		const shortWords = words.filter((w) => w.length >= 3 && w.length <= 8);
+		if (shortWords.length === 0) {
+			// Ultimate fallback: random letters
+			return Array.from({ length: minLength }, () =>
+				String.fromCharCode(65 + Math.floor(Math.random() * 26)),
+			).join("");
+		}
+
+		let result = "";
+		while (result.length < minLength && shortWords.length > 0) {
+			const word =
+				shortWords[Math.floor(Math.random() * shortWords.length)] || "";
+			if (word) {
+				result += word;
+			}
+		}
+		return result.slice(0, maxLength);
+	}
+
+	// Select a random word from suitable words
+	const selectedWord =
+		suitableWords[Math.floor(Math.random() * suitableWords.length)] || "";
+	return selectedWord.slice(0, maxLength);
 }
 
 // Helper function to convert text to numbers
@@ -136,9 +179,9 @@ function formatWithBlocking(pairs: string[], blockSize: number): string {
  * @returns {NihilistCipherResult} Encrypted text and keys
  */
 export const encryptNihilist = (text: string): NihilistCipherResult => {
-	// Generate random keys
-	const polybiusKey = generateRandomKey(8);
-	const cipherKey = generateRandomKey(6);
+	// Generate keys from real words
+	const polybiusKey = generateWordKey(5, 12);
+	const cipherKey = generateWordKey(4, 10);
 	const polybiusSquare = createPolybiusSquare(polybiusKey);
 
 	// Clean text and convert to numbers

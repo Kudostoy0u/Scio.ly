@@ -28,6 +28,7 @@ export const RowHeader = ({
 				{renderLabelDisplay(
 					(rowKey[ri] || "").toUpperCase(),
 					(rowLabels[ri] || "").toUpperCase(),
+					darkMode,
 				)}
 			</div>
 		);

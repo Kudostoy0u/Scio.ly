@@ -2,6 +2,7 @@ import type { QuoteData } from "@/app/codebusters/types";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import logger from "@/lib/utils/logging/logger";
 import React, { useCallback } from "react";
+import { toast } from "react-toastify";
 
 // Regex for splitting equation parts (moved to top level for performance)
 const EQUATION_SPLIT_REGEX = /\s*[+\-=]\s*/;
@@ -59,11 +60,11 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
 			"w-8 h-8 md:w-10 md:h-10 text-center border rounded text-sm font-mono focus:outline-none focus:ring-0 cursor-pointer";
 		if (isTestSubmitted) {
 			if (isHinted) {
-				return `${baseClasses} border-yellow-500 text-yellow-800 bg-transparent`;
+				return `${baseClasses} border-yellow-500 ${darkMode ? "text-yellow-400" : "text-yellow-600"} bg-transparent`;
 			}
 			return isCorrect
-				? `${baseClasses} border-green-500 text-green-800 bg-transparent`
-				: `${baseClasses} border-red-500 text-red-800 bg-transparent`;
+				? `${baseClasses} border-green-500 ${darkMode ? "text-green-400" : "text-green-600"} bg-transparent`
+				: `${baseClasses} border-red-500 ${darkMode ? "text-red-400" : "text-red-600"} bg-transparent`;
 		}
 		if (isSelected) {
 			return `${baseClasses} border-blue-500 ${darkMode ? "bg-blue-900/40" : "bg-blue-100"}`;
@@ -85,6 +86,11 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
 		darkMode,
 		selectedInputPosition,
 		setSelectedInputPosition,
+		inlineDigits,
+		digitToPositions,
+		positionOffset,
+		onSolutionChange,
+		setClickedCells,
 	}: {
 		digit: string;
 		position: number;
@@ -98,6 +104,17 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
 		darkMode: boolean;
 		selectedInputPosition: number | null;
 		setSelectedInputPosition: (pos: number | null) => void;
+		inlineDigits: { digits: string[]; boundaries: Set<number> };
+		digitToPositions: { [digit: string]: number[] };
+		positionOffset: number;
+		onSolutionChange: (
+			quoteIndex: number,
+			position: number,
+			letter: string,
+		) => void;
+		setClickedCells: React.Dispatch<
+			React.SetStateAction<{ [letter: string]: string }>
+		>;
 	}) => {
 		const isSelected = selectedInputPosition === position;
 
@@ -117,9 +134,38 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
 						value={value || ""}
 						readOnly={!isTestSubmitted}
 						disabled={isTestSubmitted}
-						onClick={() => {
+						onClick={(e) => {
 							if (!isTestSubmitted) {
-								setSelectedInputPosition(position);
+								e.stopPropagation(); // Prevent document click handler from firing
+								// If clicking on an already selected box with a value, clear it
+								if (isSelected && value) {
+									const digitValue = inlineDigits.digits[position];
+									if (digitValue !== undefined) {
+										const positions = digitToPositions[digitValue] || [
+											position,
+										];
+										for (const p of positions) {
+											onSolutionChange(quoteIndex, p + positionOffset, "");
+										}
+										// Clear grid selection
+										setClickedCells((prev) => {
+											const next = { ...prev };
+											const letterToRemove = Object.keys(next).find(
+												(l) => next[l] === digitValue,
+											);
+											if (letterToRemove) {
+												delete next[letterToRemove];
+											}
+											return next;
+										});
+									}
+								} else if (isSelected && !value) {
+									// If clicking on an already selected box without a value, deselect it
+									setSelectedInputPosition(null);
+								} else {
+									// Otherwise, select the box
+									setSelectedInputPosition(position);
+								}
 							}
 						}}
 						autoComplete="off"
@@ -355,6 +401,21 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
 		return Array.from(lettersSet).sort();
 	}, [equationData]);
 
+	// Handle clicks outside the input boxes to deselect
+	React.useEffect(() => {
+		if (isTestSubmitted || selectedInputPosition === null) return;
+
+		const handleClickOutside = () => {
+			// Click is outside (input's onClick stops propagation), deselect
+			setSelectedInputPosition(null);
+		};
+
+		document.addEventListener("click", handleClickOutside);
+		return () => {
+			document.removeEventListener("click", handleClickOutside);
+		};
+	}, [isTestSubmitted, selectedInputPosition]);
+
 	// Handle keyboard input when an input is selected
 	React.useEffect(() => {
 		if (isTestSubmitted || selectedInputPosition === null) return;
@@ -366,6 +427,12 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
 
 				// Check if letter is valid for this cryptarithm
 				if (!equationLetters.includes(letter)) {
+					toast.warning(
+						`"${letter}" is not a valid letter. Valid letters are: ${equationLetters.join(", ")}`,
+						{
+							autoClose: 3000,
+						},
+					);
 					return;
 				}
 
@@ -1067,6 +1134,11 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
 														darkMode={darkMode}
 														selectedInputPosition={selectedInputPosition}
 														setSelectedInputPosition={setSelectedInputPosition}
+														inlineDigits={inlineDigits}
+														digitToPositions={digitToPositions}
+														positionOffset={positionOffset}
+														onSolutionChange={onSolutionChange}
+														setClickedCells={setClickedCells}
 													/>
 												);
 											})}

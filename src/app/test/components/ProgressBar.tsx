@@ -2,17 +2,21 @@
 import { useEffect, useRef, useState } from "react";
 
 interface ProgressBarProps {
-	answeredCount: number;
-	totalCount: number;
+	answeredCount?: number;
+	totalCount?: number;
+	progressPercentage?: number; // 0-100
 	isSubmitted: boolean;
 	darkMode?: boolean;
+	maxWidth?: "3xl" | "6xl";
 }
 
 export default function ProgressBar({
 	answeredCount,
 	totalCount,
+	progressPercentage,
 	isSubmitted,
 	darkMode = false,
+	maxWidth = "3xl",
 }: ProgressBarProps) {
 	const progressBarRef = useRef<HTMLDivElement>(null);
 	const spacerRef = useRef<HTMLDivElement>(null);
@@ -87,7 +91,7 @@ export default function ProgressBar({
 			)}
 			<div
 				ref={progressBarRef}
-				className={`z-10 w-full max-w-3xl ${darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-300"} border-2 rounded-full h-5 mb-6 shadow-lg ${
+				className={`z-10 w-full ${maxWidth === "6xl" ? "max-w-6xl" : "max-w-3xl"} mx-auto ${darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-300"} border-2 rounded-full h-5 mb-6 shadow-lg ${
 					isSubmitted
 						? ""
 						: isFixed
@@ -98,7 +102,15 @@ export default function ProgressBar({
 			>
 				<div
 					className="bg-blue-500 h-4 rounded-full transition-[width] duration-700 ease-in-out shadow-md"
-					style={{ width: `${(answeredCount / totalCount) * 100}%` }}
+					style={{
+						width: `${
+							progressPercentage !== undefined
+								? progressPercentage
+								: totalCount && answeredCount !== undefined
+									? (answeredCount / totalCount) * 100
+									: 0
+						}%`,
+					}}
 				/>
 			</div>
 		</>

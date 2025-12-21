@@ -39,6 +39,7 @@ export const TokenInput = ({
 	const correctDisplay = getCorrectLetterDisplay(
 		value,
 		correctMapping[idx] || "",
+		darkMode,
 	);
 	return (
 		<div key={idx} className="flex flex-col items-center">

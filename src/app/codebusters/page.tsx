@@ -10,6 +10,7 @@ import { toast } from "react-toastify";
 import { FloatingActionButtons } from "@/app/components/FloatingActionButtons";
 import MainHeader from "@/app/components/Header";
 import ShareModal from "@/app/components/ShareModal";
+import TestContainer from "@/app/components/TestContainer";
 import { pauseTestSession } from "@/app/utils/timeManagement";
 import CipherInfoModal from "./CipherInfoModal";
 import { loadQuestionsFromDatabase } from "./services/questionLoader";
@@ -19,6 +20,7 @@ import { useAnswerChecking } from "./hooks/useAnswerChecking";
 import { useAssignmentLoader } from "./hooks/useAssignmentLoader";
 import { useCodebustersState } from "./hooks/useCodebustersState";
 import { useHintSystem } from "./hooks/useHintSystem";
+import { usePointsProgress } from "./hooks/usePointsProgress";
 import { useProgressCalculation } from "./hooks/useProgressCalculation";
 import { useQuestionGeneration } from "./hooks/useQuestionGeneration";
 import { useSolutionHandlers } from "./hooks/useSolutionHandlers";
@@ -26,6 +28,7 @@ import { useTestReset } from "./hooks/useTestReset";
 import { useTestSubmission } from "./hooks/useTestSubmission";
 import { useTimerManagement } from "./hooks/useTimerManagement";
 
+import ProgressBar from "@/app/test/components/ProgressBar";
 // Import components
 import {
 	ActionButtons,
@@ -39,13 +42,6 @@ import {
 	QuestionsList,
 	SubmitButton,
 } from "./components";
-import { createCodebustersPrintContent } from "./utils/print/content";
-import {
-	createCodebustersAnswerKey,
-	formatCodebustersQuestionsForPrint,
-} from "./utils/print/formatQuestions";
-import { setupCodebustersPrintWindow } from "./utils/print/setupWindow";
-import { createCodebustersPrintStyles } from "./utils/print/styles";
 
 export default function CodeBusters() {
 	const { darkMode } = useTheme();
@@ -139,8 +135,12 @@ export default function CodeBusters() {
 		handleKeywordSolutionChange,
 		handleCryptarithmSolutionChange,
 	} = useSolutionHandlers(quotes, setQuotes);
-	const { totalProgress, calculateQuoteProgress } =
-		useProgressCalculation(quotes);
+	const { calculateQuoteProgress } = useProgressCalculation(quotes);
+	const pointsProgress = usePointsProgress(
+		quotes,
+		hintedLetters,
+		questionPoints,
+	);
 
 	// Handle quote reporting
 	const handleReportQuote = useCallback(
@@ -314,23 +314,6 @@ export default function CodeBusters() {
 		setPrintModalOpen(true);
 	};
 
-	// Extract print content creation to reduce complexity
-	const createPrintContent = useCallback(() => {
-		const getStylesheets = () => "";
-		const printStyles = createCodebustersPrintStyles(getStylesheets);
-		const questionsHtml =
-			formatCodebustersQuestionsForPrint(quotes, questionPoints) +
-			createCodebustersAnswerKey(quotes);
-		return createCodebustersPrintContent(
-			{
-				tournamentName,
-				questionsHtml,
-				questionPoints,
-			},
-			printStyles,
-		);
-	}, [quotes, questionPoints, tournamentName]);
-
 	// Handle actual printing
 	const handleActualPrint = useCallback(async () => {
 		if (!tournamentName.trim()) {
@@ -338,13 +321,24 @@ export default function CodeBusters() {
 			return;
 		}
 		try {
-			const printContent = createPrintContent();
-			await setupCodebustersPrintWindow(printContent);
+			// Store quotes and tournament name in localStorage for print page
+			localStorage.setItem(
+				"__codebusters_print_quotes__",
+				JSON.stringify(quotes),
+			);
+			localStorage.setItem("__codebusters_print_tournament__", tournamentName);
+
+			// Open print page in new window
+			const printWindow = window.open("/codebusters/print", "_blank");
+			if (!printWindow) {
+				toast.error("Please allow popups to print the test");
+				return;
+			}
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : "Failed to print test");
 		}
 		setPrintModalOpen(false);
-	}, [tournamentName, createPrintContent]);
+	}, [tournamentName, quotes]);
 
 	// Handle test reset after submission
 	const handleTestReset = useCallback(() => {
@@ -385,7 +379,7 @@ export default function CodeBusters() {
 				{/* Global scrollbar theme is centralized in globals.css */}
 
 				{/* Page Content */}
-				<div className="relative flex flex-col items-center p-3 md:p-6 pt-24 md:pt-24">
+				<div className="relative flex flex-col items-center px-0 md:px-6 pt-24 md:pt-24 pb-3 md:pb-6">
 					<FloatingTimer
 						timeLeft={timeLeft}
 						darkMode={darkMode}
@@ -398,7 +392,7 @@ export default function CodeBusters() {
 					/>
 
 					{/* Inline back link to Practice */}
-					<div className="w-full max-w-[90vw] md:max-w-6xl mt-0 mb-3">
+					<div className="w-full max-w-[90vw] md:max-w-6xl mt-0 mb-3 px-3 md:px-0">
 						<button
 							type="button"
 							onClick={handleBack}
@@ -413,7 +407,7 @@ export default function CodeBusters() {
 
 					{/* Progress Bar or Summary */}
 					{isTestSubmitted ? (
-						<div className="w-full">
+						<div className="w-full px-3 md:px-0">
 							<CodebustersSummary
 								quotes={quotes}
 								darkMode={darkMode}
@@ -422,25 +416,17 @@ export default function CodeBusters() {
 							/>
 						</div>
 					) : (
-						<div
-							className={`sticky top-4 z-[9999] w-full max-w-[90vw] md:max-w-6xl border-2 rounded-full h-5 mb-6 shadow-lg ${
-								darkMode
-									? "bg-gray-700 border-gray-600"
-									: "bg-white border-gray-300"
-							}`}
-						>
-							<div
-								className="bg-blue-500 h-4 rounded-full transition-[width] duration-700 ease-in-out shadow-md"
-								style={{ width: `${totalProgress}%` }}
+						<div className="w-full px-3 md:px-0">
+							<ProgressBar
+								progressPercentage={pointsProgress}
+								isSubmitted={isTestSubmitted}
+								darkMode={darkMode}
+								maxWidth="6xl"
 							/>
 						</div>
 					)}
 
-					<main
-						className={`w-full max-w-[90vw] md:max-w-6xl rounded-lg shadow-md p-3 md:p-6 mt-4 ${
-							darkMode ? "bg-gray-800" : "bg-white"
-						}`}
-					>
+					<TestContainer darkMode={darkMode} maxWidth="6xl">
 						<LoadingState
 							isLoading={isLoading && !isResetting}
 							error={error}
@@ -510,7 +496,7 @@ export default function CodeBusters() {
 									isAssignment={!!assignmentId}
 								/>
 							)}
-					</main>
+					</TestContainer>
 
 					{/* Floating Action Buttons */}
 					<FloatingActionButtons

@@ -8,6 +8,7 @@ import EditQuestionModal from "@/app/components/EditQuestionModal";
 import { FloatingActionButtons } from "@/app/components/FloatingActionButtons";
 import Header from "@/app/components/Header";
 import ShareModal from "@/app/components/ShareModal";
+import TestContainer from "@/app/components/TestContainer";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { toast } from "react-toastify";
 import { default as FloatingTimer } from "./components/FloatingTimer";
@@ -295,11 +296,7 @@ export default function TestContent({
 						</div>
 					)}
 
-					<main
-						className={`w-screen md:w-full md:max-w-3xl rounded-none md:rounded-lg shadow-md px-3 md:p-6 pt-4 pb-4 md:pt-4 mt-4 relative left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:mx-auto ${
-							darkMode ? "bg-gray-800" : "bg-white"
-						}`}
-					>
+					<TestContainer darkMode={darkMode} maxWidth="3xl">
 						<div className="flex justify-between items-center mb-4 pt-1">
 							<div className="flex items-center gap-4">
 								<button
@@ -520,7 +517,7 @@ export default function TestContent({
 									isViewResults={routerData.viewResults === "true"}
 								/>
 							))}
-					</main>
+					</TestContainer>
 				</div>
 			</TestLayout>
 

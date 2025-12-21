@@ -49,10 +49,10 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
 		<div className={`${cardBase} ${cardPadding} relative`}>
 			{item.icon && (
 				<div
-					className={`absolute left-2 top-1/2 -translate-y-1/2 transition-opacity duration-300 md:transition-none ${iconOpacityClass}`}
+					className={`absolute left-1 md:left-2 top-1/2 -translate-y-1/2 transition-opacity duration-300 md:transition-none ${iconOpacityClass}`}
 				>
 					{React.createElement(item.icon, {
-						className: `w-4 h-4 ${item.valueClassName || ""}`,
+						className: `w-3 h-3 md:w-4 md:h-4 ${item.valueClassName || ""}`,
 					})}
 				</div>
 			)}
@@ -76,17 +76,17 @@ export default function SummaryGrid({
 }: SummaryGridProps) {
 	const cardBase = `text-center rounded-lg transition-all duration-500 md:transition-none ${darkMode ? "bg-gray-700" : "bg-gray-50"}`;
 	const cardPadding = showCompactLayout
-		? "py-2 px-4 md:py-2 md:px-6"
+		? "py-1.5 px-2 md:py-2 md:px-6"
 		: "py-2 md:py-2"; // more padding in compact mode
-	const labelClass = `${darkMode ? "text-gray-300" : "text-gray-600"} text-sm`;
-	const valueClassBase = "font-bold text-xl"; // slightly smaller than 2xl to reduce width
+	const labelClass = `${darkMode ? "text-gray-300" : "text-gray-600"} text-xs md:text-sm`;
+	const valueClassBase = "font-bold text-base md:text-xl"; // smaller on mobile
 
 	return (
 		<div
-			className={`grid gap-3 transition-all duration-500 ease-in-out md:transition-none ${
+			className={`grid transition-all duration-500 ease-in-out md:transition-none ${
 				showCompactLayout
-					? "grid-cols-2 md:grid-cols-2 max-w-[280px] mx-auto"
-					: "grid-cols-2 md:grid-cols-4"
+					? "grid-cols-4 md:grid-cols-2 gap-1.5 md:gap-3 w-full md:max-w-[280px] md:mx-auto"
+					: "grid-cols-2 md:grid-cols-4 gap-3"
 			} ${className}`}
 		>
 			<SummaryCard

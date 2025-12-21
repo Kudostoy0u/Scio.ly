@@ -1,3 +1,4 @@
+import { createPolybiusSquare } from "@/app/codebusters/ciphers/utils/cipherUtils";
 import type { QuoteData } from "@/app/codebusters/types";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import React, { useState, useEffect } from "react";
@@ -59,17 +60,65 @@ export const CheckerboardDisplay = ({
 		Array.from({ length: 5 }, () => Array.from({ length: 5 }, () => "")),
 	);
 
-	// Reset labels/grid when question changes or test resets
-	useEffect(() => {
-		setColLabels(Array.from({ length: 5 }, () => ""));
-		setRowLabels(Array.from({ length: 5 }, () => ""));
-		setGridValues(
-			Array.from({ length: 5 }, () => Array.from({ length: 5 }, () => "")),
-		);
-	}, []);
-
 	// Parse tokens and respect block separators (3+ spaces) for visual gaps
-	const { tokens, blockEnd } = parseTokensAndBlocks(text);
+	// Memoize tokens to prevent infinite loops
+	const { tokens, blockEnd } = React.useMemo(
+		() => parseTokensAndBlocks(text),
+		[text],
+	);
+
+	// Reset labels/grid when question changes (but not when test is submitted)
+	useEffect(() => {
+		if (!isTestSubmitted) {
+			setColLabels(Array.from({ length: 5 }, () => ""));
+			setRowLabels(Array.from({ length: 5 }, () => ""));
+			setGridValues(
+				Array.from({ length: 5 }, () => Array.from({ length: 5 }, () => "")),
+			);
+		}
+	}, [isTestSubmitted]);
+
+	// Track if we've already auto-populated for this submission
+	const hasAutoPopulatedRef = React.useRef(false);
+
+	// Auto-populate grid from polybius key when test is submitted
+	useEffect(() => {
+		// Reset the ref when test is not submitted
+		if (!isTestSubmitted) {
+			hasAutoPopulatedRef.current = false;
+			return;
+		}
+
+		// Only populate once when test is submitted
+		if (hasAutoPopulatedRef.current || !polybiusKey || !rowKey || !colKey) {
+			return;
+		}
+
+		// Create row and column label arrays from rowKey and colKey
+		const autoRowLabels: string[] = [];
+		const autoColLabels: string[] = [];
+
+		for (let i = 0; i < 5; i++) {
+			const rowChar = rowKey[i];
+			const colChar = colKey[i];
+			if (rowChar) {
+				autoRowLabels[i] = rowChar.toUpperCase();
+			}
+			if (colChar) {
+				autoColLabels[i] = colChar.toUpperCase();
+			}
+		}
+
+		// Set the labels
+		setRowLabels(autoRowLabels);
+		setColLabels(autoColLabels);
+
+		// Populate grid with polybius square (key letters first, then remaining alphabet)
+		const polybiusSquare = createPolybiusSquare(polybiusKey);
+		setGridValues(polybiusSquare);
+
+		hasAutoPopulatedRef.current = true;
+	}, [isTestSubmitted, polybiusKey, rowKey, colKey]);
 
 	const syncGridFromSolutions = createSyncGridFromSolutions(
 		tokens,

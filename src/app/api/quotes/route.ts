@@ -22,40 +22,80 @@ const fetchQuotes = async (
 	limit: number,
 	charLengthRange?: { min: number; max: number },
 ) => {
-	const sanitizedLanguage = sanitizeInput(language);
-	const quotes = await getQuotesByLanguage(
-		sanitizedLanguage,
+	console.log("[fetchQuotes] Starting:", {
+		language,
 		limit,
 		charLengthRange,
-	);
-
-	if (!quotes || quotes.length === 0) {
-		throw new Error(
-			`No quotes found for language: ${sanitizedLanguage}${charLengthRange ? ` with character length range ${charLengthRange.min}-${charLengthRange.max}` : ""}`,
-		);
-	}
-
-	return quotes.map((quote) => {
-		const quoteRecord = quote as { id: string; author: string; quote: string };
-		return {
-			id: quoteRecord.id,
-			author: quoteRecord.author,
-			quote: quoteRecord.quote,
-		};
 	});
+
+	try {
+		const sanitizedLanguage = sanitizeInput(language);
+		console.log("[fetchQuotes] Sanitized language:", sanitizedLanguage);
+
+		console.log("[fetchQuotes] Calling getQuotesByLanguage...");
+		const quotes = await getQuotesByLanguage(
+			sanitizedLanguage,
+			limit,
+			charLengthRange,
+		);
+		console.log("[fetchQuotes] Received quotes:", {
+			count: quotes?.length || 0,
+			isArray: Array.isArray(quotes),
+		});
+
+		if (!quotes || quotes.length === 0) {
+			const errorMsg = `No quotes found for language: ${sanitizedLanguage}${charLengthRange ? ` with character length range ${charLengthRange.min}-${charLengthRange.max}` : ""}`;
+			console.error("[fetchQuotes] No quotes found:", errorMsg);
+			throw new Error(errorMsg);
+		}
+
+		console.log("[fetchQuotes] Mapping quotes...");
+		const mappedQuotes = quotes.map((quote) => {
+			const quoteRecord = quote as {
+				id: string;
+				author: string;
+				quote: string;
+			};
+			return {
+				id: quoteRecord.id,
+				author: quoteRecord.author,
+				quote: quoteRecord.quote,
+			};
+		});
+		console.log("[fetchQuotes] Successfully mapped quotes:", {
+			count: mappedQuotes.length,
+		});
+
+		return mappedQuotes;
+	} catch (error) {
+		console.error("[fetchQuotes] Error:", {
+			message: error instanceof Error ? error.message : "Unknown error",
+			stack: error instanceof Error ? error.stack : undefined,
+			name: error instanceof Error ? error.name : typeof error,
+		});
+		throw error;
+	}
 };
 
 export async function GET(request: NextRequest) {
 	const startTime = Date.now();
-	logApiRequest(
-		"GET",
-		"/api/quotes",
-		Object.fromEntries(request.nextUrl.searchParams),
-	);
+	const params = Object.fromEntries(request.nextUrl.searchParams);
+
+	console.log("[GET /api/quotes] Request:", {
+		params,
+		timestamp: new Date().toISOString(),
+	});
+
+	logApiRequest("GET", "/api/quotes", params);
 
 	try {
 		const searchParams = request.nextUrl.searchParams;
+		console.log("[GET /api/quotes] Parsing query params:", {
+			rawParams: Array.from(searchParams.entries()),
+		});
+
 		const filters = parseQueryParams(searchParams, QuoteFiltersSchema);
+		console.log("[GET /api/quotes] Parsed filters:", filters);
 
 		let charLengthRange: { min: number; max: number } | undefined;
 		if (filters.charLengthMin && filters.charLengthMax) {
@@ -63,7 +103,14 @@ export async function GET(request: NextRequest) {
 				min: Math.min(filters.charLengthMin, filters.charLengthMax),
 				max: Math.max(filters.charLengthMin, filters.charLengthMax),
 			};
+			console.log("[GET /api/quotes] Character length range:", charLengthRange);
 		}
+
+		console.log("[GET /api/quotes] Fetching quotes:", {
+			language: filters.language,
+			limit: filters.limit,
+			charLengthRange,
+		});
 
 		const quotes = await fetchQuotes(
 			filters.language,
@@ -71,17 +118,45 @@ export async function GET(request: NextRequest) {
 			charLengthRange,
 		);
 
+		console.log("[GET /api/quotes] Success:", {
+			quoteCount: quotes.length,
+			duration: Date.now() - startTime,
+		});
+
 		const response = createSuccessResponse({ quotes });
 		logApiResponse("GET", "/api/quotes", 200, Date.now() - startTime);
 		return response;
 	} catch (error) {
+		const duration = Date.now() - startTime;
+		const errorDetails = {
+			message: error instanceof Error ? error.message : "Unknown error",
+			stack: error instanceof Error ? error.stack : undefined,
+			name: error instanceof Error ? error.name : typeof error,
+			duration,
+			params,
+		};
+
+		console.error("[GET /api/quotes] Error:", errorDetails);
+
+		if (error instanceof z.ZodError) {
+			console.error("[GET /api/quotes] Validation error details:", {
+				issues: error.issues,
+			});
+		}
+
 		const response = handleApiError(error);
-		logApiResponse(
-			"GET",
-			"/api/quotes",
-			response.status,
-			Date.now() - startTime,
-		);
+		const responseBody = await response
+			.clone()
+			.json()
+			.catch(() => ({
+				error: "Unable to parse response body",
+			}));
+		console.error("[GET /api/quotes] Error response:", {
+			status: response.status,
+			body: responseBody,
+		});
+
+		logApiResponse("GET", "/api/quotes", response.status, duration);
 		return response;
 	}
 }

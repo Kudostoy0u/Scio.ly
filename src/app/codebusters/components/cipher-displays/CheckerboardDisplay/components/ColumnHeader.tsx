@@ -29,6 +29,7 @@ export const ColumnHeader = ({
 				{renderLabelDisplay(
 					(colKey[i] || "").toUpperCase(),
 					(colLabels[i] || "").toUpperCase(),
+					darkMode,
 				)}
 			</div>
 		);

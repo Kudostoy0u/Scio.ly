@@ -134,6 +134,7 @@ export const NihilistDisplay = ({
 		ci: number,
 		polyGrid: string[][],
 		polybiusKey: string,
+		darkMode: boolean,
 	): React.ReactNode => {
 		const normalizeIj = (s: string) =>
 			(s || "").toUpperCase().replace(/J/g, "I");
@@ -145,7 +146,9 @@ export const NihilistDisplay = ({
 
 		if (user && userNorm === expNorm) {
 			return (
-				<span className="text-green-600 font-mono text-xs">
+				<span
+					className={`font-mono text-xs ${darkMode ? "text-green-400" : "text-green-600"}`}
+				>
 					{displayExpected}
 				</span>
 			);
@@ -153,15 +156,23 @@ export const NihilistDisplay = ({
 		if (user && userNorm !== expNorm) {
 			return (
 				<span className="font-mono text-xs">
-					<span className="text-red-600 line-through mr-1">
+					<span
+						className={`line-through mr-1 ${darkMode ? "text-red-400" : "text-red-600"}`}
+					>
 						{userNorm === "I" ? "I/J" : userNorm}
 					</span>
-					<span className="text-green-600">{displayExpected}</span>
+					<span className={darkMode ? "text-green-400" : "text-green-600"}>
+						{displayExpected}
+					</span>
 				</span>
 			);
 		}
 		return (
-			<span className="text-red-600 font-mono text-xs">{displayExpected}</span>
+			<span
+				className={`font-mono text-xs ${darkMode ? "text-red-400" : "text-red-600"}`}
+			>
+				{displayExpected}
+			</span>
 		);
 	};
 
@@ -252,8 +263,8 @@ export const NihilistDisplay = ({
 																				solution?.[index] || ""
 																			).toUpperCase() ===
 																				(correctMapping[index] || "")
-																				? "border-green-500 text-green-800 bg-transparent"
-																				: "border-red-500 text-red-800 bg-transparent";
+																				? `border-green-500 ${darkMode ? "text-green-400" : "text-green-600"} bg-transparent`
+																				: `border-red-500 ${darkMode ? "text-red-400" : "text-red-600"} bg-transparent`;
 																		}
 																	)()
 																: darkMode
@@ -276,7 +287,9 @@ export const NihilistDisplay = ({
 																	return "text-transparent";
 																}
 																if (!val || val !== exp) {
-																	return "text-red-600";
+																	return darkMode
+																		? "text-red-400"
+																		: "text-red-600";
 																}
 																return "text-transparent";
 															})()}`}
@@ -336,7 +349,13 @@ export const NihilistDisplay = ({
 												key={`cell-${ri + 1}-${ci + 1}-${polyGrid[ri]?.[ci] || ""}`}
 												className={`w-8 h-8 border rounded text-center flex items-center justify-center ${darkMode ? "border-gray-600" : "border-gray-300"}`}
 											>
-												{renderGridCellContent(ri, ci, polyGrid, polybiusKey)}
+												{renderGridCellContent(
+													ri,
+													ci,
+													polyGrid,
+													polybiusKey,
+													darkMode,
+												)}
 											</div>
 										) : (
 											<input

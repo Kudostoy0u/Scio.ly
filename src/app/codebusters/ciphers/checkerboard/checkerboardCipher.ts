@@ -2,6 +2,7 @@
  * Checkerboard cipher encryption function
  */
 
+import wordsJson from "@/../public/words.json";
 import {
 	getUniqueWords,
 	pickWord,
@@ -26,6 +27,31 @@ function generateRandomKey(length: number): string {
 function getFiveLetterWords(): string[] {
 	const uniqueWords = getUniqueWords();
 	return uniqueWords.filter((word) => word.length === 5);
+}
+
+// Helper function to get words suitable for polybius key (at least 8 characters)
+// Loads directly from words.json since getUniqueWords() filters to 2-6 letters
+function getPolybiusKeyWords(): string[] {
+	const wordsFromJson = (wordsJson as string[])
+		.map((w) => w.toUpperCase().replace(/[^A-Z]/g, ""))
+		.filter((w) => w.length >= 8);
+
+	// Remove duplicates
+	return Array.from(new Set(wordsFromJson));
+}
+
+// Helper function to pick a word for polybius key (8 characters)
+function pickPolybiusKey(): string {
+	const polybiusWords = getPolybiusKeyWords();
+
+	// Fallback to random key if no suitable words available
+	if (polybiusWords.length === 0) {
+		return generateRandomKey(8);
+	}
+
+	// Pick a word and use first 8 characters
+	const selectedWord = pickWord(polybiusWords);
+	return selectedWord.slice(0, 8).toUpperCase();
 }
 
 // Helper function to pick two different 5-letter words for row and column keys
@@ -172,8 +198,8 @@ function encryptWithBlocking(tokens: string[], blockSize: number): string {
 export const encryptCheckerboard = (text: string): CheckerboardResult => {
 	// Pick 5-letter words from word bank for row and column keys
 	const { rowKey, colKey } = pickRowAndColumnKeys();
-	// Generate random key for polybius (8 characters)
-	const polybiusKeyRaw = generateRandomKey(8);
+	// Pick a word from word bank for polybius key (8 characters)
+	const polybiusKeyRaw = pickPolybiusKey();
 
 	// Create Polybius square
 	const polybiusSquare = createPolybiusSquare(polybiusKeyRaw);
