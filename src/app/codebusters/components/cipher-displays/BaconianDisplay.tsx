@@ -7,7 +7,7 @@ import {
 import type { QuoteData } from "@/app/codebusters/types";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import type React from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // Top-level regex for whitespace splitting
 const WHITESPACE_REGEX = /\s+/;
@@ -37,7 +37,8 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 	syncEnabled = true,
 }) => {
 	const { darkMode } = useTheme();
-	const [focusedGroupIndex, setFocusedGroupIndex] = useState<number | null>(
+	const containerRef = useRef<HTMLDivElement | null>(null);
+	const [selectedGroupIndex, setSelectedGroupIndex] = useState<number | null>(
 		null,
 	);
 
@@ -95,7 +96,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 		groupIndex: number,
 		shouldHighlight: boolean,
 	): string => {
-		if (focusedGroupIndex === groupIndex) {
+		if (selectedGroupIndex === groupIndex) {
 			return "border-2 border-blue-500";
 		}
 		if (shouldHighlight) {
@@ -163,7 +164,6 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 		quoteIndex,
 		onInputChange,
 		onFocus,
-		onBlur,
 	}: {
 		group: string;
 		groupIndex: number;
@@ -176,7 +176,6 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 		quoteIndex: number;
 		onInputChange: (value: string) => void;
 		onFocus: () => void;
-		onBlur: () => void;
 	}) => (
 		<div key={groupIndex} className="flex flex-col items-center">
 			<div className={getGroupDisplayClassName(binaryType)}>
@@ -188,9 +187,16 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 					id={`baconian-${quoteIndex}-${groupIndex}`}
 					value={value}
 					disabled={isTestSubmitted}
-					onChange={(e) => onInputChange(e.target.value)}
+					readOnly={!isTestSubmitted}
+					onClick={(e) => {
+						if (isTestSubmitted) {
+							return;
+						}
+						e.stopPropagation();
+						onFocus();
+					}}
 					onFocus={onFocus}
-					onBlur={onBlur}
+					onChange={(e) => onInputChange(e.target.value)}
 					className={getInputClassName(
 						groupIndex,
 						shouldHighlight,
@@ -282,7 +288,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 
 	// Helper function to apply binary filter
 	const applyBinaryFilter = useCallback(
-		(binaryGroup: string, binaryType: string): string => {
+		(binaryGroup: string, binaryType: string, groupIndex: number): string => {
 			const allSchemes = [
 				...baconianSchemes.schemes.traditional,
 				...baconianSchemes.schemes.emoji,
@@ -292,7 +298,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 			const scheme = allSchemes.find((s) => s.type === binaryType);
 
 			if (scheme) {
-				return renderBinaryGroup(binaryGroup, scheme);
+				return renderBinaryGroup(binaryGroup, scheme, String(groupIndex));
 			}
 
 			return binaryGroup;
@@ -308,9 +314,18 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 			binaryType: string,
 		): string[] => {
 			if (storedGroups && storedGroups.length > 0) {
-				return storedGroups;
+				const shouldRender = storedGroups.every((group) =>
+					/^[AB]{5}$/.test(group),
+				);
+				return shouldRender
+					? storedGroups.map((group, index) =>
+							applyBinaryFilter(group, binaryType, index),
+						)
+					: storedGroups;
 			}
-			return binaryGroups.map((group) => applyBinaryFilter(group, binaryType));
+			return binaryGroups.map((group, index) =>
+				applyBinaryFilter(group, binaryType, index),
+			);
 		},
 		[applyBinaryFilter],
 	);
@@ -330,8 +345,8 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 
 			// Ensure groups align exactly with 5-bit Baconian groups
 			if (filteredGroups.length !== binaryGroups.length) {
-				filteredGroups = binaryGroups.map((group) =>
-					applyBinaryFilter(group, binaryType),
+				filteredGroups = binaryGroups.map((group, index) =>
+					applyBinaryFilter(group, binaryType, index),
 				);
 			}
 
@@ -341,13 +356,33 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 		[getFilteredGroups, applyBinaryFilter],
 	);
 
+	const splitEncryptedGroups = useCallback(
+		(encrypted: string, groupCount: number): string[] | null => {
+			const trimmed = encrypted.trim();
+			if (!trimmed) {
+				return null;
+			}
+			const whitespaceSplit = trimmed.split(WHITESPACE_REGEX).filter(Boolean);
+			if (whitespaceSplit.length === groupCount) {
+				return whitespaceSplit;
+			}
+			const isPlainBinary = /^[AB]+$/.test(trimmed);
+			if (isPlainBinary && trimmed.length % 5 === 0) {
+				const chunks = trimmed.match(/.{1,5}/g);
+				return chunks && chunks.length === groupCount ? chunks : null;
+			}
+			return null;
+		},
+		[],
+	);
+
 	const baconianData = useMemo(() => {
 		const quote = quotes[quoteIndex];
 		if (!quote) {
 			return {
 				originalQuote: "",
-				originalBinaryGroups: [],
 				binaryGroups: [],
+				groupKeys: [],
 				binaryType: "",
 			};
 		}
@@ -356,51 +391,116 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 		const binaryGroups = convertLettersToBinary(cleanedQuote);
 
 		// Prefer pre-generated encrypted groups from the question (stable and synchronized with grading)
-		const storedGroups =
-			(quote.encrypted || "").trim().length > 0
-				? (quote.encrypted as string).trim().split(WHITESPACE_REGEX)
-				: null;
+		const storedGroups = quote.encrypted
+			? splitEncryptedGroups(quote.encrypted, binaryGroups.length)
+			: null;
 		const filteredGroups = processFilteredGroups(
 			storedGroups,
 			binaryGroups,
 			quote.baconianBinaryType || "",
 		);
+		const groupKeys = storedGroups?.every((group) => /^[AB]{5}$/.test(group))
+			? storedGroups
+			: binaryGroups;
 
 		return {
 			originalQuote: cleanedQuote,
-			originalBinaryGroups: binaryGroups,
 			binaryGroups: filteredGroups,
+			groupKeys,
 			binaryType: quote.baconianBinaryType || "",
 		};
-	}, [quotes, quoteIndex, convertLettersToBinary, processFilteredGroups]);
+	}, [
+		quotes,
+		quoteIndex,
+		convertLettersToBinary,
+		processFilteredGroups,
+		splitEncryptedGroups,
+	]);
 
-	const handleInputChange = (groupIndex: number, value: string) => {
-		if (!onSolutionChange) {
-			return;
-		}
+	const handleInputChange = useCallback(
+		(groupIndex: number, value: string) => {
+			if (!onSolutionChange) {
+				return;
+			}
 
-		const upperValue = value.toUpperCase();
+			const upperValue = value.toUpperCase();
 
-		if (syncEnabled) {
-			const currentOriginalGroup =
-				baconianData.originalBinaryGroups?.[groupIndex];
-
-			if (currentOriginalGroup && baconianData.originalBinaryGroups) {
-				baconianData.originalBinaryGroups.forEach((group, index) => {
-					if (group === currentOriginalGroup) {
-						onSolutionChange(quoteIndex, index, upperValue);
-					}
-				});
+			if (syncEnabled) {
+				const currentGroupKey = baconianData.groupKeys?.[groupIndex];
+				if (currentGroupKey) {
+					baconianData.groupKeys.forEach((groupKey, index) => {
+						if (groupKey === currentGroupKey) {
+							onSolutionChange(quoteIndex, index, upperValue);
+						}
+					});
+				} else {
+					onSolutionChange(quoteIndex, groupIndex, upperValue);
+				}
 			} else {
 				onSolutionChange(quoteIndex, groupIndex, upperValue);
 			}
-		} else {
-			onSolutionChange(quoteIndex, groupIndex, upperValue);
+		},
+		[onSolutionChange, syncEnabled, baconianData.groupKeys, quoteIndex],
+	);
+
+	useEffect(() => {
+		if (isTestSubmitted) {
+			return;
 		}
-	};
+
+		const handleClickOutside = (event: MouseEvent) => {
+			const target = event.target as HTMLElement | null;
+			const container = containerRef.current;
+			if (!container || !target) {
+				return;
+			}
+			if (!container.contains(target)) {
+				setSelectedGroupIndex(null);
+				return;
+			}
+			const isInput = Boolean(target.closest('input[id^="baconian-"]'));
+			if (!isInput) {
+				setSelectedGroupIndex(null);
+			}
+		};
+
+		document.addEventListener("click", handleClickOutside);
+		return () => {
+			document.removeEventListener("click", handleClickOutside);
+		};
+	}, [isTestSubmitted]);
+
+	useEffect(() => {
+		if (isTestSubmitted || selectedGroupIndex === null) {
+			return;
+		}
+
+		const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+			if (event.key === "Escape") {
+				setSelectedGroupIndex(null);
+				return;
+			}
+			if (event.key === "Backspace" || event.key === "Delete") {
+				handleInputChange(selectedGroupIndex, "");
+				return;
+			}
+			if (event.key.length === 1 && /[A-Za-z]/.test(event.key)) {
+				handleInputChange(selectedGroupIndex, event.key.toUpperCase());
+			}
+		};
+
+		document.addEventListener("keydown", handleKeyDown);
+		return () => {
+			document.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [handleInputChange, isTestSubmitted, selectedGroupIndex]);
 
 	return (
-		<div className="font-mono" style={{ fontFamily: "Poppins, sans-serif" }}>
+		<div
+			ref={containerRef}
+			className="font-mono"
+			style={{ fontFamily: "Poppins, sans-serif" }}
+		>
 			<div
 				className={`mb-4 p-2 rounded ${darkMode ? "bg-gray-700/50" : "bg-gray-50"}`}
 				style={{ fontFamily: "Poppins, sans-serif" }}
@@ -431,9 +531,9 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 
 					const shouldHighlight =
 						syncEnabled &&
-						focusedGroupIndex !== null &&
-						baconianData.originalBinaryGroups?.[focusedGroupIndex] ===
-							baconianData.originalBinaryGroups?.[i];
+						selectedGroupIndex !== null &&
+						baconianData.groupKeys?.[selectedGroupIndex] ===
+							baconianData.groupKeys?.[i];
 
 					return (
 						<BinaryGroupDisplay
@@ -448,8 +548,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 							binaryType={baconianData.binaryType}
 							quoteIndex={quoteIndex}
 							onInputChange={(val) => handleInputChange(i, val)}
-							onFocus={() => setFocusedGroupIndex(i)}
-							onBlur={() => setFocusedGroupIndex(null)}
+							onFocus={() => setSelectedGroupIndex(i)}
 						/>
 					);
 				})}

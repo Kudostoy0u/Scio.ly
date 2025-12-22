@@ -48,15 +48,12 @@ export const parseBaconianTokens = (
 	groupParsedIdxs: number[];
 	groupTokens: string[];
 } => {
-	const parsedTokens: { token: string; isGroup: boolean }[] = [];
-	let currentGroup = "";
-	for (const ch of encrypted) {
-		currentGroup = processBaconianChar(ch, currentGroup, parsedTokens);
-	}
-	if (currentGroup.length === 5) {
-		parsedTokens.push({ token: currentGroup, isGroup: true });
-	}
-	return extractBaconianGroups(parsedTokens);
+	const groupTokens = encrypted
+		.trim()
+		.split(/\s+/)
+		.filter((token) => token.length > 0);
+	const groupParsedIdxs = groupTokens.map((_, idx) => idx);
+	return { groupParsedIdxs, groupTokens };
 };
 
 export const getBaconianStartIndex = (

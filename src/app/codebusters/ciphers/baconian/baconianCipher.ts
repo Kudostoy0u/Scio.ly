@@ -4,7 +4,6 @@
 
 import type { BaconianCipherResult } from "@/app/codebusters/ciphers/types/cipherTypes";
 import { selectRandomScheme } from "@/app/codebusters/schemes/baconian-schemes";
-import { convertBinaryPattern } from "@/app/codebusters/schemes/pattern-converter";
 
 /**
  * Encrypts text using Baconian cipher
@@ -41,19 +40,44 @@ export const encryptBaconian = (text: string): BaconianCipherResult => {
 		Z: "BABBB",
 	};
 
-	// Clean text and convert to binary
+	const selectedScheme = selectRandomScheme();
 	const cleanedText = text.toUpperCase().replace(/[^A-Z]/g, "");
-	let binaryPattern = "";
+	const normalizedLetters = cleanedText
+		.split("")
+		.map((letter) => {
+			if (letter === "J") {
+				return "I";
+			}
+			if (letter === "V") {
+				return "U";
+			}
+			return letter;
+		})
+		.filter((letter) => Boolean(letter));
 
-	for (const letter of cleanedText) {
-		if (letter && baconianMap[letter]) {
-			binaryPattern += baconianMap[letter];
+	const uniqueLetters = Array.from(new Set(normalizedLetters));
+	const patternPool = Array.from(new Set(Object.values(baconianMap)));
+	for (let i = patternPool.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1));
+		const temp = patternPool[i];
+		if (temp !== undefined && patternPool[j] !== undefined) {
+			patternPool[i] = patternPool[j];
+			patternPool[j] = temp;
 		}
 	}
 
-	// Select random scheme and convert pattern
-	const selectedScheme = selectRandomScheme();
-	const convertedPattern = convertBinaryPattern(binaryPattern, selectedScheme);
+	const letterToPattern = new Map<string, string>();
+	uniqueLetters.forEach((letter, index) => {
+		const pattern = patternPool[index];
+		if (pattern) {
+			letterToPattern.set(letter, pattern);
+		}
+	});
 
-	return { encrypted: convertedPattern, binaryType: selectedScheme.type };
+	const encryptedGroups = normalizedLetters.map(
+		(letter) => letterToPattern.get(letter) || "",
+	);
+	const encrypted = encryptedGroups.join(" ");
+
+	return { encrypted, binaryType: selectedScheme.type };
 };

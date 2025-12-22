@@ -1,5 +1,7 @@
 "use client";
+import { FRACTIONATED_MORSE_TRIPLET_ORDER } from "@/app/codebusters/ciphers/fractionatedMorse/tripletOrder";
 import type { QuoteData } from "@/app/codebusters/types";
+import { chooseCribWordFromQuote } from "@/app/codebusters/utils/hintContentGenerators";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import logger from "@/lib/utils/logging/logger";
 import { useMemo, useState } from "react";
@@ -70,12 +72,20 @@ export const FractionatedMorseDisplay = ({
 	const usedTriplets = useMemo(
 		() =>
 			fractionationTable
-				? Object.keys(fractionationTable)
-						.filter((triplet) => triplet !== "xxx" && !triplet.includes("xxx"))
-						.sort()
-				: [],
+				? FRACTIONATED_MORSE_TRIPLET_ORDER.filter(
+						(triplet) => triplet in fractionationTable,
+					)
+				: FRACTIONATED_MORSE_TRIPLET_ORDER,
 		[fractionationTable],
 	);
+
+	const cribWord = useMemo(() => {
+		const quote = quotes[quoteIndex];
+		if (!quote?.quote) {
+			return "";
+		}
+		return chooseCribWordFromQuote(quote.quote);
+	}, [quoteIndex, quotes]);
 
 	const cipherToTriplet: { [key: string]: string } = {};
 	if (fractionationTable) {
@@ -190,6 +200,13 @@ export const FractionatedMorseDisplay = ({
 			>
 				Fractionated Morse Cipher
 			</div>
+			{cribWord && (
+				<div
+					className={`text-xs mb-3 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+				>
+					Crib: {cribWord}
+				</div>
+			)}
 
 			{/* Cipher text */}
 			<div className="flex flex-wrap gap-y-8 text-sm sm:text-base break-words whitespace-pre-wrap">
@@ -201,7 +218,10 @@ export const FractionatedMorseDisplay = ({
 						solution,
 					);
 
-					const plaintextLetters = calculatePlaintextLetters(triplets);
+					const plaintextLetters = calculatePlaintextLetters(
+						triplets,
+						incompleteTriplets,
+					);
 					removeTrailingPartialTriplets(triplets);
 
 					const charsWithPositions = text
@@ -278,7 +298,7 @@ export const FractionatedMorseDisplay = ({
 					<p
 						className={`text-sm mb-2 ${darkMode ? "text-gray-300" : "text-gray-600"}`}
 					>
-						Original Quote & Morse Code:
+						Original Quote:
 					</p>
 					<p
 						className={`font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-900"}`}

@@ -34,8 +34,9 @@ function processCategoryChar(
 	char: string,
 	index: number,
 	scheme: BaconianScheme,
+	groupKey: string,
 ): string {
-	const cacheKey = `${scheme.type}_${char}_${index}`;
+	const cacheKey = `${scheme.type}_${groupKey}_${char}_${index}`;
 	if (!categoryLetterCache.has(cacheKey)) {
 		if (char === "A") {
 			const zeroSet = scheme.zero as string;
@@ -52,29 +53,39 @@ function processCategoryChar(
 function renderCategoryType(
 	binaryGroup: string,
 	scheme: BaconianScheme,
+	groupKey: string,
 ): string {
 	return binaryGroup
 		.split("")
-		.map((char, index) => processCategoryChar(char, index, scheme))
+		.map((char, index) => processCategoryChar(char, index, scheme, groupKey))
 		.join("");
 }
 
 // Helper function to render set type
-function renderSetType(binaryGroup: string, scheme: BaconianScheme): string {
+function renderSetType(
+	binaryGroup: string,
+	scheme: BaconianScheme,
+	groupKey: string,
+): string {
 	const zeroSet = (
 		Array.isArray(scheme.zero) ? scheme.zero : [scheme.zero]
 	).filter(Boolean) as string[];
 	const oneSet = (Array.isArray(scheme.one) ? scheme.one : [scheme.one]).filter(
 		Boolean,
 	) as string[];
-	const pick = (arr: string[]) =>
-		arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : "";
 	return binaryGroup
 		.split("")
-		.map((char) => {
-			return char === "A"
-				? pick(zeroSet) || zeroSet[0] || ""
-				: pick(oneSet) || oneSet[0] || "";
+		.map((char, index) => {
+			const cacheKey = `${scheme.type}_${groupKey}_${char}_${index}`;
+			if (!setLetterCache.has(cacheKey)) {
+				const source = char === "A" ? zeroSet : oneSet;
+				const pick =
+					source.length > 0
+						? source[Math.floor(Math.random() * source.length)]
+						: "";
+				setLetterCache.set(cacheKey, pick || "");
+			}
+			return setLetterCache.get(cacheKey) || "";
 		})
 		.join("");
 }
@@ -82,6 +93,7 @@ function renderSetType(binaryGroup: string, scheme: BaconianScheme): string {
 export function renderBinaryGroup(
 	binaryGroup: string,
 	scheme: BaconianScheme,
+	groupKey = "",
 ): string {
 	switch (scheme.renderType) {
 		case "direct":
@@ -90,12 +102,29 @@ export function renderBinaryGroup(
 				.replace(/B/g, scheme.one as string);
 
 		case "category":
-			return renderCategoryType(binaryGroup, scheme);
+			return renderCategoryType(binaryGroup, scheme, groupKey);
 
 		case "set":
-			return renderSetType(binaryGroup, scheme);
+			return renderSetType(binaryGroup, scheme, groupKey);
 
 		case "formatting":
+			if (scheme.type === "Accented vs Plain") {
+				const accentedLetters = "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞß";
+				const plainLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+				return binaryGroup
+					.split("")
+					.map((char, index) => {
+						const cacheKey = `${scheme.type}_${groupKey}_${char}_${index}`;
+						if (!accentLetterCache.has(cacheKey)) {
+							const source = char === "A" ? accentedLetters : plainLetters;
+							const pick =
+								source[Math.floor(Math.random() * source.length)] || "";
+							accentLetterCache.set(cacheKey, pick);
+						}
+						return accentLetterCache.get(cacheKey) || "";
+					})
+					.join("");
+			}
 			return convertBinaryPattern(binaryGroup, scheme);
 
 		default:
@@ -127,6 +156,8 @@ export function getCssClassForFormatting(
 
 const randomLetterCache = new Map<string, string>();
 const categoryLetterCache = new Map<string, string>();
+const setLetterCache = new Map<string, string>();
+const accentLetterCache = new Map<string, string>();
 
 export function getDisplayLetter(
 	char: string,
