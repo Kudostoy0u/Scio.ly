@@ -13,6 +13,7 @@ import { useTheme } from "@/app/contexts/ThemeContext";
 import { useInvalidateTeam, useTeamMembers } from "@/lib/hooks/useTeam";
 import type { TeamMember as TeamMemberV2 } from "@/lib/server/teams";
 import type { TeamMember as StoreTeamMember } from "@/lib/stores/teams/types";
+import { getTRPCProxyClient } from "@/lib/trpc/client";
 import {
 	generateDisplayName,
 	needsNamePrompt,
@@ -327,29 +328,26 @@ export default function PeopleTabUnified({
 		const subteamId = member.subteamId || member.subteam?.id;
 		if (subteamId) {
 			try {
-				const response = await fetch(
-					`/api/teams/${team.slug}/removed-events?subteamId=${subteamId}`,
-				);
-				if (response.ok) {
-					const data = await response.json();
-					// Extract all added events from all conflict blocks
-					const addedEvents: string[] = [];
-					if (data.blocks && typeof data.blocks === "object") {
-						for (const block of Object.values(data.blocks)) {
-							if (
-								block &&
-								typeof block === "object" &&
-								"added" in block &&
-								Array.isArray(block.added)
-							) {
-								addedEvents.push(...block.added);
-							}
+				const client = getTRPCProxyClient();
+				const data = await client.teams.getRemovedEvents.query({
+					teamSlug: team.slug,
+					subteamId,
+				});
+				// Extract all added events from all conflict blocks
+				const addedEvents: string[] = [];
+				if (data.blocks && typeof data.blocks === "object") {
+					for (const block of Object.values(data.blocks)) {
+						if (
+							block &&
+							typeof block === "object" &&
+							"added" in block &&
+							Array.isArray(block.added)
+						) {
+							addedEvents.push(...block.added);
 						}
 					}
-					setCustomRosterEvents(addedEvents);
-				} else {
-					setCustomRosterEvents([]);
 				}
+				setCustomRosterEvents(addedEvents);
 			} catch {
 				setCustomRosterEvents([]);
 			}

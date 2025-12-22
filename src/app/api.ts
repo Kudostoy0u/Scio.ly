@@ -17,7 +17,6 @@ const api = {
 	idQuestions: `${API_BASE_URL}/id-questions`,
 	reportEdit: `${API_BASE_URL}/report/edit`,
 	reportRemove: `${API_BASE_URL}/report/remove`,
-	reportAll: `${API_BASE_URL}/report/all`,
 	reportMeta: `${API_BASE_URL}/report/meta`,
 	admin: `${API_BASE_URL}/admin`,
 
@@ -28,7 +27,6 @@ const api = {
 	geminiExplain: `${API_BASE_URL}/gemini/explain`,
 	geminiGradeFreeResponses: `${API_BASE_URL}/gemini/grade-free-responses`,
 	geminiExtractQuestions: `${API_BASE_URL}/gemini/extract-questions`,
-	processPdf: `${API_BASE_URL}/process-pdf`,
 	uploadImage: `${API_BASE_URL}/upload-image`,
 
 	arr: JSON.parse(process.env.NEXT_PUBLIC_API_KEYS || "[]"),

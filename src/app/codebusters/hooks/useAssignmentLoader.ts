@@ -1,3 +1,4 @@
+import { getTRPCProxyClient } from "@/lib/trpc/client";
 import { useCallback } from "react";
 import type { QuoteData } from "../types";
 
@@ -178,28 +179,36 @@ export function useAssignmentLoader({
 	const handleLoadAssignmentQuestions = useCallback(
 		async (assignmentId: string) => {
 			try {
-				const response = await fetch(`/api/assignments/${assignmentId}`);
-				if (!response.ok) {
-					setError("Failed to load assignment");
-					setIsLoading(false);
-					return;
-				}
-				const data = await response.json();
-				const assignment = data.assignment;
+				const client = getTRPCProxyClient();
+				const assignment = await client.teams.getAssignmentDetails.query({
+					assignmentId,
+				});
 				const questions = assignment.questions;
 				if (!questions || questions.length === 0) {
 					setError("No questions found in this assignment");
 					setIsLoading(false);
 					return;
 				}
-				const paramsQuestion = questions.find(
-					(q: AssignmentQuestion) => q.question_type === "codebusters_params",
-				);
-				if (paramsQuestion?.parameters) {
-					await handleParamsBasedQuestions(paramsQuestion, assignment);
-					return;
+				const paramsQuestion = questions.find((q) => {
+					const qAny = q as unknown as AssignmentQuestion;
+					return (
+						qAny.question_type === "codebusters_params" ||
+						(q as { questionType?: string }).questionType ===
+							"codebusters_params"
+					);
+				});
+				if (paramsQuestion && "parameters" in paramsQuestion) {
+					const qAny = paramsQuestion as unknown as AssignmentQuestion;
+					if (qAny.parameters) {
+						await handleParamsBasedQuestions(qAny, {
+							time_limit_minutes: assignment.timeLimitMinutes ?? undefined,
+						});
+						return;
+					}
 				}
-				handlePreGeneratedQuestions(questions, assignment);
+				handlePreGeneratedQuestions(questions as AssignmentQuestion[], {
+					time_limit_minutes: assignment.timeLimitMinutes ?? undefined,
+				});
 			} catch (_error) {
 				setError("Failed to load assignment");
 				setIsLoading(false);

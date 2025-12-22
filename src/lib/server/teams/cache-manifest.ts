@@ -15,6 +15,7 @@ export type SubteamCacheManifest = {
 	streamUpdatedAt: string;
 	timersUpdatedAt: string;
 	tournamentsUpdatedAt: string;
+	rosterNotesUpdatedAt: string;
 };
 
 export type TeamCacheManifest = {
@@ -107,6 +108,7 @@ export async function touchSubteamCacheManifest(
 		stream?: boolean;
 		timers?: boolean;
 		tournaments?: boolean;
+		rosterNotes?: boolean;
 	},
 	db: TeamCacheDb = dbPg,
 ) {
@@ -121,6 +123,9 @@ export async function touchSubteamCacheManifest(
 	}
 	if (updates.tournaments) {
 		set.tournamentsUpdatedAt = now;
+	}
+	if (updates.rosterNotes) {
+		set.rosterNotesUpdatedAt = now;
 	}
 
 	if (Object.keys(set).length === 0) {
@@ -209,6 +214,7 @@ export async function getTeamCacheManifest(
 					streamUpdatedAt: teamSubteamCacheManifests.streamUpdatedAt,
 					timersUpdatedAt: teamSubteamCacheManifests.timersUpdatedAt,
 					tournamentsUpdatedAt: teamSubteamCacheManifests.tournamentsUpdatedAt,
+					rosterNotesUpdatedAt: teamSubteamCacheManifests.rosterNotesUpdatedAt,
 				})
 				.from(teamSubteamCacheManifests)
 				.where(
@@ -229,7 +235,13 @@ export async function getTeamCacheManifest(
 			membersUpdatedAt: fallback,
 			subteamsUpdatedAt: fallback,
 			calendarUpdatedAt: fallback,
-			subteams: subteamManifests,
+			subteams: subteamManifests.map((row) => ({
+				subteamId: row.subteamId,
+				streamUpdatedAt: String(row.streamUpdatedAt),
+				timersUpdatedAt: String(row.timersUpdatedAt),
+				tournamentsUpdatedAt: String(row.tournamentsUpdatedAt),
+				rosterNotesUpdatedAt: String(row.rosterNotesUpdatedAt),
+			})),
 		};
 	}
 
@@ -246,6 +258,7 @@ export async function getTeamCacheManifest(
 			streamUpdatedAt: String(row.streamUpdatedAt),
 			timersUpdatedAt: String(row.timersUpdatedAt),
 			tournamentsUpdatedAt: String(row.tournamentsUpdatedAt),
+			rosterNotesUpdatedAt: String(row.rosterNotesUpdatedAt),
 		})),
 	};
 }

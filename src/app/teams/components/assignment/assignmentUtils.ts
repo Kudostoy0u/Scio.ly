@@ -1,8 +1,8 @@
 import { EVENTS_2026 } from "@/lib/constants/events2026";
 import { getEventSubtopics as getEventSubtopicsFromModule } from "@/lib/constants/subtopics";
-import { getEventCapabilities } from "@/lib/utils/assessments/eventConfig";
 import { getTRPCProxyClient } from "@/lib/trpc/client";
-import type { Question, RosterMember } from "./assignmentTypes";
+import { getEventCapabilities } from "@/lib/utils/assessments/eventConfig";
+import type { Question } from "./assignmentTypes";
 
 export const getAvailableEvents = (): string[] => {
 	return EVENTS_2026.map((event) => event.name);
@@ -55,7 +55,10 @@ export const generateQuestions = async (
 
 	return result.questions.map((q, index) => ({
 		question_text: q.question_text,
-		question_type: q.question_type as "multiple_choice" | "free_response" | "codebusters",
+		question_type: q.question_type as
+			| "multiple_choice"
+			| "free_response"
+			| "codebusters",
 		options: Array.isArray(q.options)
 			? q.options.map((opt, i) => ({
 					id: String(i),
@@ -68,26 +71,6 @@ export const generateQuestions = async (
 		difficulty: q.difficulty || 0.5,
 		imageData: q.imageData || undefined,
 	}));
-};
-
-/**
- * @deprecated Use tRPC cache via useTeamFull hook instead
- * This function made legacy fetch calls that resulted in 403 errors.
- * Use the cached team data from useTeamFull hook in components.
- *
- * Example:
- * ```tsx
- * const { data: teamData } = useTeamFull(teamSlug);
- * // Transform teamData.members and teamData.rosterEntries into RosterMember[]
- * ```
- */
-export const fetchRosterMembers = async (
-	_teamId: string,
-	_subteamId?: string,
-): Promise<RosterMember[]> => {
-	throw new Error(
-		"fetchRosterMembers is deprecated. Use useTeamFull hook from @/lib/hooks/useTeam instead.",
-	);
 };
 
 export const createAssignment = async (
@@ -146,9 +129,7 @@ export const createAssignment = async (
 		questionText: q.question_text,
 		questionType: q.question_type,
 		options: Array.isArray(q.options)
-			? q.options.map((opt) =>
-					typeof opt === "string" ? opt : opt.text,
-				)
+			? q.options.map((opt) => (typeof opt === "string" ? opt : opt.text))
 			: undefined,
 		correctAnswer: Array.isArray(q.answers)
 			? q.answers[0]?.toString()
@@ -202,7 +183,9 @@ export const createCodebustersAssignment = async (
 	},
 ) => {
 	if (!assignmentData.codebusters_params) {
-		throw new Error("codebusters_params is required for Codebusters assignments");
+		throw new Error(
+			"codebusters_params is required for Codebusters assignments",
+		);
 	}
 
 	const trpc = getTRPCProxyClient();
@@ -231,15 +214,16 @@ export const createCodebustersAssignment = async (
 		event_name: assignmentData.event_name || "Codebusters",
 		roster_members: rosterMembers,
 		codebusters_params: assignmentData.codebusters_params,
-		codebusters_questions: assignmentData.questions.length > 0
-			? assignmentData.questions.map((q) => ({
-					author: q.author || "",
-					quote: q.question_text,
-					cipherType: q.cipherType || "",
-					encrypted: "",
-					...q,
-				}))
-			: undefined,
+		codebusters_questions:
+			assignmentData.questions.length > 0
+				? assignmentData.questions.map((q) => ({
+						author: q.author || "",
+						quote: q.question_text,
+						cipherType: q.cipherType || "",
+						encrypted: "",
+						...q,
+					}))
+				: undefined,
 	});
 };
 

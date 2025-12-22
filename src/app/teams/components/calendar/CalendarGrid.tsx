@@ -264,7 +264,7 @@ export default function CalendarGrid({
 							key={day.date.toISOString()}
 							className={`p-1 md:p-2 border-r border-b overflow-hidden max-h-[200%] flex flex-col ${
 								darkMode ? "border-gray-700" : "border-gray-200"
-							} ${isCurrentMonth ? "" : darkMode ? "bg-gray-800 text-gray-500" : "bg-gray-50 text-gray-400"}`}
+							} ${isToday ? (darkMode ? "bg-blue-900/20" : "bg-blue-50") : ""} ${isCurrentMonth ? "" : darkMode ? "bg-gray-800 text-gray-500" : "bg-gray-50 text-gray-400"}`}
 						>
 							<div className="flex items-center justify-between mb-1">
 								<span

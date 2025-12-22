@@ -2,6 +2,7 @@
 
 import type { Question } from "@/app/utils/geminiService";
 import type { RouterParams } from "@/app/utils/questionUtils";
+import { getTRPCProxyClient } from "@/lib/trpc/client";
 import logger from "@/lib/utils/logging/logger";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchQuestionsForParams } from "./utils/fetchQuestions";
@@ -281,11 +282,21 @@ export function useTestDataLoading(
 					localStorage.removeItem("currentTestSession");
 
 					// Fetch from API
-					const response = await fetch(`/api/assignments/${assignmentId}`);
-					if (response.ok) {
-						const data = await response.json();
-						const assignment = data.assignment;
-						const questions = assignment.questions;
+					if (!assignmentId) {
+						setFetchError("Assignment ID is required");
+						setIsLoading(false);
+						fetchCompletedRef.current = true;
+						return;
+					}
+					try {
+						const client = getTRPCProxyClient();
+						const assignment = await client.teams.getAssignmentDetails.query({
+							assignmentId,
+						});
+						const questions = assignment.questions.map((q) => ({
+							...q,
+							imageData: q.imageData ?? undefined,
+						}));
 						const normalized = normalizeQuestionsFull(questions);
 
 						setData(normalized);
@@ -318,12 +329,16 @@ export function useTestDataLoading(
 							count: normalized.length,
 						});
 						return;
+					} catch (_error) {
+						setFetchError("Failed to load assignment");
+						setIsLoading(false);
+						fetchCompletedRef.current = true;
+						return;
 					}
 				} catch (_error) {
 					setFetchError("Failed to load assignment");
 					setIsLoading(false);
 					fetchCompletedRef.current = true;
-					return;
 				}
 			};
 

@@ -5,6 +5,7 @@ import {
 	initializeTestSession,
 	updateTimeLeft,
 } from "@/app/utils/timeManagement";
+import { getTRPCProxyClient } from "@/lib/trpc/client";
 import logger from "@/lib/utils/logging/logger";
 import type React from "react";
 import { normalizeQuestionsFull } from "../hooks/utils/normalize";
@@ -232,20 +233,19 @@ async function loadFromApi(
 
 	clearTestLocalStorage();
 
-	const response = await fetch(`/api/assignments/${assignmentId}`);
-	if (!response.ok) {
-		return false;
-	}
-
-	const data = await response.json();
-	const assignment = data.assignment;
-	const questions = assignment.questions;
+	const client = getTRPCProxyClient();
+	const assignment = await client.teams.getAssignmentDetails.query({
+		assignmentId,
+	});
+	const questions = assignment.questions.map((q) => ({
+		...q,
+		imageData: q.imageData ?? undefined,
+	}));
 	const normalized = normalizeQuestionsFull(questions);
 	const assignmentKey = `assignment_${assignmentId}`;
 
 	// Get time limit from assignment (in minutes), default to 60 if not set
-	const timeLimitMinutes =
-		assignment.timeLimitMinutes ?? assignment.time_limit_minutes ?? 60;
+	const timeLimitMinutes = assignment.timeLimitMinutes ?? 60;
 	const timeLimitSeconds = timeLimitMinutes * 60;
 
 	// Check Dexie for existing time left (for resuming)
@@ -412,10 +412,12 @@ export function loadViewResultsData(
 			const assignmentId = stableRouterData.assignmentId;
 			if (assignmentId) {
 				// Fetch assignment details to get the title
-				fetch(`/api/assignments/${assignmentId}`)
-					.then((response) => {
-						if (response.ok) {
-							return response.json();
+				const client = getTRPCProxyClient();
+				client.teams.getAssignmentDetails
+					.query({ assignmentId })
+					.then((assignment) => {
+						if (assignment) {
+							return { assignment };
 						}
 						return null;
 					})

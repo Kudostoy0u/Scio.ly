@@ -182,7 +182,7 @@ async function submitEnhancedAssignment(
 		const client = getTRPCProxyClient();
 		try {
 			const result = await client.teams.submitAssignment.mutate({
-				assignmentId: routerData.assignmentId,
+				assignmentId: String(routerData.assignmentId),
 				answers: formattedAnswers,
 				score: mcqScore,
 				totalPoints: mcqTotal,
@@ -257,20 +257,18 @@ async function submitLegacyAssignment(
 			data: { user },
 		} = await supabase.auth.getUser();
 		const name = (user?.user_metadata?.name || user?.email || "").toString();
-		const res = await fetch("/api/assignments/submit", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				assignmentId: String(assignmentIdStr),
+		const { getTRPCProxyClient } = await import("@/lib/trpc/client");
+		const client = getTRPCProxyClient();
+		try {
+			await client.teams.submitLegacyAssignment.mutate({
+				assignmentId: assignmentId,
 				userId: user?.id || null,
-				name,
-				eventName: routerData.eventName,
-				score: mcqScore,
-				detail: { total: mcqTotal },
-			}),
-		});
+				name: name || null,
+				eventName: routerData.eventName || null,
+				score: mcqScore || null,
+				detail: JSON.stringify({ total: mcqTotal }) || null,
+			});
 
-		if (res.ok) {
 			try {
 				const selStr = localStorage.getItem("teamsSelection") || "";
 				const sel = selStr ? JSON.parse(selStr) : null;
@@ -283,14 +281,10 @@ async function submitLegacyAssignment(
 			} catch {
 				// Ignore errors
 			}
-		} else {
-			try {
-				const j = await res.json().catch(() => null);
-				const msg = j?.error || "Failed to submit results";
-				toast.error(msg);
-			} catch {
-				// Ignore errors
-			}
+		} catch (error) {
+			const errorMessage =
+				error instanceof Error ? error.message : "Failed to submit results";
+			toast.error(errorMessage);
 		}
 
 		localStorage.removeItem("currentAssignmentId");

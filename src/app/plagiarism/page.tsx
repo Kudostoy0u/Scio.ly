@@ -158,56 +158,11 @@ export default function PlagiarismPage() {
 				return;
 			}
 			setSelectedFile(file);
-			setStatus("Processing document...");
-			setLoadingState("loading");
-
-			try {
-				const base64 = await new Promise<string>((resolve, reject) => {
-					const reader = new FileReader();
-					reader.readAsDataURL(file);
-					reader.onload = () => {
-						const result = reader.result as string;
-						if (result?.includes(",")) {
-							const base64 = result.split(",")[1];
-							resolve(base64 || "");
-						} else {
-							reject(new Error("Failed to convert file to base64."));
-						}
-					};
-					reader.onerror = (error) => reject(error);
-				});
-
-				const response = await fetch(api.processPdf, {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						pdfData: base64,
-						filename: file.name,
-					}),
-				});
-
-				const data = await response.json();
-
-				if (data.success) {
-					const newText = inputText
-						? `${inputText}\n\n${data.text}`
-						: data.text;
-					setInputText(newText);
-					checkInputChange(newText);
-					setStatus("Document processed successfully.");
-					setLoadingState("loaded");
-				} else {
-					setStatus(`Error processing document: ${data.error}`);
-					setLoadingState("error");
-				}
-			} catch (error) {
-				setStatus(`Error processing document: ${(error as Error).message}`);
-				setLoadingState("error");
-			}
+			setStatus("PDF processing is currently unavailable.");
+			setLoadingState("error");
+			// PDF processing endpoint was removed - feature disabled
 		},
-		[inputText, checkInputChange],
+		[],
 	);
 
 	const handlePlagiarismAnalysis = useCallback(async () => {

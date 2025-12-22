@@ -168,6 +168,7 @@ export default function MobileCalendar({
 					].slice(0, 4);
 
 					const selected = isSameDay(date, selectedDate);
+					const isToday = isSameDay(date, new Date());
 
 					return (
 						<button
@@ -176,8 +177,8 @@ export default function MobileCalendar({
 							onClick={() => onSelectDate(date)}
 							className={`h-16 p-1 border-r border-b text-left ${
 								darkMode ? "border-gray-700" : "border-gray-200"
-							} ${isCurrentMonth(date) ? "" : darkMode ? "bg-gray-800 text-gray-500" : "bg-gray-50 text-gray-400"} ${
-								selected
+							} ${isToday ? (darkMode ? "bg-blue-900/20" : "bg-blue-50") : ""} ${isCurrentMonth(date) ? "" : darkMode ? "bg-gray-800 text-gray-500" : "bg-gray-50 text-gray-400"} ${
+								selected && !isToday
 									? darkMode
 										? "ring-1 ring-blue-500"
 										: "ring-1 ring-blue-500"
@@ -187,11 +188,19 @@ export default function MobileCalendar({
 							<div className="flex items-center justify-between">
 								<span
 									className={`text-xs font-medium ${
-										selected
-											? "text-blue-500"
-											: isCurrentMonth(date)
-												? (darkMode ? "text-white" : "text-gray-900")
-												: (darkMode ? "text-gray-500" : "text-gray-400")
+										isToday
+											? darkMode
+												? "text-blue-400"
+												: "text-blue-600"
+											: selected
+												? "text-blue-500"
+												: isCurrentMonth(date)
+													? darkMode
+														? "text-white"
+														: "text-gray-900"
+													: darkMode
+														? "text-gray-500"
+														: "text-gray-400"
 									}`}
 								>
 									{date.getDate()}

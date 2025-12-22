@@ -307,20 +307,17 @@ async function submitLegacyAssignment(
 	mcqTotal: number,
 ): Promise<void> {
 	try {
-		const res = await fetch("/api/assignments/submit", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				assignmentId: String(assignmentId),
-				userId,
-				name: userName,
-				eventName: routerData.eventName,
-				score: mcqScore,
-				detail: { total: mcqTotal },
-			}),
-		});
-
-		if (res.ok) {
+		const { getTRPCProxyClient } = await import("@/lib/trpc/client");
+		const client = getTRPCProxyClient();
+		try {
+			await client.teams.submitLegacyAssignment.mutate({
+				assignmentId: Number(assignmentId),
+				userId: userId || null,
+				name: userName || null,
+				eventName: routerData.eventName || null,
+				score: mcqScore || null,
+				detail: JSON.stringify({ total: mcqTotal }) || null,
+			});
 			try {
 				const selStr = localStorage.getItem("teamsSelection") || "";
 				const sel = selStr ? JSON.parse(selStr) : null;
@@ -335,14 +332,10 @@ async function submitLegacyAssignment(
 			} catch {
 				// Ignore errors
 			}
-		} else {
-			try {
-				const j = await res.json().catch(() => null);
-				const msg = j?.error || "Failed to submit results";
-				(await import("react-toastify")).toast.error(msg);
-			} catch {
-				// Ignore errors
-			}
+		} catch (error) {
+			const errorMessage =
+				error instanceof Error ? error.message : "Failed to submit results";
+			(await import("react-toastify")).toast.error(errorMessage);
 		}
 		localStorage.removeItem("currentAssignmentId");
 	} catch {

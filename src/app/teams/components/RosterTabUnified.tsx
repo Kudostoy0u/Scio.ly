@@ -56,6 +56,11 @@ export default function RosterTabUnified({
 	const { invalidateTeam, updateTeamData } = useInvalidateTeam();
 	const utils = trpc.useUtils();
 	const saveRosterMutation = trpc.teams.saveRoster.useMutation();
+	const updateRemovedEventsMutation =
+		trpc.teams.updateRemovedEvents.useMutation();
+	const restoreRemovedEventsMutation =
+		trpc.teams.restoreRemovedEvents.useMutation();
+	const updateRosterNotesMutation = trpc.teams.updateRosterNotes.useMutation();
 
 	// Get roster data from shared cache
 	const { data: rosterData, isLoading } = useTeamRoster(
@@ -189,29 +194,29 @@ export default function RosterTabUnified({
 		rosterRef.current = roster;
 	}, [roster]);
 
-	// Fetch roster notes when subteam changes
+	// Get roster notes from shared cache
+	const { data: rosterNotesData } = trpc.teams.getRosterNotes.useQuery(
+		{
+			teamSlug: team.slug,
+			subteamId: activeSubteamId || "",
+		},
+		{
+			enabled: !!activeSubteamId,
+			staleTime: 5 * 60 * 1000,
+			gcTime: 60 * 60 * 1000,
+			refetchOnWindowFocus: false,
+			refetchOnReconnect: false,
+		},
+	);
+
+	// Sync roster notes from query to local state
 	useEffect(() => {
-		if (!activeSubteamId) {
+		if (rosterNotesData) {
+			setRosterNotes(rosterNotesData.rosterNotes || "");
+		} else if (!activeSubteamId) {
 			setRosterNotes("");
-			return;
 		}
-
-		const fetchNotes = async () => {
-			try {
-				const response = await fetch(
-					`/api/teams/${team.slug}/subteams/${activeSubteamId}/roster-notes`,
-				);
-				if (response.ok) {
-					const data = await response.json();
-					setRosterNotes(data.rosterNotes || "");
-				}
-			} catch (error) {
-				console.error("Failed to fetch roster notes:", error);
-			}
-		};
-
-		void fetchNotes();
-	}, [activeSubteamId, team.slug]);
+	}, [rosterNotesData, activeSubteamId]);
 
 	useEffect(() => {
 		return () => {
@@ -500,41 +505,34 @@ export default function RosterTabUnified({
 		}
 
 		try {
-			const response = await fetch(`/api/teams/${team.slug}/removed-events`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					subteamId: activeSubteamId,
-					eventName,
-					conflictBlock,
-				}),
+			await updateRemovedEventsMutation.mutateAsync({
+				teamSlug: team.slug,
+				subteamId: activeSubteamId,
+				eventName,
+				conflictBlock,
+				mode: "remove",
 			});
-
-			if (response.ok) {
-				await response.json().catch(() => undefined);
-				setBlockOverrides((prev) => {
-					const current = prev[conflictBlock] ?? { added: [], removed: [] };
-					return {
-						...prev,
-						[conflictBlock]: {
-							added: current.added.filter((e) => e !== eventName),
-							removed: Array.from(new Set([...current.removed, eventName])),
-						},
-					};
-				});
-				setRoster((prev) => {
-					const newRoster = { ...prev };
-					delete newRoster[eventName];
-					return newRoster;
-				});
-				toast.success(`${eventName} removed from ${conflictBlock}`);
-				invalidateTeam(team.slug);
-			} else {
-				const error = await response.json();
-				toast.error(error.error || "Failed to remove event");
-			}
-		} catch {
-			toast.error("Failed to remove event");
+			setBlockOverrides((prev) => {
+				const current = prev[conflictBlock] ?? { added: [], removed: [] };
+				return {
+					...prev,
+					[conflictBlock]: {
+						added: current.added.filter((e) => e !== eventName),
+						removed: Array.from(new Set([...current.removed, eventName])),
+					},
+				};
+			});
+			setRoster((prev) => {
+				const newRoster = { ...prev };
+				delete newRoster[eventName];
+				return newRoster;
+			});
+			toast.success(`${eventName} removed from ${conflictBlock}`);
+			invalidateTeam(team.slug);
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : "Failed to remove event",
+			);
 		}
 	};
 
@@ -548,40 +546,32 @@ export default function RosterTabUnified({
 		).slice();
 
 		try {
-			const response = await fetch(`/api/teams/${team.slug}/removed-events`, {
-				method: "DELETE",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					subteamId: activeSubteamId,
-					conflictBlock,
-					mode: "reset",
-				}),
+			await restoreRemovedEventsMutation.mutateAsync({
+				teamSlug: team.slug,
+				subteamId: activeSubteamId,
+				conflictBlock,
+				mode: "reset",
 			});
-
-			if (response.ok) {
-				await response.json().catch(() => undefined);
-				setBlockOverrides((prev) => {
+			setBlockOverrides((prev) => {
+				const next = { ...prev };
+				delete next[conflictBlock];
+				return next;
+			});
+			if (eventsToRemoveFromRoster.length > 0) {
+				setRoster((prev) => {
 					const next = { ...prev };
-					delete next[conflictBlock];
+					for (const eventName of eventsToRemoveFromRoster) {
+						delete next[eventName];
+					}
 					return next;
 				});
-				if (eventsToRemoveFromRoster.length > 0) {
-					setRoster((prev) => {
-						const next = { ...prev };
-						for (const eventName of eventsToRemoveFromRoster) {
-							delete next[eventName];
-						}
-						return next;
-					});
-				}
-				invalidateTeam(team.slug);
-				toast.success(`${conflictBlock} reset`);
-			} else {
-				const error = await response.json();
-				toast.error(error.error || "Failed to reset block");
 			}
-		} catch {
-			toast.error("Failed to reset block");
+			invalidateTeam(team.slug);
+			toast.success(`${conflictBlock} reset`);
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : "Failed to reset block",
+			);
 		}
 	};
 
@@ -597,24 +587,13 @@ export default function RosterTabUnified({
 
 		setIsSubmittingEvent(true);
 		try {
-			const response = await fetch(`/api/teams/${team.slug}/removed-events`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					subteamId: activeSubteamId,
-					eventName: name,
-					conflictBlock: addEventModal.conflictBlock,
-					mode: "add",
-				}),
+			await updateRemovedEventsMutation.mutateAsync({
+				teamSlug: team.slug,
+				subteamId: activeSubteamId,
+				eventName: name,
+				conflictBlock: addEventModal.conflictBlock,
+				mode: "add",
 			});
-
-			if (!response.ok) {
-				const error = await response.json();
-				toast.error(error.error || "Failed to add event");
-				return;
-			}
-
-			await response.json().catch(() => undefined);
 			setBlockOverrides((prev) => {
 				const current = prev[addEventModal.conflictBlock] ?? {
 					added: [],
@@ -657,24 +636,17 @@ export default function RosterTabUnified({
 
 		setIsSavingNotes(true);
 		try {
-			const response = await fetch(
-				`/api/teams/${team.slug}/subteams/${activeSubteamId}/roster-notes`,
-				{
-					method: "PUT",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ notes }),
-				},
-			);
-
-			if (!response.ok) {
-				const error = await response.json();
-				toast.error(error.error || "Failed to save notes");
-				return;
-			}
+			await updateRosterNotesMutation.mutateAsync({
+				teamSlug: team.slug,
+				subteamId: activeSubteamId,
+				notes,
+			});
 			invalidateTeam(team.slug);
 		} catch (error) {
 			console.error("Failed to save roster notes:", error);
-			toast.error("Failed to save notes");
+			toast.error(
+				error instanceof Error ? error.message : "Failed to save notes",
+			);
 		} finally {
 			setIsSavingNotes(false);
 		}

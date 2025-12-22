@@ -272,12 +272,3 @@ export function computeQuestionRank(
 ): number {
 	return calculateQuestionHash(questionId);
 }
-
-export function getQuestionByRank(
-	_targetRank: number,
-	_table: "questions" | "idEvents" = "questions",
-) {
-	throw new Error(
-		"getQuestionByRank is deprecated. Use getQuestionByCode instead.",
-	);
-}

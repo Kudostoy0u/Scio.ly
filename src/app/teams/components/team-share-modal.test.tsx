@@ -59,11 +59,11 @@ describe("TeamShareModal", () => {
 	it("joins team with code", async () => {
 		mkFetch((url, init) => {
 			const u = String(url);
-			if (u === "/api/teams/join-by-code" && init?.method === "POST") {
+			if (u === "/api/teams/join" && init?.method === "POST") {
 				const body = JSON.parse(String(init.body || "{}"));
 				if (body.code === "JOINME") {
 					return new Response(
-						JSON.stringify({ success: true, slug: "abc123", role: "user" }),
+						JSON.stringify({ slug: "abc123", role: "user" }),
 						{
 							status: 200,
 						},

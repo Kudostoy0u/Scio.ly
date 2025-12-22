@@ -92,12 +92,19 @@ export function useEnhancedTeamData() {
 		return globalApiCache.fetchWithCache(
 			cacheKey,
 			async () => {
-				const response = await fetch("/api/teams/user-teams");
-				if (!response.ok) {
-					throw new Error("Failed to fetch user teams");
-				}
-				const result = await response.json();
-				return result.teams || [];
+				const { getTRPCProxyClient } = await import("@/lib/trpc/client");
+				const client = getTRPCProxyClient();
+				const result = await client.teams.listUserTeams.query();
+				// Map tRPC response to expected format
+				return (result.teams || []).map((team) => ({
+					id: team.id,
+					slug: team.slug,
+					school: team.school,
+					division: team.division,
+					user_role: team.role,
+					team_name: team.name,
+					is_archived: team.status === "archived",
+				}));
 			},
 			"user-teams",
 		);
@@ -114,19 +121,33 @@ export function useEnhancedTeamData() {
 			return globalApiCache.fetchWithCache(
 				cacheKey,
 				async () => {
-					const response = await fetch(`/api/teams/${teamSlug}/subteams`);
-					if (response.status === 403) {
-						const errorData = await response.json();
-						handle403Error(
-							errorData.error || "You are not a member of this team",
-						);
-						return [];
+					const { getTRPCProxyClient } = await import("@/lib/trpc/client");
+					const client = getTRPCProxyClient();
+					try {
+						const result = await client.teams.getSubteams.query({
+							teamSlug,
+						});
+						// Map tRPC response to expected format
+						return (result.subteams || []).map((subteam) => ({
+							id: subteam.id,
+							name: subteam.name,
+							team_id: subteam.teamId,
+							description: subteam.description || "",
+							created_at: subteam.createdAt,
+						}));
+					} catch (error) {
+						if (
+							error instanceof Error &&
+							(error.message.includes("Forbidden") ||
+								error.message.includes("not a member"))
+						) {
+							handle403Error(
+								error.message || "You are not a member of this team",
+							);
+							return [];
+						}
+						throw error;
 					}
-					if (!response.ok) {
-						throw new Error("Failed to fetch subteams");
-					}
-					const result = await response.json();
-					return result.subteams || [];
 				},
 				"subteams",
 			);
@@ -151,24 +172,30 @@ export function useEnhancedTeamData() {
 			return globalApiCache.fetchWithCache(
 				cacheKey,
 				async () => {
-					const response = await fetch(
-						`/api/teams/${teamSlug}/roster?subteamId=${subteamId}`,
-					);
-					if (response.status === 403) {
-						const errorData = await response.json();
-						handle403Error(
-							errorData.error || "You are not a member of this team",
-						);
-						return { roster: {}, removedEvents: [] };
+					const { getTRPCProxyClient } = await import("@/lib/trpc/client");
+					const client = getTRPCProxyClient();
+					try {
+						const result = await client.teams.getRoster.query({
+							teamSlug,
+							subteamId,
+						});
+						return {
+							roster: result.roster || {},
+							removedEvents: result.removedEvents || [],
+						};
+					} catch (error) {
+						if (
+							error instanceof Error &&
+							(error.message.includes("Forbidden") ||
+								error.message.includes("not a member"))
+						) {
+							handle403Error(
+								error.message || "You are not a member of this team",
+							);
+							return { roster: {}, removedEvents: [] };
+						}
+						throw error;
 					}
-					if (!response.ok) {
-						throw new Error("Failed to fetch roster");
-					}
-					const result = await response.json();
-					return {
-						roster: result.roster || {},
-						removedEvents: result.removedEvents || [],
-					};
 				},
 				"roster",
 			);
@@ -268,7 +295,9 @@ export function useEnhancedTeamData() {
 							title: a.title,
 							description: a.description || "",
 							due_date: a.due_date || "",
-							assigned_to: a.roster?.map((r) => r.display_name || r.student_name || "") || [],
+							assigned_to:
+								a.roster?.map((r) => r.display_name || r.student_name || "") ||
+								[],
 							created_by: a.creator_name || a.creator_email || "",
 							created_at: a.created_at || "",
 						}));

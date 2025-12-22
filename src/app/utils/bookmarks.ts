@@ -94,12 +94,6 @@ export const loadBookmarksFromSupabase = async (
 };
 
 /**
- * Alias for loadBookmarksFromSupabase for backward compatibility
- * @deprecated Use loadBookmarksFromSupabase instead
- */
-export { loadBookmarksFromSupabase as loadBookmarksFromFirebase };
-
-/**
  * Adds a bookmark to the user's bookmark collection
  * Checks for existing bookmarks to prevent duplicates
  *

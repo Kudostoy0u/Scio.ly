@@ -9,3 +9,17 @@ export * from "./timers";
 export * from "./assignments";
 export * from "./cache-manifest";
 export * from "./calendar";
+// Export everything from additional except submitAssignment to avoid naming conflict
+export {
+	getTeamCodes,
+	getRemovedEvents,
+	updateRemovedEvents,
+	restoreRemovedEvents,
+	getRoster,
+	getRosterLinkStatus,
+	getSubteams,
+	updateSubteam,
+	getRosterNotes,
+	updateRosterNotes,
+	submitAssignment as submitLegacyAssignment,
+} from "./additional";

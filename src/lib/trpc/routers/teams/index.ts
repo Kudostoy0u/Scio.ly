@@ -23,8 +23,14 @@ import {
 	getAssignmentAnalytics,
 	getAssignmentDetails,
 	getCalendarManifest,
+	getRemovedEvents,
+	getRoster,
+	getRosterLinkStatus,
+	getRosterNotes,
 	getStreamPosts,
+	getSubteams,
 	getTeamCacheManifest,
+	getTeamCodes,
 	getTeamFullBySlug,
 	getTeamMetaBySlug,
 	getUpcomingTournaments,
@@ -43,9 +49,13 @@ import {
 	removeTimer,
 	renameSubteam,
 	replaceRosterEntries,
+	restoreRemovedEvents,
 	skipCalendarOccurrence,
 	updateCalendarEvent,
+	updateRemovedEvents,
+	updateRosterNotes,
 	updateStreamPost,
+	updateSubteam,
 	upsertRosterEntry,
 } from "@/lib/server/teams";
 import { ensureSupabaseLink } from "@/lib/server/teams/shared";
@@ -289,7 +299,9 @@ export const teamsRouter = router({
 				teamSlug: z.string(),
 				event_name: z.string().min(1),
 				question_count: z.number().int().min(1).max(100),
-				question_types: z.array(z.enum(["multiple_choice", "free_response"])).min(1),
+				question_types: z
+					.array(z.enum(["multiple_choice", "free_response"]))
+					.min(1),
 				division: z.string().optional(),
 				id_percentage: z.number().int().min(0).max(100).optional(),
 				pure_id_only: z.boolean().optional(),
@@ -302,9 +314,7 @@ export const teamsRouter = router({
 			const { generateQuestionsForAssignment } = await import(
 				"@/lib/server/questions/generate"
 			);
-			const { assertCaptainAccess } = await import(
-				"@/lib/server/teams/shared"
-			);
+			const { assertCaptainAccess } = await import("@/lib/server/teams/shared");
 
 			await assertCaptainAccess(input.teamSlug, ctx.user.id);
 
@@ -371,7 +381,10 @@ export const teamsRouter = router({
 				points: z.number().int().optional().nullable(),
 				time_limit_minutes: z.number().int().optional().nullable(),
 				event_name: z.string().optional().nullable(),
-				roster_members: z.array(assignmentRosterMemberSchema).optional().default([]),
+				roster_members: z
+					.array(assignmentRosterMemberSchema)
+					.optional()
+					.default([]),
 				codebusters_params: z.object({
 					questionCount: z.number().int().min(1).max(50),
 					cipherTypes: z.array(z.string()).optional().default([]),
@@ -420,11 +433,38 @@ export const teamsRouter = router({
 		.mutation(async ({ ctx, input }) => {
 			const { createCodebustersAssignment: createCodebustersAssignmentFn } =
 				await import("@/lib/server/teams/codebusters-assignments");
+			// Transform roster_members from { studentName, userId, displayName } to RosterMemberSchema format
+			const transformedRosterMembers = input.roster_members.map((member) => {
+				if (member.userId) {
+					return {
+						user_id: member.userId,
+						student_name: member.studentName,
+						display_name: member.displayName,
+					};
+				}
+				return member.studentName;
+			});
+			// Transform codebusters_questions to match the expected schema (handle cryptarithmData)
+			const transformedQuestions = input.codebusters_questions?.map((q) => ({
+				...q,
+				cryptarithmData:
+					q.cryptarithmData && typeof q.cryptarithmData === "object"
+						? (q.cryptarithmData as {
+								equation: string;
+								numericExample?: string | null;
+								digitGroups: { digits: string; word: string }[];
+							})
+						: undefined,
+			}));
 			return createCodebustersAssignmentFn(
 				input.teamSlug,
 				input.subteamId || null,
 				ctx.user.id,
-				input,
+				{
+					...input,
+					roster_members: transformedRosterMembers,
+					codebusters_questions: transformedQuestions,
+				},
 			);
 		}),
 
@@ -1164,5 +1204,177 @@ export const teamsRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			return removeTimer(input.teamSlug, input, ctx.user.id);
+		}),
+
+	listArchivedTeams: protectedProcedure.query(async ({ ctx }) => {
+		const { teamsService } = await import("@/lib/services/teams");
+		const teams = await teamsService.getUserArchivedTeams(ctx.user.id);
+		return { teams };
+	}),
+
+	deleteTeam: protectedProcedure
+		.input(z.object({ teamSlug: z.string().min(1) }))
+		.mutation(async ({ ctx, input }) => {
+			// archiveTeam actually deletes the team
+			return archiveTeam(input.teamSlug, ctx.user.id);
+		}),
+
+	getCodes: protectedProcedure
+		.input(z.object({ teamSlug: z.string().min(1) }))
+		.query(async ({ ctx, input }) => {
+			return getTeamCodes(input.teamSlug, ctx.user.id);
+		}),
+
+	getRemovedEvents: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				subteamId: z.uuid(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			return getRemovedEvents(input.teamSlug, input.subteamId, ctx.user.id);
+		}),
+
+	updateRemovedEvents: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				subteamId: z.uuid(),
+				eventName: z.string().min(1).max(100),
+				conflictBlock: z.string().min(1).max(50),
+				mode: z.enum(["remove", "add"]).optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			return updateRemovedEvents(
+				input.teamSlug,
+				input.subteamId,
+				input.eventName,
+				input.conflictBlock,
+				input.mode ?? "remove",
+				ctx.user.id,
+			);
+		}),
+
+	restoreRemovedEvents: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				subteamId: z.uuid(),
+				conflictBlock: z.string().min(1).max(50),
+				mode: z.enum(["restore", "reset"]).optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			return restoreRemovedEvents(
+				input.teamSlug,
+				input.subteamId,
+				input.conflictBlock,
+				input.mode ?? "restore",
+				ctx.user.id,
+			);
+		}),
+
+	getRoster: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				subteamId: z.uuid().nullable().optional(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			return getRoster(input.teamSlug, input.subteamId ?? null, ctx.user.id);
+		}),
+
+	getRosterLinkStatus: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				subteamId: z.uuid().nullable().optional(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			return getRosterLinkStatus(
+				input.teamSlug,
+				input.subteamId ?? null,
+				ctx.user.id,
+			);
+		}),
+
+	getSubteams: protectedProcedure
+		.input(z.object({ teamSlug: z.string().min(1) }))
+		.query(async ({ ctx, input }) => {
+			return getSubteams(input.teamSlug, ctx.user.id);
+		}),
+
+	updateSubteam: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				subteamId: z.uuid(),
+				name: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			return updateSubteam(
+				input.teamSlug,
+				input.subteamId,
+				input.name,
+				ctx.user.id,
+			);
+		}),
+
+	getRosterNotes: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				subteamId: z.uuid(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			return getRosterNotes(input.teamSlug, input.subteamId, ctx.user.id);
+		}),
+
+	updateRosterNotes: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				subteamId: z.uuid(),
+				notes: z.string().nullable(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			return updateRosterNotes(
+				input.teamSlug,
+				input.subteamId,
+				input.notes,
+				ctx.user.id,
+			);
+		}),
+
+	submitLegacyAssignment: protectedProcedure
+		.input(
+			z.object({
+				assignmentId: z.number().int().positive(),
+				userId: z.uuid().nullable().optional(),
+				name: z.string().nullable().optional(),
+				eventName: z.string().nullable().optional(),
+				score: z.number().nullable().optional(),
+				detail: z.string().nullable().optional(),
+			}),
+		)
+		.mutation(async ({ input }) => {
+			const { submitLegacyAssignment: submitLegacyAssignmentFn } = await import(
+				"@/lib/server/teams"
+			);
+			return submitLegacyAssignmentFn(
+				input.assignmentId,
+				input.userId ?? null,
+				input.name ?? null,
+				input.eventName ?? null,
+				input.score ?? null,
+				input.detail ?? null,
+			);
 		}),
 });

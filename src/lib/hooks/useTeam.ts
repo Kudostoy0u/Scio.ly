@@ -109,6 +109,7 @@ type SubteamCacheManifest = {
 	streamUpdatedAt: string;
 	timersUpdatedAt: string;
 	tournamentsUpdatedAt: string;
+	rosterNotesUpdatedAt: string;
 };
 
 type TeamCacheManifest = {
@@ -181,6 +182,12 @@ export function useTeamCacheInvalidation(teamSlug: string) {
 						subteamId: subteam.subteamId,
 					}),
 				);
+				bootstrapRefreshes.push(
+					utils.teams.getRosterNotes.prefetch({
+						teamSlug,
+						subteamId: subteam.subteamId,
+					}),
+				);
 			}
 
 			void Promise.all(bootstrapRefreshes).then(() => {
@@ -249,6 +256,13 @@ export function useTeamCacheInvalidation(teamSlug: string) {
 				refreshes.push(
 					utils.teams.getTournaments.prefetch({ teamSlug, subteamId }),
 				);
+				staleFlags.push(`teams.getRosterNotes:${subteamId}`);
+				invalidations.push(
+					utils.teams.getRosterNotes.invalidate({ teamSlug, subteamId }),
+				);
+				refreshes.push(
+					utils.teams.getRosterNotes.prefetch({ teamSlug, subteamId }),
+				);
 				continue;
 			}
 
@@ -284,6 +298,18 @@ export function useTeamCacheInvalidation(teamSlug: string) {
 					utils.teams.getTournaments.prefetch({ teamSlug, subteamId }),
 				);
 			}
+			if (
+				toTimestamp(next.rosterNotesUpdatedAt) >
+				toTimestamp(previous.rosterNotesUpdatedAt)
+			) {
+				staleFlags.push(`teams.getRosterNotes:${subteamId}`);
+				invalidations.push(
+					utils.teams.getRosterNotes.invalidate({ teamSlug, subteamId }),
+				);
+				refreshes.push(
+					utils.teams.getRosterNotes.prefetch({ teamSlug, subteamId }),
+				);
+			}
 		}
 
 		for (const [subteamId] of cachedSubteams.entries()) {
@@ -304,6 +330,13 @@ export function useTeamCacheInvalidation(teamSlug: string) {
 				);
 				refreshes.push(
 					utils.teams.getTournaments.prefetch({ teamSlug, subteamId }),
+				);
+				staleFlags.push(`teams.getRosterNotes:${subteamId}`);
+				invalidations.push(
+					utils.teams.getRosterNotes.invalidate({ teamSlug, subteamId }),
+				);
+				refreshes.push(
+					utils.teams.getRosterNotes.prefetch({ teamSlug, subteamId }),
 				);
 			}
 		}

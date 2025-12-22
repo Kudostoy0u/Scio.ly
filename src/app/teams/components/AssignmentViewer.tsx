@@ -1,5 +1,6 @@
 "use client";
 
+import { trpc } from "@/lib/trpc/client";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import QuestionRenderer from "./QuestionRenderer";
@@ -295,6 +296,8 @@ export default function AssignmentViewer({
 		);
 	};
 
+	const submitAssignmentMutation = trpc.teams.submitAssignment.useMutation();
+
 	const submitAssignment = async () => {
 		if (Object.keys(responses).length === 0) {
 			setError("Please answer at least one question");
@@ -305,50 +308,40 @@ export default function AssignmentViewer({
 		setError(null);
 
 		try {
-			const responseData = Object.entries(responses).map(
-				([questionId, response]) => {
-					const responseObj =
-						typeof response === "object" &&
-						response !== null &&
-						!Array.isArray(response) &&
-						"text" in response
-							? (response as { text?: string; data?: unknown })
-							: null;
-					return {
-						question_id: questionId,
-						response_text:
-							responseObj?.text ??
-							(typeof response === "string" ? response : String(response)),
-						response_data: responseObj?.data ?? null,
-					};
-				},
-			);
+			const formattedAnswers: Record<string, unknown> = {};
+			for (const [questionId, response] of Object.entries(responses)) {
+				const responseObj =
+					typeof response === "object" &&
+					response !== null &&
+					!Array.isArray(response) &&
+					"text" in response
+						? (response as { text?: string; data?: unknown })
+						: null;
+				formattedAnswers[questionId] =
+					responseObj?.text ??
+					(typeof response === "string" ? response : String(response));
+			}
 
 			const timeTaken = startTime
 				? Math.floor((Date.now() - startTime.getTime()) / 1000)
 				: 0;
 
-			const response = await fetch(
-				`/api/teams/${assignment.id}/assignments/${assignment.id}/submit`,
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						responses: responseData,
-						time_taken_seconds: timeTaken,
-					}),
-				},
-			);
+			await submitAssignmentMutation.mutateAsync({
+				assignmentId: assignment.id,
+				answers: formattedAnswers,
+				timeSpent: timeTaken,
+				submittedAt: new Date().toISOString(),
+			});
 
-			if (response.ok) {
-				const data = await response.json();
-				onSubmissionComplete(data.submission);
-			} else {
-				const errorData = await response.json();
-				setError(errorData.error || "Failed to submit assignment");
-			}
-		} catch (_error) {
-			setError("Failed to submit assignment");
+			onSubmissionComplete({
+				assignmentId: assignment.id,
+				responses: formattedAnswers,
+				timeSpent: timeTaken,
+			});
+		} catch (error) {
+			const errorMessage =
+				error instanceof Error ? error.message : "Failed to submit assignment";
+			setError(errorMessage);
 		}
 		setSubmitting(false);
 	};

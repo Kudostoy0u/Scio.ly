@@ -1,8 +1,9 @@
 "use client";
 
 import { useTheme } from "@/app/contexts/ThemeContext";
+import { trpc } from "@/lib/trpc/client";
 import { Copy, Crown, Users, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { toast } from "react-toastify";
 
 interface BannerInviteProps {
@@ -17,37 +18,19 @@ export default function BannerInvite({
 	teamSlug,
 }: BannerInviteProps) {
 	const { darkMode } = useTheme();
-	const [codes, setCodes] = useState<{
-		captainCode: string;
-		userCode: string;
-	} | null>(null);
-	const [loading, setLoading] = useState(false);
+	const {
+		data: codes,
+		isLoading: loading,
+		error,
+	} = trpc.teams.getCodes.useQuery({ teamSlug }, { enabled: isOpen });
 
-	const loadCodes = useCallback(async () => {
-		try {
-			setLoading(true);
-			const response = await fetch(`/api/teams/${teamSlug}/codes`);
-
-			if (response.ok) {
-				const data = await response.json();
-				setCodes(data);
-			} else {
-				const error = await response.json();
-				toast.error(error.error || "Failed to load invite codes");
-			}
-		} catch (_error) {
-			toast.error("Failed to load invite codes");
-		} finally {
-			setLoading(false);
-		}
-	}, [teamSlug]);
-
-	// Load team codes
 	useEffect(() => {
-		if (isOpen) {
-			loadCodes();
+		if (error) {
+			toast.error(
+				error instanceof Error ? error.message : "Failed to load invite codes",
+			);
 		}
-	}, [isOpen, loadCodes]);
+	}, [error]);
 
 	const copyToClipboard = async (text: string, type: string) => {
 		try {
@@ -139,6 +122,7 @@ export default function BannerInvite({
 										<button
 											type="button"
 											onClick={() =>
+												codes.captainCode &&
 												copyToClipboard(codes.captainCode, "Captain")
 											}
 											className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-medium transition-colors ${
@@ -186,7 +170,10 @@ export default function BannerInvite({
 										</div>
 										<button
 											type="button"
-											onClick={() => copyToClipboard(codes.userCode, "User")}
+											onClick={() =>
+												codes.userCode &&
+												copyToClipboard(codes.userCode, "User")
+											}
 											className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-medium transition-colors ${
 												darkMode
 													? "bg-blue-600 text-white hover:bg-blue-700"
@@ -224,17 +211,6 @@ export default function BannerInvite({
 								className={`text-center py-12 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
 							>
 								<p>Failed to load invite codes</p>
-								<button
-									type="button"
-									onClick={loadCodes}
-									className={`mt-4 px-4 py-2 rounded-lg font-medium transition-colors ${
-										darkMode
-											? "bg-gray-700 text-white hover:bg-gray-600"
-											: "bg-gray-200 text-gray-700 hover:bg-gray-300"
-									}`}
-								>
-									Try Again
-								</button>
 							</div>
 						)}
 					</div>

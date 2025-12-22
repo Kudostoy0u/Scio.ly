@@ -521,11 +521,9 @@ class GlobalApiCache {
 			this.fetchWithCache(
 				`user-teams-${userId}`,
 				async () => {
-					const response = await fetch("/api/teams/user-teams");
-					if (!response.ok) {
-						throw new Error("Failed to fetch user teams");
-					}
-					const result = await response.json();
+					const { getTRPCProxyClient } = await import("@/lib/trpc/client");
+					const client = getTRPCProxyClient();
+					const result = await client.teams.listUserTeams.query();
 					return result.teams || [];
 				},
 				"user-teams",
@@ -539,11 +537,11 @@ class GlobalApiCache {
 				this.fetchWithCache(
 					`subteams-${teamSlug}`,
 					async () => {
-						const response = await fetch(`/api/teams/${teamSlug}/subteams`);
-						if (!response.ok) {
-							throw new Error("Failed to fetch subteams");
-						}
-						const result = await response.json();
+						const { getTRPCProxyClient } = await import("@/lib/trpc/client");
+						const client = getTRPCProxyClient();
+						const result = await client.teams.getSubteams.query({
+							teamSlug,
+						});
 						return result.subteams || [];
 					},
 					"subteams",

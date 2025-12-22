@@ -182,6 +182,12 @@ export const teamSubteamCacheManifests = cockroachTable(
 		})
 			.defaultNow()
 			.notNull(),
+		rosterNotesUpdatedAt: timestamp("roster_notes_updated_at", {
+			mode: "string",
+			withTimezone: true,
+		})
+			.defaultNow()
+			.notNull(),
 		updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
 			.defaultNow()
 			.notNull(),

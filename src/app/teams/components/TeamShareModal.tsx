@@ -74,15 +74,14 @@ export default function TeamShareModal({
 			setError("");
 			setSuccess("");
 
-			const response = await fetch("/api/teams/join-by-code", {
+			const response = await fetch("/api/teams/join", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ code: joinCode.trim() }),
 			});
 
-			const result = await response.json();
-
-			if (!result.success) {
+			if (!response.ok) {
+				const result = await response.json();
 				setError(result.error || "Invalid or expired code");
 				if (response.status === 401) {
 					toast.error("You must be signed in to join a team.");
@@ -90,6 +89,7 @@ export default function TeamShareModal({
 				return;
 			}
 
+			const result = await response.json();
 			router.push(`/teams/${result.slug}`);
 			setSuccess("Successfully joined team!");
 

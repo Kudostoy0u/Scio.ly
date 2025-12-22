@@ -297,7 +297,7 @@ export default function EnhancedAssignmentCreator({
 		} catch (error) {
 			const errorMessage =
 				error instanceof Error ? error.message : "Failed to generate questions";
-			
+
 			// Check if it's a rate limit error
 			if (
 				errorMessage.includes("429") ||
@@ -393,8 +393,10 @@ export default function EnhancedAssignmentCreator({
 		}
 	};
 
-	// tRPC mutation for creating assignments
+	// tRPC mutations for creating assignments
 	const createAssignmentMutation = trpc.teams.createAssignment.useMutation();
+	const createCodebustersAssignmentMutation =
+		trpc.teams.createCodebustersAssignment.useMutation();
 
 	const handleCreateAssignment = async () => {
 		setLoading(true);
@@ -458,26 +460,17 @@ export default function EnhancedAssignmentCreator({
 			if (isCodebusters) {
 				const codebustersQuestionsPayload =
 					codebustersQuotes.length > 0 ? codebustersQuotes : undefined;
-				const url = subteamId
-					? `/api/teams/${teamId}/subteams/${subteamId}/assignments/codebusters`
-					: `/api/teams/${teamId}/assignments/codebusters`;
-				const response = await fetch(url, {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
+				const { assignment } =
+					await createCodebustersAssignmentMutation.mutateAsync({
+						teamSlug: teamId,
+						subteamId: subteamId || null,
 						title: details.title,
 						description: details.description || null,
-						assignment_type: "standard",
 						due_date: details.dueDate || null,
 						points: details.points ?? 100,
 						time_limit_minutes: details.timeLimitMinutes || null,
 						event_name: details.eventName || "Codebusters",
-						questions: [],
-						roster_members: rosterMemberDetails.map((member) => ({
-							user_id: member.userId,
-							student_name: member.studentName,
-							display_name: member.displayName,
-						})),
+						roster_members: rosterMemberDetails,
 						codebusters_params: {
 							questionCount: settings.questionCount,
 							cipherTypes: settings.subtopics || [],
@@ -486,12 +479,7 @@ export default function EnhancedAssignmentCreator({
 							charLengthMax: settings.charLengthMax ?? 200,
 						},
 						codebusters_questions: codebustersQuestionsPayload,
-					}),
-				});
-				if (!response.ok) {
-					throw new Error("Failed to create Codebusters assignment");
-				}
-				const { assignment } = await response.json();
+					});
 				toast.success("Assignment created successfully!");
 				onAssignmentCreated({ id: assignment.id, title: assignment.title });
 				return;

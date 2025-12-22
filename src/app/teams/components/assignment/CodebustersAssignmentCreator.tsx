@@ -225,7 +225,13 @@ export default function CodebustersAssignmentCreator({
 			});
 
 			toast.success("Codebusters assignment created successfully!");
-			onAssignmentCreated(assignment);
+			// Handle both return types: { assignment } or direct assignment
+			const assignmentData =
+				"assignment" in assignment ? assignment.assignment : assignment;
+			onAssignmentCreated({
+				id: assignmentData.id,
+				title: assignmentData.title,
+			});
 		} catch (error) {
 			setError(
 				error instanceof Error ? error.message : "Failed to create assignment",
