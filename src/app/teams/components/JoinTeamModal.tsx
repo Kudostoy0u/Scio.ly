@@ -1,7 +1,6 @@
 "use client";
 
 import { useTheme } from "@/app/contexts/ThemeContext";
-import { motion } from "framer-motion";
 import { Key, Users, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
@@ -56,27 +55,30 @@ export default function JoinTeamModal({
 
 	return (
 		<div className="fixed inset-0 z-50 overflow-y-auto">
-			<div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+			<div className="flex items-center justify-center min-h-screen p-4">
 				{/* Backdrop */}
-				<motion.div
-					initial={{ opacity: 0 }}
-					animate={{ opacity: 1 }}
-					exit={{ opacity: 0 }}
-					className="fixed inset-0 transition-opacity z-40"
+				<div
+					className="fixed inset-0 z-40"
 					style={{
 						backgroundColor: darkMode
 							? "rgba(0, 0, 0, 0.75)"
 							: "rgba(0, 0, 0, 0.5)",
 					}}
 					onClick={onClose}
+					onKeyDown={(e) => {
+						if (e.key === "Enter" || e.key === " ") {
+							e.preventDefault();
+							onClose();
+						}
+					}}
+					role="button"
+					tabIndex={0}
+					aria-label="Close modal"
 				/>
 
 				{/* Modal */}
-				<motion.div
-					initial={{ opacity: 0, scale: 0.95, y: 20 }}
-					animate={{ opacity: 1, scale: 1, y: 0 }}
-					exit={{ opacity: 0, scale: 0.95, y: 20 }}
-					className={`relative z-50 inline-block align-bottom rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full ${
+				<div
+					className={`relative z-50 w-full max-w-lg rounded-lg text-left overflow-hidden shadow-xl ${
 						darkMode ? "bg-gray-800" : "bg-white"
 					}`}
 				>
@@ -202,7 +204,7 @@ export default function JoinTeamModal({
 							</button>
 						</div>
 					</form>
-				</motion.div>
+				</div>
 			</div>
 		</div>
 	);

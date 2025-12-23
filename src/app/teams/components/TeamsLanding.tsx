@@ -2,7 +2,6 @@
 
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { trpc } from "@/lib/trpc/client";
-import { motion } from "framer-motion";
 import { Calendar, Landmark, Settings, Users } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -145,11 +144,7 @@ export default function TeamsLanding({
 					<div className="max-w-4xl mx-auto">
 						{isPreviewMode ? (
 							/* Preview Mode Content */
-							<motion.div
-								initial={{ opacity: 0, y: 20 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ duration: 0.5 }}
-							>
+							<div>
 								<div className="text-center py-12">
 									<div
 										className={`w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-gray-100"}`}
@@ -245,14 +240,10 @@ export default function TeamsLanding({
 										</div>
 									</div>
 								</div>
-							</motion.div>
+							</div>
 						) : userTeams.length > 0 ? (
 							/* Teams List */
-							<motion.div
-								initial={{ opacity: 0, y: 20 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ duration: 0.5 }}
-							>
+							<div>
 								<div className="flex items-center justify-between mb-6">
 									<h2
 										className={`text-2xl font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}
@@ -275,15 +266,10 @@ export default function TeamsLanding({
 										/>
 									))}
 								</div>
-							</motion.div>
+							</div>
 						) : (
 							/* Empty State */
-							<motion.div
-								initial={{ opacity: 0, y: 20 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ duration: 0.5 }}
-								className="text-center"
-							>
+							<div className="text-center">
 								{/* Illustration */}
 								<div className="mb-8 px-4 overflow-hidden">
 									<div className="relative w-full max-w-96 h-48 sm:h-64 mx-auto">
@@ -374,7 +360,7 @@ export default function TeamsLanding({
 								<div className="mt-8 text-sm text-gray-500 dark:text-gray-400">
 									Don&apos;t see your teams? Try another account.
 								</div>
-							</motion.div>
+							</div>
 						)}
 					</div>
 				</div>

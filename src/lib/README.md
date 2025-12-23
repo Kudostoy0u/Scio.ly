@@ -17,8 +17,7 @@ Database schema definitions using Drizzle ORM.
 
 **Key Tables:**
 - `questions` - Main question bank with metadata
-- `quotes` - Short quotes for Codebusters
-- `longquotes` - Longer quotes and content
+- `quotes` - Quotes for Codebusters (all lengths)
 - `shareLinks` - Test sharing functionality
 - `edits` - Question edit tracking
 - `blacklists` - Content blacklisting system

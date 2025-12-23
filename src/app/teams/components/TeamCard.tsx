@@ -1,5 +1,4 @@
 import { useTheme } from "@/app/contexts/ThemeContext";
-import { motion } from "framer-motion";
 import { Users } from "lucide-react";
 
 interface TeamMember {
@@ -24,17 +23,15 @@ export function TeamCard({ team, onClick }: TeamCardProps) {
 	const { darkMode } = useTheme();
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.3 }}
-			whileHover={{ y: -2 }}
-			className={`p-6 rounded-lg border cursor-pointer transition-all hover:shadow-lg ${
+		<button
+			type="button"
+			className={`w-full text-left p-6 rounded-lg border cursor-pointer transition-all hover:shadow-[0_0_20px_rgba(0,0,0,0.15)] ${
 				darkMode
 					? "bg-gray-800 border-gray-700 hover:border-gray-600"
 					: "bg-white border-gray-200 hover:border-gray-300"
 			}`}
 			onClick={() => onClick(team.slug)}
+			aria-label={`View ${team.school} team`}
 		>
 			<div className="flex items-center justify-between mb-4">
 				<div className="flex items-center space-x-3">
@@ -86,6 +83,6 @@ export function TeamCard({ team, onClick }: TeamCardProps) {
 					</span>
 				</div>
 			</div>
-		</motion.div>
+		</button>
 	);
 }

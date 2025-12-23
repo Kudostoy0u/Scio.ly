@@ -693,6 +693,9 @@ export async function getTeamEventsForTimers(input: {
 	const { team } = await assertTeamAccess(input.teamSlug, input.userId);
 
 	const now = new Date();
+	// Subtract 1 minute to ensure events that are just a minute in the future are included
+	// This accounts for any timezone or precision differences
+	const nowMinusOneMinute = new Date(now.getTime() - 60 * 1000);
 	const futureDate = new Date();
 	futureDate.setDate(now.getDate() + 30);
 
@@ -717,7 +720,7 @@ export async function getTeamEventsForTimers(input: {
 					eq(calendarEvents.subteamId, input.subteamId),
 				),
 				or(
-					gte(calendarEvents.startTime, sql`now()`),
+					gte(calendarEvents.startTime, nowMinusOneMinute.toISOString()),
 					eq(calendarEvents.isRecurring, true),
 				),
 			),

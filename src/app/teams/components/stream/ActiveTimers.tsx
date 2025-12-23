@@ -1,6 +1,7 @@
 "use client";
 
 import { Calendar, MapPin, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { Event } from "./streamTypes";
 import {
 	calculateTimeRemaining,
@@ -21,6 +22,18 @@ export default function ActiveTimers({
 	activeTimers,
 	onRemoveTimer,
 }: ActiveTimersProps) {
+	// Counter to force re-render for countdown (updates frequently for smooth fractional display)
+	const [, setTick] = useState(0);
+
+	useEffect(() => {
+		// Update every 50ms (20 times per second) for smooth millisecond updates
+		const interval = setInterval(() => {
+			setTick((prev) => prev + 1);
+		}, 50);
+
+		return () => clearInterval(interval);
+	}, []);
+
 	if (activeTimers.length === 0) {
 		return null;
 	}
@@ -41,6 +54,28 @@ export default function ActiveTimers({
 						const timeRemaining = calculateTimeRemaining(event.start_time);
 						const displayUnits = getDisplayTimeUnits(timeRemaining);
 						const status = getEventStatus(event.start_time);
+
+						// Calculate fractional part for the last unit if it's seconds or minutes
+						const now = new Date();
+						const target = new Date(event.start_time);
+						const totalMs = target.getTime() - now.getTime();
+						const lastUnit = displayUnits[displayUnits.length - 1];
+						let fractionalPart: number | null = null;
+						let decimalPlaces = 0;
+
+						if (lastUnit && totalMs > 0) {
+							if (lastUnit.key === "seconds") {
+								// For seconds: show 2 decimal places (fractional seconds)
+								const fractionalSeconds = (totalMs % 1000) / 1000;
+								fractionalPart = fractionalSeconds;
+								decimalPlaces = 2;
+							} else if (lastUnit.key === "minutes") {
+								// For minutes: show 3 decimal places (fractional minutes = seconds/60)
+								const fractionalMinutes = (totalMs % (1000 * 60)) / (1000 * 60);
+								fractionalPart = fractionalMinutes;
+								decimalPlaces = 3;
+							}
+						}
 
 						return (
 							<div
@@ -91,10 +126,16 @@ export default function ActiveTimers({
 
 								{/* Time units with white cards */}
 								<div className="flex justify-between gap-2 mb-3">
-									{displayUnits.map((unit, _index) => {
+									{displayUnits.map((unit, index) => {
 										if (!unit) {
 											return null;
 										}
+										const isLastUnit = index === displayUnits.length - 1;
+										const showFractional =
+											isLastUnit &&
+											fractionalPart !== null &&
+											(unit.key === "seconds" || unit.key === "minutes");
+
 										return (
 											<div key={unit.key} className="flex-1">
 												<div
@@ -104,10 +145,24 @@ export default function ActiveTimers({
 															: "bg-white border-gray-200"
 													}`}
 												>
-													<div
-														className={`text-xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}
-													>
-														{Number.isNaN(unit.value) ? 0 : unit.value}
+													<div className="relative inline-block">
+														<span
+															className={`text-xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}
+														>
+															{Number.isNaN(unit.value) ? 0 : unit.value}
+														</span>
+														{showFractional && fractionalPart !== null && (
+															<sup
+																className={`font-normal absolute left-full ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+																style={{
+																	marginLeft: "1px",
+																	fontSize: "0.5rem",
+																	top: "0.7em",
+																}}
+															>
+																{fractionalPart.toFixed(decimalPlaces).slice(1)}
+															</sup>
+														)}
 													</div>
 													<div
 														className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-600"}`}

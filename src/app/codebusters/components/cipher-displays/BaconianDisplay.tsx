@@ -187,16 +187,24 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 					id={`baconian-${quoteIndex}-${groupIndex}`}
 					value={value}
 					disabled={isTestSubmitted}
-					readOnly={!isTestSubmitted}
 					onClick={(e) => {
 						if (isTestSubmitted) {
 							return;
 						}
 						e.stopPropagation();
 						onFocus();
+						// Ensure input gets focus on mobile
+						e.currentTarget.focus();
 					}}
 					onFocus={onFocus}
-					onChange={(e) => onInputChange(e.target.value)}
+					onChange={(e) => {
+						// Filter to only allow letters
+						const filtered = e.target.value
+							.toUpperCase()
+							.replace(/[^A-Z]/g, "")
+							.slice(0, 1);
+						onInputChange(filtered);
+					}}
 					className={getInputClassName(
 						groupIndex,
 						shouldHighlight,
@@ -206,6 +214,7 @@ export const BaconianDisplay: React.FC<BaconianDisplayProps> = ({
 					)}
 					maxLength={1}
 					autoComplete="off"
+					inputMode="text"
 					data-quote-index={quoteIndex}
 					data-group-index={groupIndex}
 				/>

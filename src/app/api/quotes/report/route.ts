@@ -5,10 +5,7 @@ import {
 	validateFields,
 } from "@/lib/api/utils";
 import { db } from "@/lib/db";
-import {
-	longquotes as longquotesTable,
-	quotes as quotesTable,
-} from "@/lib/db/schema";
+import { quotes as quotesTable } from "@/lib/db/schema";
 import { geminiService } from "@/lib/services/gemini";
 import type { ApiResponse } from "@/lib/types/api";
 import logger from "@/lib/utils/logging/logger";
@@ -138,7 +135,6 @@ export async function POST(request: NextRequest) {
 
 				// If we have an ID, try to delete by ID first
 				if (quoteId && quoteId.startsWith("assignment-") === false) {
-					// Try quotes table first
 					try {
 						await db.delete(quotesTable).where(eq(quotesTable.id, quoteId));
 						logger.info("Deleted quote from quotes table by ID", { quoteId });
@@ -149,10 +145,7 @@ export async function POST(request: NextRequest) {
 						);
 						deleted = true;
 					} catch (error) {
-						logger.warn(
-							"Quote not found in quotes table by ID, trying longquotes:",
-							error,
-						);
+						logger.warn("Quote not found in quotes table by ID:", error);
 						logger.dev.error(
 							"Quote deletion by ID failed from quotes table",
 							error as Error,
@@ -160,43 +153,12 @@ export async function POST(request: NextRequest) {
 								quoteId,
 							},
 						);
-
-						// Try longquotes table
-						try {
-							await db
-								.delete(longquotesTable)
-								.where(eq(longquotesTable.id, quoteId));
-							logger.info("Deleted quote from longquotes table by ID", {
-								quoteId,
-							});
-							logger.dev.structured(
-								"info",
-								"Quote deleted by ID from longquotes table",
-								{
-									quoteId,
-								},
-							);
-							deleted = true;
-						} catch (error2) {
-							logger.warn(
-								"Quote not found in longquotes table by ID, trying by content:",
-								error2,
-							);
-							logger.dev.error(
-								"Quote deletion by ID failed from longquotes table",
-								error2 as Error,
-								{
-									quoteId,
-								},
-							);
-						}
 					}
 				}
 
 				// If delete by ID failed or ID is missing, try to find by content
 				if (!deleted && originalQuoteText && originalAuthor) {
 					try {
-						// Try quotes table by content
 						await db
 							.delete(quotesTable)
 							.where(
@@ -215,44 +177,14 @@ export async function POST(request: NextRequest) {
 						);
 						deleted = true;
 					} catch (error) {
-						logger.warn(
-							"Quote not found in quotes table by content, trying longquotes:",
+						logger.error(
+							"Could not locate quote in quotes table for deletion:",
 							error,
 						);
 						logger.dev.error(
 							"Quote deletion failed in quotes table by content",
 							error as Error,
 						);
-
-						// Try longquotes table by content
-						try {
-							await db
-								.delete(longquotesTable)
-								.where(
-									and(
-										eq(longquotesTable.quote, originalQuoteText),
-										eq(longquotesTable.author, originalAuthor),
-									),
-								);
-							logger.info("Deleted quote from longquotes table by content");
-							logger.dev.structured(
-								"info",
-								"Quote deleted from longquotes table by content",
-								{
-									cipherType,
-								},
-							);
-							deleted = true;
-						} catch (error2) {
-							logger.error(
-								"Could not locate quote in either table for deletion:",
-								error2,
-							);
-							logger.dev.error(
-								"Quote deletion failed in longquotes table by content",
-								error2 as Error,
-							);
-						}
 					}
 				}
 
@@ -348,7 +280,6 @@ export async function POST(request: NextRequest) {
 
 				// If we have an ID, try to update by ID first
 				if (quoteId && quoteId.startsWith("assignment-") === false) {
-					// Try quotes table first
 					try {
 						await db
 							.update(quotesTable)
@@ -371,10 +302,7 @@ export async function POST(request: NextRequest) {
 						});
 						updated = true;
 					} catch (error) {
-						logger.warn(
-							"Quote not found in quotes table by ID, trying longquotes:",
-							error,
-						);
+						logger.warn("Quote not found in quotes table by ID:", error);
 						logger.dev.error(
 							"Quote update failed in quotes table",
 							error as Error,
@@ -382,53 +310,12 @@ export async function POST(request: NextRequest) {
 								quoteId,
 							},
 						);
-
-						// Try longquotes table
-						try {
-							await db
-								.update(longquotesTable)
-								.set(payload)
-								.where(eq(longquotesTable.id, quoteId));
-							logger.info("Applied edit to longquotes table by ID", {
-								quoteId,
-								originalQuote: originalQuoteText,
-								editedQuote: editedQuoteText,
-								originalAuthor,
-								editedAuthor,
-							});
-							logger.dev.structured(
-								"info",
-								"Quote updated in longquotes table",
-								{
-									quoteId,
-									cipherType,
-									originalQuote: originalQuoteText,
-									editedQuote: editedQuoteText,
-									originalAuthor,
-									editedAuthor,
-								},
-							);
-							updated = true;
-						} catch (error2) {
-							logger.warn(
-								"Quote not found in longquotes table by ID, trying by content:",
-								error2,
-							);
-							logger.dev.error(
-								"Quote update failed in longquotes table",
-								error2 as Error,
-								{
-									quoteId,
-								},
-							);
-						}
 					}
 				}
 
 				// If update by ID failed or ID is missing, try to find by content
 				if (!updated && originalQuoteText && originalAuthor) {
 					try {
-						// Try quotes table by content
 						await db
 							.update(quotesTable)
 							.set(payload)
@@ -457,54 +344,14 @@ export async function POST(request: NextRequest) {
 						);
 						updated = true;
 					} catch (error) {
-						logger.warn(
-							"Quote not found in quotes table by content, trying longquotes:",
+						logger.error(
+							"Could not locate quote in quotes table by content:",
 							error,
 						);
 						logger.dev.error(
 							"Quote update failed in quotes table by content",
 							error as Error,
 						);
-
-						// Try longquotes table by content
-						try {
-							await db
-								.update(longquotesTable)
-								.set(payload)
-								.where(
-									and(
-										eq(longquotesTable.quote, originalQuoteText),
-										eq(longquotesTable.author, originalAuthor),
-									),
-								);
-							logger.info("Applied edit to longquotes table by content", {
-								originalQuote: originalQuoteText,
-								editedQuote: editedQuoteText,
-								originalAuthor,
-								editedAuthor,
-							});
-							logger.dev.structured(
-								"info",
-								"Quote updated in longquotes table by content",
-								{
-									cipherType,
-									originalQuote: originalQuoteText,
-									editedQuote: editedQuoteText,
-									originalAuthor,
-									editedAuthor,
-								},
-							);
-							updated = true;
-						} catch (error2) {
-							logger.error(
-								"Could not locate quote in either table by content:",
-								error2,
-							);
-							logger.dev.error(
-								"Quote update failed in longquotes table by content",
-								error2 as Error,
-							);
-						}
 					}
 				}
 

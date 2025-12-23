@@ -323,9 +323,9 @@ export default function QuestionCard({
 									: String(opt),
 						);
 						return optionTexts;
-					})().map((option) => (
+					})().map((option, optionIndex) => (
 						<label
-							key={`${index}-option-${option}`}
+							key={`${index}-option-${optionIndex}-${option.slice(0, 30)}`}
 							className={`block p-2 rounded-md ${getOptionClassName({
 								isSubmitted,
 								darkMode,

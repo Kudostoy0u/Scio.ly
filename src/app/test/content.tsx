@@ -297,81 +297,88 @@ export default function TestContent({
 					)}
 
 					<TestContainer darkMode={darkMode} maxWidth="3xl">
-						<div className="flex justify-between items-center mb-4 pt-1">
-							<div className="flex items-center gap-4">
-								<button
-									type="button"
-									onClick={handleResetTest}
-									title="Reset Test"
-									className={`flex items-center transition-all duration-200 ${
-										darkMode
-											? "text-gray-400 hover:text-gray-300"
-											: "text-gray-500 hover:text-gray-700"
-									}`}
-								>
-									<RefreshCcw className="w-4 h-4 mr-2" />
-									<span className="text-sm">Reset</span>
-								</button>
+						{/* Hide controls for assignments and Codebusters MCQ-only */}
+						{!routerData.assignmentId &&
+							!(
+								routerData.eventName === "Codebusters" &&
+								routerData.types === "multiple-choice"
+							) && (
+								<div className="flex justify-between items-center mb-4 pt-1">
+									<div className="flex items-center gap-4">
+										<button
+											type="button"
+											onClick={handleResetTest}
+											title="Reset Test"
+											className={`flex items-center transition-all duration-200 ${
+												darkMode
+													? "text-gray-400 hover:text-gray-300"
+													: "text-gray-500 hover:text-gray-700"
+											}`}
+										>
+											<RefreshCcw className="w-4 h-4 mr-2" />
+											<span className="text-sm">Reset</span>
+										</button>
 
-								<button
-									type="button"
-									onClick={handlePrintConfig}
-									disabled={isOffline || data.length === 0}
-									title={
-										isOffline
-											? "Print feature not available offline"
-											: "Print Test"
-									}
-									className={`flex items-center transition-all duration-200 ${
-										isOffline || data.length === 0
-											? "text-gray-400 cursor-not-allowed"
-											: darkMode
-												? "text-gray-400 hover:text-gray-300"
-												: "text-gray-500 hover:text-gray-700"
-									}`}
-								>
-									<svg
-										className="w-4 h-4 mr-2"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<title>Print test</title>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-										/>
-									</svg>
-									<span className="text-sm">Print</span>
-								</button>
-							</div>
-
-							<div className="flex items-center gap-4">
-								<button
-									type="button"
-									onClick={() => setShareModalOpen(true)}
-									disabled={isOffline}
-									title={
-										isOffline
-											? "Share feature not available offline"
-											: "Share Test"
-									}
-								>
-									<div
-										className={`flex items-center transition-all duration-200 ${
-											isOffline
-												? "text-gray-400 cursor-not-allowed"
-												: "text-blue-400 hover:text-blue-500"
-										}`}
-									>
-										<FaShareAlt className="transition-all duration-500 mr-2" />
-										<span className="text-sm">Take together</span>
+										<button
+											type="button"
+											onClick={handlePrintConfig}
+											disabled={isOffline || data.length === 0}
+											title={
+												isOffline
+													? "Print feature not available offline"
+													: "Print Test"
+											}
+											className={`flex items-center transition-all duration-200 ${
+												isOffline || data.length === 0
+													? "text-gray-400 cursor-not-allowed"
+													: darkMode
+														? "text-gray-400 hover:text-gray-300"
+														: "text-gray-500 hover:text-gray-700"
+											}`}
+										>
+											<svg
+												className="w-4 h-4 mr-2"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<title>Print test</title>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+												/>
+											</svg>
+											<span className="text-sm">Print</span>
+										</button>
 									</div>
-								</button>
-							</div>
-						</div>
+
+									<div className="flex items-center gap-4">
+										<button
+											type="button"
+											onClick={() => setShareModalOpen(true)}
+											disabled={isOffline}
+											title={
+												isOffline
+													? "Share feature not available offline"
+													: "Share Test"
+											}
+										>
+											<div
+												className={`flex items-center transition-all duration-200 ${
+													isOffline
+														? "text-gray-400 cursor-not-allowed"
+														: "text-blue-400 hover:text-blue-500"
+												}`}
+											>
+												<FaShareAlt className="transition-all duration-500 mr-2" />
+												<span className="text-sm">Take together</span>
+											</div>
+										</button>
+									</div>
+								</div>
+							)}
 
 						<div className="container mx-auto px-4 mt-3">
 							<TestMainContent
@@ -485,13 +492,6 @@ export default function TestContent({
 															? "all members"
 															: previewScope;
 													toast.success(`Test sent to ${recipientsLabel}!`);
-													const qp = new URLSearchParams({
-														school,
-														division: divisionSel,
-													});
-													setTimeout(() => {
-														window.location.href = `/teams/results?${qp.toString()}`;
-													}, 600);
 												}
 											} catch {
 												// Ignore assignment creation errors

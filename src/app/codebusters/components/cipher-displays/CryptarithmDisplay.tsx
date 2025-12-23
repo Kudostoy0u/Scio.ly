@@ -91,6 +91,10 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
 		positionOffset,
 		onSolutionChange,
 		setClickedCells,
+		equationLetters,
+		cryptarithmData,
+		solution,
+		clickedCells,
 	}: {
 		digit: string;
 		position: number;
@@ -115,6 +119,10 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
 		setClickedCells: React.Dispatch<
 			React.SetStateAction<{ [letter: string]: string }>
 		>;
+		equationLetters: string[];
+		cryptarithmData: CryptarithmDisplayProps["cryptarithmData"];
+		solution: { [key: number]: string } | undefined;
+		clickedCells: { [letter: string]: string };
 	}) => {
 		const isSelected = selectedInputPosition === position;
 
@@ -132,11 +140,12 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
 						name={`cryptarithm-${quoteIndex}-${position}`}
 						maxLength={1}
 						value={value || ""}
-						readOnly={!isTestSubmitted}
 						disabled={isTestSubmitted}
 						onClick={(e) => {
 							if (!isTestSubmitted) {
 								e.stopPropagation(); // Prevent document click handler from firing
+								// Ensure input gets focus on mobile
+								e.currentTarget.focus();
 								// If clicking on an already selected box with a value, clear it
 								if (isSelected && value) {
 									const digitValue = inlineDigits.digits[position];
@@ -168,7 +177,102 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
 								}
 							}
 						}}
+						onFocus={() => {
+							if (!isTestSubmitted) {
+								setSelectedInputPosition(position);
+							}
+						}}
+						onChange={(e) => {
+							if (isTestSubmitted) return;
+							// Filter to only allow letters that are valid for this cryptarithm
+							const inputValue = e.target.value
+								.toUpperCase()
+								.replace(/[^A-Z]/g, "")
+								.slice(0, 1);
+							if (inputValue) {
+								const letter = inputValue;
+								// Check if letter is valid for this cryptarithm
+								if (!equationLetters.includes(letter)) {
+									toast.warning(
+										`"${letter}" is not a valid letter. Valid letters are: ${equationLetters.join(", ")}`,
+										{
+											autoClose: 3000,
+										},
+									);
+									return;
+								}
+								const digit = inlineDigits.digits[position];
+								if (digit !== undefined) {
+									// Check if this letter is already mapped to a different digit
+									const existingDigitForLetter = clickedCells[letter];
+									if (
+										existingDigitForLetter &&
+										existingDigitForLetter !== digit
+									) {
+										// This letter is already mapped to a different digit - clear all positions with that digit
+										let clearPosition = 0;
+										for (const group of cryptarithmData?.digitGroups ?? []) {
+											const digits = group.digits.split(" ").filter(Boolean);
+											for (let i = 0; i < digits.length; i++) {
+												const posDigit = digits[i];
+												if (posDigit === existingDigitForLetter) {
+													const currentSolutionLetter =
+														solution?.[clearPosition];
+													if (
+														currentSolutionLetter &&
+														currentSolutionLetter.toUpperCase() === letter
+													) {
+														onSolutionChange(quoteIndex, clearPosition, "");
+													}
+												}
+												clearPosition++;
+											}
+										}
+									}
+									// Update all positions with this digit
+									const positions = digitToPositions[digit] || [position];
+									for (const p of positions) {
+										onSolutionChange(quoteIndex, p + positionOffset, letter);
+									}
+									// Sync with grid
+									if (letter && equationLetters.includes(letter)) {
+										const previousLetter = Object.keys(clickedCells).find(
+											(l) => clickedCells[l] === digit && l !== letter,
+										);
+										setClickedCells((prev) => {
+											const next = { ...prev };
+											if (previousLetter) {
+												delete next[previousLetter];
+											}
+											next[letter] = digit;
+											return next;
+										});
+									}
+								}
+							} else {
+								// Clear the input
+								const digit = inlineDigits.digits[position];
+								if (digit !== undefined) {
+									const positions = digitToPositions[digit] || [position];
+									for (const p of positions) {
+										onSolutionChange(quoteIndex, p + positionOffset, "");
+									}
+									// Clear grid selection
+									setClickedCells((prev) => {
+										const next = { ...prev };
+										const letterToRemove = Object.keys(next).find(
+											(l) => next[l] === digit,
+										);
+										if (letterToRemove) {
+											delete next[letterToRemove];
+										}
+										return next;
+									});
+								}
+							}
+						}}
 						autoComplete="off"
+						inputMode="text"
 						className={getDigitInputClassName(
 							isTestSubmitted,
 							isHinted,
@@ -1139,6 +1243,10 @@ export const CryptarithmDisplay: React.FC<CryptarithmDisplayProps> = ({
 														positionOffset={positionOffset}
 														onSolutionChange={onSolutionChange}
 														setClickedCells={setClickedCells}
+														equationLetters={equationLetters}
+														cryptarithmData={cryptarithmData}
+														solution={solution}
+														clickedCells={clickedCells}
 													/>
 												);
 											})}

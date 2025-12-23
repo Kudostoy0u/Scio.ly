@@ -11,351 +11,438 @@ export const relations = defineRelations(schema, (r) => ({
 	assignments: {
 		assignmentResults: r.many.assignmentResults(),
 	},
-	newTeamEvents: {
-		newTeamUnitsViaNewTeamActiveTimers: r.many.newTeamUnits({
-			from: r.newTeamEvents.id.through(r.newTeamActiveTimers.eventId),
-			to: r.newTeamUnits.id.through(r.newTeamActiveTimers.teamUnitId),
-			alias: "newTeamEvents_id_newTeamUnits_id_via_newTeamActiveTimers",
-		}),
-		newTeamEventAttendees: r.many.newTeamEventAttendees(),
-		newTeamUnit: r.one.newTeamUnits({
-			from: r.newTeamEvents.teamId,
-			to: r.newTeamUnits.id,
-			alias: "newTeamEvents_teamId_newTeamUnits_id",
-		}),
-		newTeamUnitsViaNewTeamStreamPosts: r.many.newTeamUnits({
-			alias: "newTeamUnits_id_newTeamEvents_id_via_newTeamStreamPosts",
-		}),
-	},
-	newTeamUnits: {
-		newTeamEventsViaNewTeamActiveTimers: r.many.newTeamEvents({
-			alias: "newTeamEvents_id_newTeamUnits_id_via_newTeamActiveTimers",
-		}),
-		newTeamAnalytics: r.many.newTeamAnalytics(),
-		newTeamAssignmentsViaNewTeamAssignmentRoster: r.many.newTeamAssignments({
-			alias:
-				"newTeamAssignments_id_newTeamUnits_id_via_newTeamAssignmentRoster",
-		}),
-		newTeamAssignmentTemplates: r.many.newTeamAssignmentTemplates(),
-		newTeamAssignmentsTeamId: r.many.newTeamAssignments({
-			alias: "newTeamAssignments_teamId_newTeamUnits_id",
-		}),
-		newTeamEventsTeamId: r.many.newTeamEvents({
-			alias: "newTeamEvents_teamId_newTeamUnits_id",
-		}),
-		newTeamInvitations: r.many.newTeamInvitations(),
-		newTeamMaterials: r.many.newTeamMaterials(),
-		newTeamMemberships: r.many.newTeamMemberships(),
-		newTeamMessages: r.many.newTeamMessages(),
-		newTeamNotifications: r.many.newTeamNotifications(),
+	calendarEvents: {
 		users: r.many.users({
-			from: r.newTeamUnits.id.through(r.newTeamPeople.teamUnitId),
-			to: r.users.id.through(r.newTeamPeople.userId),
+			from: r.calendarEvents.id.through(r.calendarEventAttendees.eventId),
+			to: r.users.id.through(r.calendarEventAttendees.userId),
+			alias: "calendarEvents_id_users_id_via_calendarEventAttendees",
 		}),
-		newTeamPolls: r.many.newTeamPolls(),
-		newTeamPosts: r.many.newTeamPosts(),
-		newTeamRecurringMeetings: r.many.newTeamRecurringMeetings(),
-		newTeamRemovedEvents: r.many.newTeamRemovedEvents(),
-		newTeamRosterData: r.many.newTeamRosterData(),
-		newTeamEventsViaNewTeamStreamPosts: r.many.newTeamEvents({
-			from: r.newTeamUnits.id.through(r.newTeamStreamPosts.teamUnitId),
-			to: r.newTeamEvents.id.through(r.newTeamStreamPosts.tournamentId),
-			alias: "newTeamUnits_id_newTeamEvents_id_via_newTeamStreamPosts",
+		userCreatedBy: r.one.users({
+			from: r.calendarEvents.createdBy,
+			to: r.users.id,
+			alias: "calendarEvents_createdBy_users_id",
 		}),
-		newTeamGroup: r.one.newTeamGroups({
-			from: r.newTeamUnits.groupId,
-			to: r.newTeamGroups.id,
+		userOwnerUserId: r.one.users({
+			from: r.calendarEvents.ownerUserId,
+			to: r.users.id,
+			alias: "calendarEvents_ownerUserId_users_id",
 		}),
-		rosterLinkInvitations: r.many.rosterLinkInvitations(),
-	},
-	newTeamAnalytics: {
-		newTeamUnit: r.one.newTeamUnits({
-			from: r.newTeamAnalytics.teamId,
-			to: r.newTeamUnits.id,
+		teamSubteam: r.one.teamSubteams({
+			from: r.calendarEvents.subteamId,
+			to: r.teamSubteams.id,
 		}),
-	},
-	newTeamAssignmentAnalytics: {
-		newTeamAssignment: r.one.newTeamAssignments({
-			from: r.newTeamAssignmentAnalytics.assignmentId,
-			to: r.newTeamAssignments.id,
-		}),
-	},
-	newTeamAssignments: {
-		newTeamAssignmentAnalytics: r.many.newTeamAssignmentAnalytics(),
-		newTeamAssignmentQuestions: r.many.newTeamAssignmentQuestions(),
-		newTeamUnits: r.many.newTeamUnits({
-			from: r.newTeamAssignments.id.through(
-				r.newTeamAssignmentRoster.assignmentId,
-			),
-			to: r.newTeamUnits.id.through(r.newTeamAssignmentRoster.subteamId),
-			alias:
-				"newTeamAssignments_id_newTeamUnits_id_via_newTeamAssignmentRoster",
-		}),
-		newTeamAssignmentSubmissions: r.many.newTeamAssignmentSubmissions(),
-		newTeamUnit: r.one.newTeamUnits({
-			from: r.newTeamAssignments.teamId,
-			to: r.newTeamUnits.id,
-			alias: "newTeamAssignments_teamId_newTeamUnits_id",
-		}),
-	},
-	newTeamAssignmentQuestions: {
-		newTeamAssignmentSubmissions: r.many.newTeamAssignmentSubmissions({
-			from: r.newTeamAssignmentQuestions.id.through(
-				r.newTeamAssignmentQuestionResponses.questionId,
-			),
-			to: r.newTeamAssignmentSubmissions.id.through(
-				r.newTeamAssignmentQuestionResponses.submissionId,
-			),
-		}),
-		newTeamAssignment: r.one.newTeamAssignments({
-			from: r.newTeamAssignmentQuestions.assignmentId,
-			to: r.newTeamAssignments.id,
-		}),
-	},
-	newTeamAssignmentSubmissions: {
-		newTeamAssignmentQuestions: r.many.newTeamAssignmentQuestions(),
-		newTeamAssignment: r.one.newTeamAssignments({
-			from: r.newTeamAssignmentSubmissions.assignmentId,
-			to: r.newTeamAssignments.id,
-		}),
-	},
-	newTeamAssignmentTemplates: {
-		newTeamUnit: r.one.newTeamUnits({
-			from: r.newTeamAssignmentTemplates.teamId,
-			to: r.newTeamUnits.id,
-		}),
-	},
-	newTeamEventAttendees: {
-		newTeamEvent: r.one.newTeamEvents({
-			from: r.newTeamEventAttendees.eventId,
-			to: r.newTeamEvents.id,
-		}),
-	},
-	newTeamInvitations: {
-		newTeamUnit: r.one.newTeamUnits({
-			from: r.newTeamInvitations.teamId,
-			to: r.newTeamUnits.id,
-		}),
-	},
-	newTeamMaterials: {
-		newTeamUnit: r.one.newTeamUnits({
-			from: r.newTeamMaterials.teamId,
-			to: r.newTeamUnits.id,
-		}),
-	},
-	newTeamMemberships: {
-		newTeamUnit: r.one.newTeamUnits({
-			from: r.newTeamMemberships.teamId,
-			to: r.newTeamUnits.id,
-		}),
-	},
-	newTeamMessages: {
-		newTeamUnits: r.many.newTeamUnits({
-			from: r.newTeamMessages.id.through(r.newTeamMessages.replyTo),
-			to: r.newTeamUnits.id.through(r.newTeamMessages.teamId),
-		}),
-	},
-	newTeamNotifications: {
-		newTeamUnit: r.one.newTeamUnits({
-			from: r.newTeamNotifications.teamId,
-			to: r.newTeamUnits.id,
+		team: r.one.teams({
+			from: r.calendarEvents.teamId,
+			to: r.teams.id,
 		}),
 	},
 	users: {
-		newTeamUnits: r.many.newTeamUnits(),
-		teamUnits: r.many.teamUnits({
-			from: r.users.id.through(r.teamMemberships.userId),
-			to: r.teamUnits.id.through(r.teamMemberships.teamUnitId),
+		calendarEventsViaCalendarEventAttendees: r.many.calendarEvents({
+			alias: "calendarEvents_id_users_id_via_calendarEventAttendees",
 		}),
-		teamsAssignmentsCreatedBy: r.many.teamsAssignment({
-			alias: "teamsAssignment_createdBy_users_id",
+		calendarEventsCreatedBy: r.many.calendarEvents({
+			alias: "calendarEvents_createdBy_users_id",
 		}),
-		teamsInvitationsInvitedBy: r.many.teamsInvitation({
-			alias: "teamsInvitation_invitedBy_users_id",
+		calendarEventsOwnerUserId: r.many.calendarEvents({
+			alias: "calendarEvents_ownerUserId_users_id",
 		}),
-		teamsInvitationsInvitedUserId: r.many.teamsInvitation({
-			alias: "teamsInvitation_invitedUserId_users_id",
+		teamActiveTimers: r.many.teamActiveTimers(),
+		teamAssignmentsViaTeamAssignmentAnalytics: r.many.teamAssignments({
+			from: r.users.id.through(r.teamAssignmentAnalytics.userId),
+			to: r.teamAssignments.id.through(r.teamAssignmentAnalytics.assignmentId),
+			alias: "users_id_teamAssignments_id_via_teamAssignmentAnalytics",
 		}),
-		teamsTeamsViaTeamsLinkInvitation: r.many.teamsTeam({
-			from: r.users.id.through(r.teamsLinkInvitation.invitedBy),
-			to: r.teamsTeam.id.through(r.teamsLinkInvitation.teamId),
-			alias: "users_id_teamsTeam_id_via_teamsLinkInvitation",
+		teamAssignmentRosters: r.many.teamAssignmentRoster(),
+		teamsViaTeamAssignmentTemplates: r.many.teams({
+			from: r.users.id.through(r.teamAssignmentTemplates.createdBy),
+			to: r.teams.id.through(r.teamAssignmentTemplates.teamId),
+			alias: "users_id_teams_id_via_teamAssignmentTemplates",
 		}),
-		teamsMembershipsInvitedBy: r.many.teamsMembership({
-			alias: "teamsMembership_invitedBy_users_id",
+		teamAssignmentsCreatedBy: r.many.teamAssignments({
+			alias: "teamAssignments_createdBy_users_id",
 		}),
-		teamsMembershipsUserId: r.many.teamsMembership({
-			alias: "teamsMembership_userId_users_id",
+		teamEventsViaTeamEventAttendees: r.many.teamEvents({
+			alias: "teamEvents_id_users_id_via_teamEventAttendees",
 		}),
-		teamsRosters: r.many.teamsRoster(),
-		teamsAssignmentsViaTeamsSubmission: r.many.teamsAssignment({
-			alias: "teamsAssignment_id_users_id_via_teamsSubmission",
+		teamEventsCreatedBy: r.many.teamEvents({
+			alias: "teamEvents_createdBy_users_id",
 		}),
-		teamsTeamsViaTeamsSubteam: r.many.teamsTeam({
-			from: r.users.id.through(r.teamsSubteam.createdBy),
-			to: r.teamsTeam.id.through(r.teamsSubteam.teamId),
-			alias: "users_id_teamsTeam_id_via_teamsSubteam",
+		teamInvitationsInvitedBy: r.many.teamInvitations({
+			alias: "teamInvitations_invitedBy_users_id",
 		}),
-		teamsTeamsCreatedBy: r.many.teamsTeam({
-			alias: "teamsTeam_createdBy_users_id",
+		teamInvitationsInvitedUserId: r.many.teamInvitations({
+			alias: "teamInvitations_invitedUserId_users_id",
+		}),
+		teamsViaTeamLinkInvitations: r.many.teams({
+			from: r.users.id.through(r.teamLinkInvitations.invitedBy),
+			to: r.teams.id.through(r.teamLinkInvitations.teamId),
+			alias: "users_id_teams_id_via_teamLinkInvitations",
+		}),
+		teamMaterials: r.many.teamMaterials(),
+		teamMembershipsInvitedBy: r.many.teamMemberships({
+			alias: "teamMemberships_invitedBy_users_id",
+		}),
+		teamMembershipsUserId: r.many.teamMemberships({
+			alias: "teamMemberships_userId_users_id",
+		}),
+		teamMessages: r.many.teamMessages(),
+		teamsViaTeamNotifications: r.many.teams({
+			alias: "teams_id_users_id_via_teamNotifications",
+		}),
+		teamPeople: r.many.teamPeople(),
+		teamPollsViaTeamPollVotes: r.many.teamPolls({
+			alias: "teamPolls_id_users_id_via_teamPollVotes",
+		}),
+		teamPollsCreatedBy: r.many.teamPolls({
+			alias: "teamPolls_createdBy_users_id",
+		}),
+		teamRecurringMeetings: r.many.teamRecurringMeetings(),
+		teamRemovedEvents: r.many.teamRemovedEvents(),
+		teamRosters: r.many.teamRoster(),
+		teamStreamPostsViaTeamStreamComments: r.many.teamStreamPosts({
+			from: r.users.id.through(r.teamStreamComments.authorId),
+			to: r.teamStreamPosts.id.through(r.teamStreamComments.postId),
+			alias: "users_id_teamStreamPosts_id_via_teamStreamComments",
+		}),
+		teamStreamPostsAuthorId: r.many.teamStreamPosts({
+			alias: "teamStreamPosts_authorId_users_id",
+		}),
+		teamAssignmentsViaTeamSubmissions: r.many.teamAssignments({
+			alias: "teamAssignments_id_users_id_via_teamSubmissions",
+		}),
+		teamsViaTeamSubteams: r.many.teams({
+			from: r.users.id.through(r.teamSubteams.createdBy),
+			to: r.teams.id.through(r.teamSubteams.teamId),
+			alias: "users_id_teams_id_via_teamSubteams",
+		}),
+		teamsCreatedBy: r.many.teams({
+			alias: "teams_createdBy_users_id",
+		}),
+		userCalendarManifests: r.many.userCalendarManifests(),
+	},
+	teamSubteams: {
+		calendarEvents: r.many.calendarEvents(),
+		teamActiveTimers: r.many.teamActiveTimers(),
+		teamAssignmentRosters: r.many.teamAssignmentRoster(),
+		teamAssignments: r.many.teamAssignments(),
+		teamEvents: r.many.teamEvents(),
+		teamMaterials: r.many.teamMaterials(),
+		teamMessages: r.many.teamMessages(),
+		teamPeople: r.many.teamPeople(),
+		teamPolls: r.many.teamPolls(),
+		teamRecurringMeetings: r.many.teamRecurringMeetings(),
+		teamRemovedEvents: r.many.teamRemovedEvents(),
+		teamRosters: r.many.teamRoster(),
+		teamStreamPosts: r.many.teamStreamPosts(),
+		teams: r.many.teams({
+			from: r.teamSubteams.id.through(r.teamSubteamCacheManifests.subteamId),
+			to: r.teams.id.through(r.teamSubteamCacheManifests.teamId),
 		}),
 	},
-	newTeamPollVotes: {
-		newTeamPoll: r.one.newTeamPolls({
-			from: r.newTeamPollVotes.pollId,
-			to: r.newTeamPolls.id,
+	teams: {
+		calendarEvents: r.many.calendarEvents(),
+		teamActiveTimers: r.many.teamActiveTimers(),
+		teamAnalytics: r.many.teamAnalytics(),
+		usersViaTeamAssignmentTemplates: r.many.users({
+			alias: "users_id_teams_id_via_teamAssignmentTemplates",
 		}),
-	},
-	newTeamPolls: {
-		newTeamPollVotes: r.many.newTeamPollVotes(),
-		newTeamUnit: r.one.newTeamUnits({
-			from: r.newTeamPolls.teamId,
-			to: r.newTeamUnits.id,
+		teamAssignments: r.many.teamAssignments(),
+		teamCacheManifests: r.many.teamCacheManifests(),
+		teamEvents: r.many.teamEvents(),
+		teamInvitations: r.many.teamInvitations(),
+		usersViaTeamLinkInvitations: r.many.users({
+			alias: "users_id_teams_id_via_teamLinkInvitations",
 		}),
-	},
-	newTeamPostAttachments: {
-		newTeamPost: r.one.newTeamPosts({
-			from: r.newTeamPostAttachments.postId,
-			to: r.newTeamPosts.id,
+		teamMaterials: r.many.teamMaterials(),
+		teamMemberships: r.many.teamMemberships(),
+		teamMessages: r.many.teamMessages(),
+		usersViaTeamNotifications: r.many.users({
+			from: r.teams.id.through(r.teamNotifications.teamId),
+			to: r.users.id.through(r.teamNotifications.userId),
+			alias: "teams_id_users_id_via_teamNotifications",
 		}),
-	},
-	newTeamPosts: {
-		newTeamPostAttachments: r.many.newTeamPostAttachments(),
-		newTeamUnit: r.one.newTeamUnits({
-			from: r.newTeamPosts.teamId,
-			to: r.newTeamUnits.id,
+		teamPeople: r.many.teamPeople(),
+		teamPolls: r.many.teamPolls(),
+		teamRecurringMeetings: r.many.teamRecurringMeetings(),
+		teamRemovedEvents: r.many.teamRemovedEvents(),
+		teamRosters: r.many.teamRoster(),
+		teamStreamPosts: r.many.teamStreamPosts(),
+		teamSubteams: r.many.teamSubteams(),
+		usersViaTeamSubteams: r.many.users({
+			alias: "users_id_teams_id_via_teamSubteams",
 		}),
-	},
-	newTeamRecurringMeetings: {
-		newTeamUnit: r.one.newTeamUnits({
-			from: r.newTeamRecurringMeetings.teamId,
-			to: r.newTeamUnits.id,
-		}),
-	},
-	newTeamRemovedEvents: {
-		newTeamUnit: r.one.newTeamUnits({
-			from: r.newTeamRemovedEvents.teamUnitId,
-			to: r.newTeamUnits.id,
-		}),
-	},
-	newTeamRosterData: {
-		newTeamUnit: r.one.newTeamUnits({
-			from: r.newTeamRosterData.teamUnitId,
-			to: r.newTeamUnits.id,
-		}),
-	},
-	newTeamStreamComments: {
-		newTeamStreamPost: r.one.newTeamStreamPosts({
-			from: r.newTeamStreamComments.postId,
-			to: r.newTeamStreamPosts.id,
-		}),
-	},
-	newTeamStreamPosts: {
-		newTeamStreamComments: r.many.newTeamStreamComments(),
-	},
-	newTeamGroups: {
-		newTeamUnits: r.many.newTeamUnits(),
-	},
-	rosterLinkInvitations: {
-		newTeamUnit: r.one.newTeamUnits({
-			from: r.rosterLinkInvitations.teamId,
-			to: r.newTeamUnits.id,
-		}),
-	},
-	teamUnits: {
-		users: r.many.users(),
-		teamGroup: r.one.teamGroups({
-			from: r.teamUnits.groupId,
-			to: r.teamGroups.id,
-		}),
-	},
-	teamGroups: {
-		teamUnits: r.many.teamUnits(),
-	},
-	teamsAssignment: {
 		user: r.one.users({
-			from: r.teamsAssignment.createdBy,
+			from: r.teams.createdBy,
 			to: r.users.id,
-			alias: "teamsAssignment_createdBy_users_id",
+			alias: "teams_createdBy_users_id",
 		}),
-		teamsSubteam: r.one.teamsSubteam({
-			from: r.teamsAssignment.subteamId,
-			to: r.teamsSubteam.id,
+	},
+	teamActiveTimers: {
+		user: r.one.users({
+			from: r.teamActiveTimers.addedBy,
+			to: r.users.id,
 		}),
-		teamsTeam: r.one.teamsTeam({
-			from: r.teamsAssignment.teamId,
-			to: r.teamsTeam.id,
+		teamSubteam: r.one.teamSubteams({
+			from: r.teamActiveTimers.subteamId,
+			to: r.teamSubteams.id,
 		}),
+		team: r.one.teams({
+			from: r.teamActiveTimers.teamId,
+			to: r.teams.id,
+		}),
+	},
+	teamAnalytics: {
+		team: r.one.teams({
+			from: r.teamAnalytics.teamId,
+			to: r.teams.id,
+		}),
+	},
+	teamAssignments: {
+		usersViaTeamAssignmentAnalytics: r.many.users({
+			alias: "users_id_teamAssignments_id_via_teamAssignmentAnalytics",
+		}),
+		teamAssignmentQuestions: r.many.teamAssignmentQuestions(),
+		teamAssignmentRosters: r.many.teamAssignmentRoster(),
+		user: r.one.users({
+			from: r.teamAssignments.createdBy,
+			to: r.users.id,
+			alias: "teamAssignments_createdBy_users_id",
+		}),
+		teamSubteam: r.one.teamSubteams({
+			from: r.teamAssignments.subteamId,
+			to: r.teamSubteams.id,
+		}),
+		team: r.one.teams({
+			from: r.teamAssignments.teamId,
+			to: r.teams.id,
+		}),
+		usersViaTeamSubmissions: r.many.users({
+			from: r.teamAssignments.id.through(r.teamSubmissions.assignmentId),
+			to: r.users.id.through(r.teamSubmissions.userId),
+			alias: "teamAssignments_id_users_id_via_teamSubmissions",
+		}),
+	},
+	teamSubmissions: {
+		teamAssignmentQuestions: r.many.teamAssignmentQuestions({
+			from: r.teamSubmissions.id.through(
+				r.teamAssignmentQuestionResponses.submissionId,
+			),
+			to: r.teamAssignmentQuestions.id.through(
+				r.teamAssignmentQuestionResponses.questionId,
+			),
+		}),
+	},
+	teamAssignmentQuestions: {
+		teamSubmissions: r.many.teamSubmissions(),
+		teamAssignment: r.one.teamAssignments({
+			from: r.teamAssignmentQuestions.assignmentId,
+			to: r.teamAssignments.id,
+		}),
+	},
+	teamAssignmentRoster: {
+		teamAssignment: r.one.teamAssignments({
+			from: r.teamAssignmentRoster.assignmentId,
+			to: r.teamAssignments.id,
+		}),
+		teamSubteam: r.one.teamSubteams({
+			from: r.teamAssignmentRoster.subteamId,
+			to: r.teamSubteams.id,
+		}),
+		user: r.one.users({
+			from: r.teamAssignmentRoster.userId,
+			to: r.users.id,
+		}),
+	},
+	teamCacheManifests: {
+		team: r.one.teams({
+			from: r.teamCacheManifests.teamId,
+			to: r.teams.id,
+		}),
+	},
+	teamEvents: {
 		users: r.many.users({
-			from: r.teamsAssignment.id.through(r.teamsSubmission.assignmentId),
-			to: r.users.id.through(r.teamsSubmission.userId),
-			alias: "teamsAssignment_id_users_id_via_teamsSubmission",
-		}),
-	},
-	teamsSubteam: {
-		teamsAssignments: r.many.teamsAssignment(),
-		teamsRosters: r.many.teamsRoster(),
-	},
-	teamsTeam: {
-		teamsAssignments: r.many.teamsAssignment(),
-		teamsInvitations: r.many.teamsInvitation(),
-		usersViaTeamsLinkInvitation: r.many.users({
-			alias: "users_id_teamsTeam_id_via_teamsLinkInvitation",
-		}),
-		teamsMemberships: r.many.teamsMembership(),
-		teamsRosters: r.many.teamsRoster(),
-		usersViaTeamsSubteam: r.many.users({
-			alias: "users_id_teamsTeam_id_via_teamsSubteam",
+			from: r.teamEvents.id.through(r.teamEventAttendees.eventId),
+			to: r.users.id.through(r.teamEventAttendees.userId),
+			alias: "teamEvents_id_users_id_via_teamEventAttendees",
 		}),
 		user: r.one.users({
-			from: r.teamsTeam.createdBy,
+			from: r.teamEvents.createdBy,
 			to: r.users.id,
-			alias: "teamsTeam_createdBy_users_id",
+			alias: "teamEvents_createdBy_users_id",
+		}),
+		teamSubteam: r.one.teamSubteams({
+			from: r.teamEvents.subteamId,
+			to: r.teamSubteams.id,
+		}),
+		team: r.one.teams({
+			from: r.teamEvents.teamId,
+			to: r.teams.id,
 		}),
 	},
-	teamsInvitation: {
+	teamInvitations: {
 		userInvitedBy: r.one.users({
-			from: r.teamsInvitation.invitedBy,
+			from: r.teamInvitations.invitedBy,
 			to: r.users.id,
-			alias: "teamsInvitation_invitedBy_users_id",
+			alias: "teamInvitations_invitedBy_users_id",
 		}),
 		userInvitedUserId: r.one.users({
-			from: r.teamsInvitation.invitedUserId,
+			from: r.teamInvitations.invitedUserId,
 			to: r.users.id,
-			alias: "teamsInvitation_invitedUserId_users_id",
+			alias: "teamInvitations_invitedUserId_users_id",
 		}),
-		teamsTeam: r.one.teamsTeam({
-			from: r.teamsInvitation.teamId,
-			to: r.teamsTeam.id,
+		team: r.one.teams({
+			from: r.teamInvitations.teamId,
+			to: r.teams.id,
 		}),
 	},
-	teamsMembership: {
-		userInvitedBy: r.one.users({
-			from: r.teamsMembership.invitedBy,
+	teamMaterials: {
+		user: r.one.users({
+			from: r.teamMaterials.createdBy,
 			to: r.users.id,
-			alias: "teamsMembership_invitedBy_users_id",
 		}),
-		teamsTeam: r.one.teamsTeam({
-			from: r.teamsMembership.teamId,
-			to: r.teamsTeam.id,
+		teamSubteam: r.one.teamSubteams({
+			from: r.teamMaterials.subteamId,
+			to: r.teamSubteams.id,
+		}),
+		team: r.one.teams({
+			from: r.teamMaterials.teamId,
+			to: r.teams.id,
+		}),
+	},
+	teamMemberships: {
+		userInvitedBy: r.one.users({
+			from: r.teamMemberships.invitedBy,
+			to: r.users.id,
+			alias: "teamMemberships_invitedBy_users_id",
+		}),
+		team: r.one.teams({
+			from: r.teamMemberships.teamId,
+			to: r.teams.id,
 		}),
 		userUserId: r.one.users({
-			from: r.teamsMembership.userId,
+			from: r.teamMemberships.userId,
 			to: r.users.id,
-			alias: "teamsMembership_userId_users_id",
+			alias: "teamMemberships_userId_users_id",
 		}),
 	},
-	teamsRoster: {
-		teamsSubteam: r.one.teamsSubteam({
-			from: r.teamsRoster.subteamId,
-			to: r.teamsSubteam.id,
+	teamMessages: {
+		user: r.one.users({
+			from: r.teamMessages.senderId,
+			to: r.users.id,
 		}),
-		teamsTeam: r.one.teamsTeam({
-			from: r.teamsRoster.teamId,
-			to: r.teamsTeam.id,
+		teamSubteam: r.one.teamSubteams({
+			from: r.teamMessages.subteamId,
+			to: r.teamSubteams.id,
+		}),
+		team: r.one.teams({
+			from: r.teamMessages.teamId,
+			to: r.teams.id,
+		}),
+	},
+	teamPeople: {
+		teamSubteam: r.one.teamSubteams({
+			from: r.teamPeople.subteamId,
+			to: r.teamSubteams.id,
+		}),
+		team: r.one.teams({
+			from: r.teamPeople.teamId,
+			to: r.teams.id,
 		}),
 		user: r.one.users({
-			from: r.teamsRoster.userId,
+			from: r.teamPeople.userId,
+			to: r.users.id,
+		}),
+	},
+	teamPolls: {
+		users: r.many.users({
+			from: r.teamPolls.id.through(r.teamPollVotes.pollId),
+			to: r.users.id.through(r.teamPollVotes.userId),
+			alias: "teamPolls_id_users_id_via_teamPollVotes",
+		}),
+		user: r.one.users({
+			from: r.teamPolls.createdBy,
+			to: r.users.id,
+			alias: "teamPolls_createdBy_users_id",
+		}),
+		teamSubteam: r.one.teamSubteams({
+			from: r.teamPolls.subteamId,
+			to: r.teamSubteams.id,
+		}),
+		team: r.one.teams({
+			from: r.teamPolls.teamId,
+			to: r.teams.id,
+		}),
+	},
+	teamPostAttachments: {
+		teamStreamPost: r.one.teamStreamPosts({
+			from: r.teamPostAttachments.postId,
+			to: r.teamStreamPosts.id,
+		}),
+	},
+	teamStreamPosts: {
+		teamPostAttachments: r.many.teamPostAttachments(),
+		users: r.many.users({
+			alias: "users_id_teamStreamPosts_id_via_teamStreamComments",
+		}),
+		user: r.one.users({
+			from: r.teamStreamPosts.authorId,
+			to: r.users.id,
+			alias: "teamStreamPosts_authorId_users_id",
+		}),
+		teamSubteam: r.one.teamSubteams({
+			from: r.teamStreamPosts.subteamId,
+			to: r.teamSubteams.id,
+		}),
+		team: r.one.teams({
+			from: r.teamStreamPosts.teamId,
+			to: r.teams.id,
+		}),
+	},
+	teamRecurringMeetings: {
+		user: r.one.users({
+			from: r.teamRecurringMeetings.createdBy,
+			to: r.users.id,
+		}),
+		teamSubteam: r.one.teamSubteams({
+			from: r.teamRecurringMeetings.subteamId,
+			to: r.teamSubteams.id,
+		}),
+		team: r.one.teams({
+			from: r.teamRecurringMeetings.teamId,
+			to: r.teams.id,
+		}),
+	},
+	teamRemovedEvents: {
+		user: r.one.users({
+			from: r.teamRemovedEvents.removedBy,
+			to: r.users.id,
+		}),
+		teamSubteam: r.one.teamSubteams({
+			from: r.teamRemovedEvents.subteamId,
+			to: r.teamSubteams.id,
+		}),
+		team: r.one.teams({
+			from: r.teamRemovedEvents.teamId,
+			to: r.teams.id,
+		}),
+	},
+	teamRoster: {
+		teamSubteam: r.one.teamSubteams({
+			from: r.teamRoster.subteamId,
+			to: r.teamSubteams.id,
+		}),
+		team: r.one.teams({
+			from: r.teamRoster.teamId,
+			to: r.teams.id,
+		}),
+		user: r.one.users({
+			from: r.teamRoster.userId,
+			to: r.users.id,
+		}),
+	},
+	userCalendarManifests: {
+		user: r.one.users({
+			from: r.userCalendarManifests.userId,
 			to: r.users.id,
 		}),
 	},

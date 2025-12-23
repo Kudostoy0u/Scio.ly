@@ -18,7 +18,7 @@ const faqs = [
 				use{" "}
 				<Link
 					href="/certified"
-					className="text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200 underline"
+					className="text-blue-800 hover:text-blue-900 dark:text-blue-500 dark:hover:text-blue-400 underline"
 				>
 					publicly released tests and those given via special permission
 				</Link>{" "}
@@ -46,7 +46,7 @@ const faqs = [
 				We welcome contributions!{" "}
 				<Link
 					href="/join"
-					className="text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200 underline"
+					className="text-blue-800 hover:text-blue-900 dark:text-blue-500 dark:hover:text-blue-400 underline"
 				>
 					Join our team
 				</Link>{" "}

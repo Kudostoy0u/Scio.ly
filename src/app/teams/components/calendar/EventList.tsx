@@ -338,84 +338,88 @@ export default function EventList({
 							const uniqueKey = `${event.id}-${event.start_time}-${index}`;
 
 							return (
-								<button
-									type="button"
-									key={uniqueKey}
-									className={`w-full text-left p-4 rounded-lg border cursor-pointer transition-colors hover:opacity-80 ${getEventColors(eventType)}`}
-									onClick={() => handleEventClick(event)}
-								>
-									<div className="flex items-start justify-between">
-										<div className="flex-1">
-											<div className="flex items-center gap-3 mb-2">
-												<h4 className="font-semibold text-lg">{event.title}</h4>
-												<span className={getEventTypeBadgeClasses(eventType)}>
-													{eventType.charAt(0).toUpperCase() +
-														eventType.slice(1)}
-												</span>
-											</div>
-
-											<div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-												<div className="flex items-center gap-2">
-													<span className="font-medium">Date:</span>
-													<span>
-														{new Date(event.start_time).toLocaleDateString()}
+								<div key={uniqueKey} className="relative">
+									<button
+										type="button"
+										className={`w-full text-left p-4 rounded-lg border cursor-pointer transition-colors hover:opacity-80 ${getEventColors(eventType)}`}
+										onClick={() => handleEventClick(event)}
+									>
+										<div className="flex items-start justify-between">
+											<div className="flex-1">
+												<div className="flex items-center gap-3 mb-2">
+													<h4 className="font-semibold text-lg">
+														{event.title}
+													</h4>
+													<span className={getEventTypeBadgeClasses(eventType)}>
+														{eventType.charAt(0).toUpperCase() +
+															eventType.slice(1)}
 													</span>
 												</div>
 
-												{event.start_time && (
+												<div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
 													<div className="flex items-center gap-2">
-														<span className="font-medium">Time:</span>
-														<span>{formatEventTime(event)}</span>
+														<span className="font-medium">Date:</span>
+														<span>
+															{new Date(event.start_time).toLocaleDateString()}
+														</span>
 													</div>
-												)}
 
-												{event.location && (
-													<div className="flex items-center gap-2">
-														<span className="font-medium">Location:</span>
-														<span>{event.location}</span>
-													</div>
-												)}
+													{event.start_time && (
+														<div className="flex items-center gap-2">
+															<span className="font-medium">Time:</span>
+															<span>{formatEventTime(event)}</span>
+														</div>
+													)}
 
-												{event.description && (
-													<div className="flex items-start gap-2 md:col-span-2">
-														<span className="font-medium">Description:</span>
-														<span className="flex-1">{event.description}</span>
-													</div>
-												)}
+													{event.location && (
+														<div className="flex items-center gap-2">
+															<span className="font-medium">Location:</span>
+															<span>{event.location}</span>
+														</div>
+													)}
+
+													{event.description && (
+														<div className="flex items-start gap-2 md:col-span-2">
+															<span className="font-medium">Description:</span>
+															<span className="flex-1">
+																{event.description}
+															</span>
+														</div>
+													)}
+												</div>
 											</div>
 										</div>
-
-										<button
-											type="button"
-											onClick={(e) => {
-												e.stopPropagation();
-												onDeleteEvent(event.id);
-											}}
-											className={`ml-4 p-2 rounded-full transition-colors cursor-pointer ${
-												darkMode
-													? "text-red-400 hover:bg-red-900/30 hover:text-red-300"
-													: "text-red-500 hover:bg-red-100 hover:text-red-700"
-											}`}
-											title="Delete event"
-											aria-label="Delete event"
+									</button>
+									<button
+										type="button"
+										onClick={(e) => {
+											e.stopPropagation();
+											onDeleteEvent(event.id);
+										}}
+										className={`absolute top-2 right-2 p-2 rounded-full transition-colors cursor-pointer ${
+											darkMode
+												? "text-red-400 hover:bg-red-900/30 hover:text-red-300"
+												: "text-red-500 hover:bg-red-100 hover:text-red-700"
+										}`}
+										title="Delete event"
+										aria-label="Delete event"
+									>
+										<svg
+											className="w-5 h-5"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
 										>
-											<svg
-												className="w-5 h-5"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<title>Delete event</title>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-												/>
-											</svg>
-										</button>
-									</div>
-								</button>
+											<title>Delete event</title>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+											/>
+										</svg>
+									</button>
+								</div>
 							);
 						})}
 					</div>

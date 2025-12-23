@@ -768,7 +768,7 @@ export default function RosterTabUnified({
 							darkMode ? "text-gray-200" : "text-gray-800"
 						}`}
 					>
-						Additional stuff
+						Additional Stuff
 					</h3>
 					<textarea
 						value={rosterNotes}

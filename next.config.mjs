@@ -1,4 +1,5 @@
 import { withSentryConfig } from '@sentry/nextjs';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -21,7 +22,12 @@ const nextConfig = {
   // experimental: { ... },
 };
 
-export default withSentryConfig(nextConfig, {
+// Only wrap with Sentry config in production to avoid build hooks in development
+// This prevents runAfterProductionCompile hooks from running in development
+const isDev = process.env.NODE_ENV === 'development';
+const isSentryEnabled = process.env.SENTRY_ENABLED !== 'false';
+
+const sentryConfig = {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
@@ -57,4 +63,10 @@ export default withSentryConfig(nextConfig, {
       removeDebugLogging: true,
     },
   },
-});
+};
+
+// In development or when Sentry is disabled, export config without Sentry wrapper
+// In production with Sentry enabled, wrap with Sentry config
+export default (isDev || !isSentryEnabled)
+  ? nextConfig
+  : withSentryConfig(nextConfig, sentryConfig);

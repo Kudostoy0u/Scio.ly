@@ -1,6 +1,7 @@
 import type { Question } from "@/app/utils/geminiService";
 import type React from "react";
 import QuestionCard from "./QuestionCard";
+import QuestionCardSkeleton from "./QuestionCardSkeleton";
 import TestCodebustersMessage from "./TestCodebustersMessage";
 
 interface TestMainContentProps {
@@ -64,11 +65,31 @@ const TestMainContent: React.FC<TestMainContentProps> = ({
 	isPreview,
 	isQuestionBookmarked,
 }) => {
-	if (isLoading && !isResetting) {
+	if ((isLoading && data.length === 0) || isResetting) {
+		// Show 10 skeleton cards when loading with no data, or when resetting
+		const skeletonKeys = [
+			"skeleton-0",
+			"skeleton-1",
+			"skeleton-2",
+			"skeleton-3",
+			"skeleton-4",
+			"skeleton-5",
+			"skeleton-6",
+			"skeleton-7",
+			"skeleton-8",
+			"skeleton-9",
+		];
 		return (
-			<div className="flex justify-center items-center h-64">
-				<div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600" />
-			</div>
+			<>
+				{skeletonKeys.map((skeletonKey, index) => (
+					<QuestionCardSkeleton
+						key={skeletonKey}
+						index={index}
+						darkMode={darkMode}
+						eventName={(routerData.eventName as string) || "Unknown Event"}
+					/>
+				))}
+			</>
 		);
 	}
 
