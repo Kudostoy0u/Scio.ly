@@ -1,10 +1,12 @@
-import crypto from "node:crypto";
 import { ApiError, handleApiError, parseRequestBody } from "@/lib/api/utils";
 import { db } from "@/lib/db";
 import { questions } from "@/lib/db/schema";
+import {
+	TRULY_RANDOM_SELECTION,
+	queryQuestions,
+	transformDatabaseResult,
+} from "@/lib/server/questions/query";
 import type { Question } from "@/lib/types/api";
-import logger from "@/lib/utils/logging/logger";
-import { type SQL, and, eq, gte, lt, lte, or, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
@@ -12,23 +14,6 @@ import { z } from "zod";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-// Feature flag: when true, use efficient two-phase indexed random selection
-const trulyRandom = true;
-
-type DatabaseQuestion = {
-	id: string;
-	question: string;
-	tournament: string;
-	division: string;
-	event: string;
-	difficulty: string | null;
-	options: unknown;
-	answers: unknown;
-	subtopics: unknown;
-	createdAt: Date | string | null;
-	updatedAt: Date | string | null;
-};
 
 const QuestionFiltersSchema = z.object({
 	event: z.string().optional(),
@@ -59,168 +44,18 @@ const CreateQuestionSchema = z.object({
 type ValidatedQuestionFilters = z.infer<typeof QuestionFiltersSchema>;
 type ValidatedCreateQuestion = z.infer<typeof CreateQuestionSchema>;
 
-class QueryBuilder {
-	private conditions: SQL[] = [];
-	private limit = 50;
-
-	addCondition(condition: SQL): this {
-		this.conditions.push(condition);
-		return this;
-	}
-
-	addEventFilter(event: string): this {
-		return this.addCondition(eq(questions.event, event));
-	}
-
-	addDivisionFilter(division: string): this {
-		return this.addCondition(eq(questions.division, division));
-	}
-
-	addTournamentFilter(tournament: string): this {
-		return this.addCondition(
-			sql`${questions.tournament} ILIKE ${`%${tournament}%`}`,
-		);
-	}
-
-	addSubtopicsFilter(subtopics: string[]): this {
-		if (subtopics.length === 0) {
-			return this;
-		}
-
-		const subtopicConditions: SQL[] = subtopics.map(
-			(subtopic) =>
-				sql`${questions.subtopics} @> ${JSON.stringify([subtopic])}`,
-		);
-
-		if (subtopicConditions.length === 1) {
-			const condition = subtopicConditions[0];
-			if (!condition) {
-				return this;
-			}
-			return this.addCondition(condition);
-		}
-
-		const orCondition = or(...subtopicConditions);
-		if (!orCondition) {
-			return this;
-		}
-		if (orCondition) {
-			return this.addCondition(orCondition);
-		}
-
-		return this;
-	}
-
-	addQuestionTypeFilter(questionType: "mcq" | "frq"): this {
-		if (questionType === "mcq") {
-			return this.addCondition(
-				sql`${questions.options} IS NOT NULL AND ${questions.options} != '[]'::jsonb AND jsonb_array_length(${questions.options}) > 0`,
-			);
-		}
-
-		return this.addCondition(
-			sql`(${questions.options} IS NULL OR ${questions.options} = '[]'::jsonb OR jsonb_array_length(${questions.options}) = 0)`,
-		);
-	}
-
-	addDifficultyRange(min?: string, max?: string): this {
-		if (min) {
-			const difficulty = Number.parseFloat(min);
-			if (!Number.isNaN(difficulty)) {
-				this.addCondition(gte(questions.difficulty, difficulty.toString()));
-			}
-		}
-
-		if (max) {
-			const difficulty = Number.parseFloat(max);
-			if (!Number.isNaN(difficulty)) {
-				this.addCondition(lte(questions.difficulty, difficulty.toString()));
-			}
-		}
-
-		return this;
-	}
-
-	setLimit(limit: string | undefined): this {
-		const parsedLimit = limit ? Number.parseInt(limit) : 50;
-
-		this.limit = Math.min(Math.max(parsedLimit > 0 ? parsedLimit : 50, 1), 200);
-		return this;
-	}
-
-	getWhereCondition(): SQL | undefined {
-		if (this.conditions.length === 0) {
-			return undefined;
-		}
-		return this.conditions.length === 1
-			? this.conditions[0]
-			: and(...this.conditions);
-	}
-
-	getLimit(): number {
-		return this.limit;
-	}
-}
-
-function encodeBase52Local(index: number): string {
-	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-	const base = alphabet.length;
-	const coreLength = 4;
-	let n = index;
-	let out = "";
-	for (let i = 0; i < coreLength; i++) {
-		out = alphabet[n % base] + out;
-		n = Math.floor(n / base);
-	}
-	return out;
-}
-
-function hashIdToInt(id: string): number {
-	let hash = 0;
-	for (let i = 0; i < id.length; i++) {
-		const char = id.charCodeAt(i);
-		hash = (hash << 5) - hash + char;
-		hash |= 0;
-	}
-	return Math.abs(hash) % 7311616; // 52^4
-}
-
-const transformDatabaseResult = (result: DatabaseQuestion): Question => {
-	const core = encodeBase52Local(hashIdToInt(result.id));
-	const base52Code = `${core}S`;
-	logger.dev.structured("info", "Transforming database result", result);
-
-	// Helper function to convert Date or string to ISO string
-	const toISOString = (
-		value: Date | string | null | undefined,
-	): string | undefined => {
-		if (!value) return undefined;
-		if (value instanceof Date) return value.toISOString();
-		if (typeof value === "string") {
-			// If it's already an ISO string, return it
-			if (value.includes("T") && value.includes("Z")) return value;
-			// Otherwise, try to parse it as a date and convert to ISO
-			const date = new Date(value);
-			if (!Number.isNaN(date.getTime())) return date.toISOString();
-			return value;
-		}
-		return undefined;
-	};
-
-	return {
-		id: result.id,
-		question: result.question,
-		tournament: result.tournament,
-		division: result.division,
-		event: result.event,
-		difficulty: result.difficulty ? Number.parseFloat(result.difficulty) : 0.5,
-		options: Array.isArray(result.options) ? result.options : [],
-		answers: Array.isArray(result.answers) ? result.answers : [],
-		subtopics: Array.isArray(result.subtopics) ? result.subtopics : [],
-		created_at: toISOString(result.createdAt),
-		updated_at: toISOString(result.updatedAt),
-		base52: base52Code,
-	};
+type DatabaseQuestion = {
+	id: string;
+	question: string;
+	tournament: string;
+	division: string;
+	event: string;
+	difficulty: string | null;
+	options: unknown;
+	answers: unknown;
+	subtopics: unknown;
+	createdAt: Date | string | null;
+	updatedAt: Date | string | null;
 };
 
 const CACHE_TTL_MS = 60000;
@@ -261,212 +96,6 @@ const parseAndValidateFilters = (
 	return QuestionFiltersSchema.parse(rawFilters);
 };
 
-const buildSubtopicsArray = (filters: ValidatedQuestionFilters): string[] => {
-	const subtopics: string[] = [];
-
-	if (filters.subtopics) {
-		subtopics.push(...filters.subtopics.split(",").map((s) => s.trim()));
-	} else if (filters.subtopic) {
-		subtopics.push(filters.subtopic);
-	}
-
-	return subtopics;
-};
-
-const fetchQuestions = async (
-	filters: ValidatedQuestionFilters,
-): Promise<Question[]> => {
-	const queryBuilder = new QueryBuilder();
-
-	if (filters.event) {
-		queryBuilder.addEventFilter(filters.event);
-	}
-
-	if (filters.division) {
-		queryBuilder.addDivisionFilter(filters.division);
-	}
-
-	if (filters.tournament) {
-		queryBuilder.addTournamentFilter(filters.tournament);
-	}
-
-	const subtopics = buildSubtopicsArray(filters);
-	if (subtopics.length > 0) {
-		queryBuilder.addSubtopicsFilter(subtopics);
-	}
-
-	if (filters.question_type) {
-		queryBuilder.addQuestionTypeFilter(filters.question_type);
-	}
-
-	queryBuilder.addDifficultyRange(
-		filters.difficulty_min,
-		filters.difficulty_max,
-	);
-	queryBuilder.setLimit(filters.limit);
-
-	const whereCondition = queryBuilder.getWhereCondition();
-	const limit = queryBuilder.getLimit();
-	const r = (() => {
-		try {
-			const buf = crypto.randomBytes(6); // 48 bits
-			const n = Number.parseInt(buf.toString("hex"), 16);
-			return n / 2 ** 48;
-		} catch {
-			return Math.random();
-		}
-	})();
-
-	if (!trulyRandom) {
-		try {
-			// Single scan using CASE wrap-around
-			const rows = await db
-				.select({
-					id: questions.id,
-					question: questions.question,
-					tournament: questions.tournament,
-					division: questions.division,
-					event: questions.event,
-					difficulty: questions.difficulty,
-					options: questions.options,
-					answers: questions.answers,
-					subtopics: questions.subtopics,
-					createdAt: questions.createdAt,
-					updatedAt: questions.updatedAt,
-					randomF: questions.randomF,
-				})
-				.from(questions)
-				.where(whereCondition)
-				.orderBy(
-					sql`CASE WHEN ${questions.randomF} >= ${r} THEN 0 ELSE 1 END`,
-					questions.randomF,
-				)
-				.limit(limit);
-
-			return rows.map((row) =>
-				transformDatabaseResult(row as DatabaseQuestion),
-			);
-		} catch (err) {
-			logger.warn(
-				"Error fetching questions (single scan), falling back to RANDOM()",
-				err,
-			);
-
-			const rows = await db
-				.select({
-					id: questions.id,
-					question: questions.question,
-					tournament: questions.tournament,
-					division: questions.division,
-					event: questions.event,
-					difficulty: questions.difficulty,
-					options: questions.options,
-					answers: questions.answers,
-					subtopics: questions.subtopics,
-					createdAt: questions.createdAt,
-					updatedAt: questions.updatedAt,
-					randomF: questions.randomF,
-				})
-				.from(questions)
-				.where(whereCondition)
-				.orderBy(sql`RANDOM()`)
-				.limit(limit);
-
-			return rows.map((row) =>
-				transformDatabaseResult(row as DatabaseQuestion),
-			);
-		}
-	}
-
-	// Two-phase indexed random seek for truly random selection
-	try {
-		logger.debug("Using two-phase indexed random seek");
-		const whereFirst = whereCondition
-			? and(whereCondition, gte(questions.randomF, r))
-			: gte(questions.randomF, r);
-
-		const firstRows = await db
-			.select({
-				id: questions.id,
-				question: questions.question,
-				tournament: questions.tournament,
-				division: questions.division,
-				event: questions.event,
-				difficulty: questions.difficulty,
-				options: questions.options,
-				answers: questions.answers,
-				subtopics: questions.subtopics,
-				createdAt: questions.createdAt,
-				updatedAt: questions.updatedAt,
-				randomF: questions.randomF,
-			})
-			.from(questions)
-			.where(whereFirst)
-			.orderBy(questions.randomF)
-			.limit(limit);
-
-		let rows = firstRows;
-
-		if (rows.length < limit) {
-			const remaining = limit - rows.length;
-			const whereSecond = whereCondition
-				? and(whereCondition, lt(questions.randomF, r))
-				: lt(questions.randomF, r);
-
-			const secondRows = await db
-				.select({
-					id: questions.id,
-					question: questions.question,
-					tournament: questions.tournament,
-					division: questions.division,
-					event: questions.event,
-					difficulty: questions.difficulty,
-					options: questions.options,
-					answers: questions.answers,
-					subtopics: questions.subtopics,
-					createdAt: questions.createdAt,
-					updatedAt: questions.updatedAt,
-					randomF: questions.randomF,
-				})
-				.from(questions)
-				.where(whereSecond)
-				.orderBy(questions.randomF)
-				.limit(remaining);
-
-			rows = rows.concat(secondRows);
-		}
-
-		return rows.map((row) => transformDatabaseResult(row as DatabaseQuestion));
-	} catch (err) {
-		logger.warn(
-			"Error fetching questions (two-phase), falling back to RANDOM()",
-			err,
-		);
-
-		const rows = await db
-			.select({
-				id: questions.id,
-				question: questions.question,
-				tournament: questions.tournament,
-				division: questions.division,
-				event: questions.event,
-				difficulty: questions.difficulty,
-				options: questions.options,
-				answers: questions.answers,
-				subtopics: questions.subtopics,
-				createdAt: questions.createdAt,
-				updatedAt: questions.updatedAt,
-				randomF: questions.randomF,
-			})
-			.from(questions)
-			.where(whereCondition)
-			.orderBy(sql`RANDOM()`)
-			.limit(limit);
-
-		return rows.map((row) => transformDatabaseResult(row as DatabaseQuestion));
-	}
-};
-
 const createQuestion = async (
 	data: ValidatedCreateQuestion,
 ): Promise<Question> => {
@@ -502,8 +131,8 @@ export async function GET(request: NextRequest) {
 		const filters = parseAndValidateFilters(searchParams);
 
 		// For truly random selection, bypass caches entirely and disable response caching
-		if (trulyRandom) {
-			const data = await fetchQuestions(filters);
+		if (TRULY_RANDOM_SELECTION) {
+			const data = await queryQuestions(filters);
 			const res = NextResponse.json({ success: true, data });
 			res.headers.set("Cache-Control", "no-store");
 			return res;
@@ -524,7 +153,7 @@ export async function GET(request: NextRequest) {
 
 		let promise = inflight.get(cacheKey);
 		if (!promise) {
-			promise = fetchQuestions(filters);
+			promise = queryQuestions(filters);
 			inflight.set(cacheKey, promise);
 		}
 		const data = await promise.finally(() => inflight.delete(cacheKey));

@@ -7,6 +7,12 @@
 import { buildAbsoluteUrl } from "@/app/test/utils/questionMedia";
 import type { Question } from "@/app/utils/geminiService";
 import { difficultyRanges } from "@/app/utils/questionUtils";
+import {
+	type IdQuestionQueryFilters,
+	type QuestionQueryFilters,
+	queryIdQuestions,
+	queryQuestions,
+} from "@/lib/server/questions/query";
 import { getMappedEventNameForApi } from "@/lib/utils/assessments/eventConfig";
 import logger from "@/lib/utils/logging/logger";
 
@@ -107,79 +113,36 @@ async function fetchBaseQuestionsServer(
 		difficulties,
 		subtopics,
 	);
-	const apiUrl = `${origin}/api/questions?${params.toString()}`;
-
-	logger.dev.structured("debug", "[fetchBaseQuestionsServer] Fetching", {
-		apiUrl,
+	logger.dev.structured("debug", "[fetchBaseQuestionsServer] Querying", {
 		eventName,
 		count,
 		types,
+		params: params.toString(),
 	});
 
-	const response = await fetch(apiUrl, {
-		cache: "no-store",
-	});
-
-	if (!response.ok) {
-		throw new Error(
-			`Failed to fetch questions: ${response.status} ${response.statusText}`,
-		);
-	}
-
-	const apiResponse = await response.json();
+	const filters = Object.fromEntries(params.entries()) as QuestionQueryFilters;
+	const results = await queryQuestions(filters);
 	logger.dev.structured("debug", "[fetchBaseQuestionsServer] API response", {
-		responseKeys: Object.keys(apiResponse),
-		hasData: "data" in apiResponse,
-		dataLength: Array.isArray(apiResponse.data)
-			? apiResponse.data.length
-			: "not array",
-		fullResponse: JSON.stringify(apiResponse).substring(0, 500),
+		responseKeys: Object.keys(results[0] ?? {}),
+		hasData: results.length > 0,
+		dataLength: results.length,
 	});
 
-	// Handle different response structures
-	let rawQuestions: unknown[] = [];
-	if (Array.isArray(apiResponse.data)) {
-		rawQuestions = apiResponse.data;
-	} else if (Array.isArray(apiResponse)) {
-		rawQuestions = apiResponse;
-	} else if (Array.isArray(apiResponse.questions)) {
-		rawQuestions = apiResponse.questions;
-	}
-
-	// Convert raw questions to Question format, extracting images
-	const questions: Question[] = rawQuestions.map((row) => {
-		const rowRecord = row as Record<string, unknown>;
-		// Extract image from images array if present
-		let imageData: string | undefined;
-		if (Array.isArray(rowRecord.images) && rowRecord.images.length > 0) {
-			const imageUrl = String(
-				rowRecord.images[Math.floor(Math.random() * rowRecord.images.length)],
-			);
-			imageData = buildAbsoluteUrl(imageUrl, origin);
-		} else if (rowRecord.imageData && typeof rowRecord.imageData === "string") {
-			imageData = buildAbsoluteUrl(rowRecord.imageData, origin);
-		} else if (rowRecord.imageUrl && typeof rowRecord.imageUrl === "string") {
-			imageData = buildAbsoluteUrl(rowRecord.imageUrl, origin);
-		}
-
+	const questions: Question[] = results.map((row) => {
+		const imageData =
+			typeof row.imageData === "string"
+				? buildAbsoluteUrl(row.imageData, origin)
+				: undefined;
 		return {
-			id: typeof rowRecord.id === "string" ? rowRecord.id : undefined,
-			question:
-				typeof rowRecord.question === "string" ? rowRecord.question : "",
-			options: Array.isArray(rowRecord.options)
-				? (rowRecord.options as string[])
-				: [],
-			answers: Array.isArray(rowRecord.answers)
-				? (rowRecord.answers as (number | string)[])
-				: [],
-			difficulty:
-				typeof rowRecord.difficulty === "number" ? rowRecord.difficulty : 0.5,
-			event: typeof rowRecord.event === "string" ? rowRecord.event : undefined,
-			subtopics: Array.isArray(rowRecord.subtopics)
-				? (rowRecord.subtopics as string[])
-				: [],
+			id: row.id,
+			question: row.question || "",
+			options: Array.isArray(row.options) ? row.options : [],
+			answers: Array.isArray(row.answers) ? row.answers : [],
+			difficulty: typeof row.difficulty === "number" ? row.difficulty : 0.5,
+			event: row.event,
+			subtopics: Array.isArray(row.subtopics) ? row.subtopics : [],
 			imageData,
-		} as Question;
+		};
 	});
 
 	logger.dev.structured("debug", "[fetchBaseQuestionsServer] Fetched", {
@@ -257,64 +220,37 @@ async function fetchIdQuestionsServer(
 		}
 	}
 
-	const apiUrl = `${origin}/api/id-questions?${params.toString()}`;
-
-	logger.dev.structured("debug", "[fetchIdQuestionsServer] Fetching", {
-		apiUrl,
+	logger.dev.structured("debug", "[fetchIdQuestionsServer] Querying", {
 		eventName,
 		count,
 		pureIdOnly,
 		rmTypeFilter,
+		params: params.toString(),
 	});
 
-	const response = await fetch(apiUrl, {
-		cache: "no-store",
-	});
-
-	if (!response.ok) {
-		throw new Error(
-			`Failed to fetch ID questions: ${response.status} ${response.statusText}`,
-		);
-	}
-
-	const apiResponse = await response.json();
-	const apiData = apiResponse as { data?: unknown[] };
-	const rawQuestions = apiData.data || [];
-
-	// Convert raw questions to Question format, extracting images
-	const questions: Question[] = rawQuestions.map((row) => {
-		const rowRecord = row as Record<string, unknown>;
-		// Extract image from images array if present
+	const filters = Object.fromEntries(
+		params.entries(),
+	) as IdQuestionQueryFilters;
+	const results = await queryIdQuestions(filters);
+	const questions: Question[] = results.map((row) => {
 		let imageData: string | undefined;
-		if (Array.isArray(rowRecord.images) && rowRecord.images.length > 0) {
+		if (Array.isArray(row.images) && row.images.length > 0) {
 			const imageUrl = String(
-				rowRecord.images[Math.floor(Math.random() * rowRecord.images.length)],
+				row.images[Math.floor(Math.random() * row.images.length)],
 			);
 			imageData = buildAbsoluteUrl(imageUrl, origin);
-		} else if (rowRecord.imageData && typeof rowRecord.imageData === "string") {
-			imageData = buildAbsoluteUrl(rowRecord.imageData, origin);
-		} else if (rowRecord.imageUrl && typeof rowRecord.imageUrl === "string") {
-			imageData = buildAbsoluteUrl(rowRecord.imageUrl, origin);
 		}
 
 		return {
-			id: typeof rowRecord.id === "string" ? rowRecord.id : undefined,
-			question:
-				typeof rowRecord.question === "string" ? rowRecord.question : "",
-			options: Array.isArray(rowRecord.options)
-				? (rowRecord.options as string[])
-				: [],
-			answers: Array.isArray(rowRecord.answers)
-				? (rowRecord.answers as (number | string)[])
-				: [],
-			difficulty:
-				typeof rowRecord.difficulty === "number" ? rowRecord.difficulty : 0.5,
-			event: typeof rowRecord.event === "string" ? rowRecord.event : undefined,
-			subtopics: Array.isArray(rowRecord.subtopics)
-				? (rowRecord.subtopics as string[])
-				: [],
+			id: row.id,
+			question: row.question || "",
+			options: Array.isArray(row.options) ? row.options : [],
+			answers: Array.isArray(row.answers) ? row.answers : [],
+			difficulty: typeof row.difficulty === "number" ? row.difficulty : 0.5,
+			event: row.event,
+			subtopics: Array.isArray(row.subtopics) ? row.subtopics : [],
 			imageData,
-		} as Question;
+		};
 	});
 
 	logger.dev.structured("debug", "[fetchIdQuestionsServer] Fetched", {
