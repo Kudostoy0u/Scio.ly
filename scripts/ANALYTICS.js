@@ -4,55 +4,102 @@ const glob = require("glob");
 const yaml = require("js-yaml");
 
 // --- configuration ---
-const RESULTS_DIR = "results";
-const OUTPUT_DIR = "./public";
-const STARTING_ELO = 1500;
-const ELO_FLOOR = 100;
+const HYPERPARAMS_PATH = path.join(__dirname, "HYPERPARAMS.json");
+const DEFAULTS = {
+  resultsDir: "results",
+  outputDir: "./public",
+  startingElo: 1500,
+  eloFloor: 100,
+  eloPerformanceScalingFactor: 140,
+  tournamentCompetitivenessFactor: 0.5,
+  firstTournamentVolatility: 1.5,
+  secondTournamentVolatility: 1.1,
+  normalVolatility: 1.0,
+  stateTournamentMultiplier: 4.0,
+  nationalTournamentMultiplier: 7.0,
+  stateTrendMultiplier: 1.0,
+  nationalTrendMultiplier: 1.0,
+  trendSeasons: 0,
+  pastSeasons: 0,
+  eloDampingScale: 100,
+  eloDampingStrength: 0.3,
+  nationalLossWeight: 2.0,
+  stateLossWeight: 1.0,
+  rankWeightExponent: 1.0,
+  skipOutput: false,
+  metricsOut: "",
+  printLoss: false,
+  enableLogging: false,
+};
 
-/**
- * This is the single most important constant for the new algorithm.
- * It controls the magnitude of Elo changes based on performance.
- * A higher value leads to more volatile ratings. 800 is a robust, stable starting point.
- */
-const ELO_PERFORMANCE_SCALING_FACTOR = 140;
-
-/**
- * Tournament competitiveness weighting factor.
- * Higher values make competitive tournaments (with high average Elo) more impactful.
- */
-const TOURNAMENT_COMPETITIVENESS_FACTOR = 0.5;
-
-/**
- * Tournament volatility scaling factors for new seasons.
- * Teams get more volatile Elo changes in their first few tournaments of a new season.
- */
-const FIRST_TOURNAMENT_VOLATILITY = 1.5; // 2x more volatile for first tournament
-const SECOND_TOURNAMENT_VOLATILITY = 1.1; // 1.5x more volatile for second tournament
-const NORMAL_VOLATILITY = 1.0;
-
-/**
- * Tournament importance multipliers for state and national tournaments.
- */
-const STATE_TOURNAMENT_MULTIPLIER = 4.0; // 4x multiplier for state tournaments
-const NATIONAL_TOURNAMENT_MULTIPLIER = 7.0; // 7x multiplier for national tournaments
-
-/**
- * ELO change damping parameters for continuous damping function.
- * Uses a sigmoid-like function to smoothly damp large changes.
- */
-const ELO_DAMPING_SCALE = 100;
-const ELO_DAMPING_STRENGTH = 0.3;
-
-// --- logging configuration ---
-const ENABLE_LOGGING = false; // Set to false to disable all logging
+const config = loadConfig(DEFAULTS, HYPERPARAMS_PATH);
 
 /**
  * Logger function that only outputs if logging is enabled
  * @param {...any} args - Arguments to log (same as console.log)
  */
 function log(..._args) {
-  if (ENABLE_LOGGING) {
+  if (config.enableLogging) {
+    console.log(..._args);
   }
+}
+
+function loadConfig(defaults, paramsPath) {
+  const args = process.argv.slice(2);
+  const configValues = { ...defaults };
+
+  if (paramsPath && fs.existsSync(paramsPath)) {
+    try {
+      const fileConfig = JSON.parse(fs.readFileSync(paramsPath, "utf8"));
+      if (fileConfig && typeof fileConfig === "object") {
+        for (const [key, value] of Object.entries(fileConfig)) {
+          if (key in configValues) {
+            configValues[key] = value;
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(`Failed to read ${paramsPath}: ${error.message}`);
+    }
+  }
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (!arg.startsWith("--")) {
+      continue;
+    }
+
+    const [rawKey, rawValue] = arg.slice(2).split("=");
+    let value = rawValue;
+    if (value === undefined) {
+      const next = args[i + 1];
+      if (next && !next.startsWith("--")) {
+        value = next;
+        i++;
+      } else {
+        value = "true";
+      }
+    }
+
+    const key = toCamel(rawKey);
+    if (!(key in configValues)) {
+      continue;
+    }
+
+    if (value === "true" || value === "false") {
+      configValues[key] = value === "true";
+    } else if (!Number.isNaN(Number(value))) {
+      configValues[key] = Number(value);
+    } else {
+      configValues[key] = value;
+    }
+  }
+
+  return configValues;
+}
+
+function toCamel(input) {
+  return input.replace(/-([a-z])/g, (_match, letter) => letter.toUpperCase());
 }
 
 const metadata = {
@@ -62,6 +109,13 @@ const metadata = {
   teamIds: [], // [teamname, ...]
   eventIds: [], // [eventname, ...]
   tournamentIds: [], // [tournamentname, ...]
+};
+
+const predictionStats = {
+  totalLoss: 0,
+  tournamentCount: 0,
+  stateLoss: 0,
+  nationalLoss: 0,
 };
 
 let nextTeamId = 0;
@@ -77,12 +131,22 @@ async function main() {
     await processDivision(division);
   }
   log("\n=== Analytics Processing Complete ===");
+
+  const metrics = buildMetricsSummary();
+  if (config.printLoss) {
+    console.log(`Prediction loss: ${metrics.totalLoss.toFixed(4)}`);
+  }
+  if (config.metricsOut) {
+    fs.writeFileSync(config.metricsOut, JSON.stringify(metrics, null, 2));
+  }
 }
 
 async function processDivision(division) {
   const eloData = {};
 
-  const tournamentFiles = glob.sync(`${RESULTS_DIR}/**/*_${division.toLowerCase()}.yaml`);
+  const tournamentFiles = glob.sync(
+    `${config.resultsDir}/**/*_${division.toLowerCase()}.yaml`
+  );
   tournamentFiles.sort();
 
   log(`Found ${tournamentFiles.length} tournament files for Division ${division}`);
@@ -92,14 +156,22 @@ async function processDivision(division) {
   }
   log(`Tournament files: ${tournamentFiles.map((f) => path.basename(f)).join(", ")}`);
 
+  let tournamentEntries = [];
   for (const file of tournamentFiles) {
     log(`\nProcessing ${path.basename(file)}...`);
     try {
       const fileContents = fs.readFileSync(file, "utf8");
+      const fileContentsLower = fileContents.toLowerCase();
       const tournamentData = yaml.load(fileContents);
       if (tournamentData) {
         log(`  Loaded tournament data from ${path.basename(file)}`);
-        processTournament(tournamentData, eloData, file);
+        const tournamentInfo = buildTournamentInfo(tournamentData, file);
+        tournamentEntries.push({
+          file,
+          tournamentData,
+          fileContentsLower,
+          tournamentInfo,
+        });
       } else {
         log(`  Warning: No tournament data found in ${path.basename(file)}`);
       }
@@ -111,6 +183,33 @@ async function processDivision(division) {
     }
   }
 
+  if (config.pastSeasons > 0) {
+    const seasons = tournamentEntries
+      .map((entry) => Number.parseInt(entry.tournamentInfo.season, 10))
+      .filter((season) => Number.isFinite(season));
+    const maxSeason = seasons.length > 0 ? Math.max(...seasons) : null;
+    if (maxSeason !== null) {
+      const minSeason = maxSeason - config.pastSeasons + 1;
+      tournamentEntries = tournamentEntries.filter((entry) => {
+        const season = Number.parseInt(entry.tournamentInfo.season, 10);
+        return Number.isFinite(season) && season >= minSeason;
+      });
+      log(
+        `Filtered tournaments to seasons ${minSeason}-${maxSeason} (pastSeasons=${config.pastSeasons})`
+      );
+    }
+  }
+
+  for (const entry of tournamentEntries) {
+    processTournament(
+      entry.tournamentData,
+      eloData,
+      entry.file,
+      entry.fileContentsLower,
+      entry.tournamentInfo
+    );
+  }
+
   const _optimizedData = {
     meta: {
       teams: metadata.teamIds,
@@ -120,7 +219,9 @@ async function processDivision(division) {
     data: eloData,
   };
 
-  generateStateFiles(eloData, division, metadata);
+  if (!config.skipOutput) {
+    generateStateFiles(eloData, division, metadata);
+  }
 }
 
 /**
@@ -161,7 +262,7 @@ function processTournamentName(tournamentName) {
   return processedName;
 }
 
-function processTournament(data, eloData, filePath) {
+function buildTournamentInfo(data, filePath) {
   const filename = path.basename(filePath, ".yaml");
   const rawTournamentName =
     data.Tournament.name ||
@@ -170,7 +271,7 @@ function processTournament(data, eloData, filePath) {
       return parts.slice(1, -1).join(" ");
     })();
 
-  const tournamentInfo = {
+  return {
     name: processTournamentName(rawTournamentName),
     date: data.Tournament["start date"]
       ? (() => {
@@ -188,6 +289,9 @@ function processTournament(data, eloData, filePath) {
       : new Date(data.Tournament["start date"]).getFullYear().toString(),
     filename: filename,
   };
+}
+
+function processTournament(data, eloData, filePath, fileContentsLower, tournamentInfo) {
 
   log(`  Tournament: ${tournamentInfo.name}`);
   log(`  Date: ${tournamentInfo.date}, Season: ${tournamentInfo.season}`);
@@ -208,18 +312,33 @@ function processTournament(data, eloData, filePath) {
   log(`  Processed teams: ${overallRankings.length} ranked teams`);
   log("  Processing overall rankings...");
 
+  const tournamentType = getTournamentType(tournamentInfo, filePath, fileContentsLower);
+  const importanceMultiplier = getTournamentImportanceMultiplier(tournamentType);
+  const isStateOrNational = tournamentType !== null;
+
   updateEloForRanking(
     overallRankings,
     eloData,
     tournamentInfo,
     "__OVERALL__",
     teamStateMap,
-    filePath
+    importanceMultiplier,
+    isStateOrNational,
+    tournamentType
   );
 
   log(`  Processing ${eventRankingsMap.size} event rankings...`);
   for (const [eventName, eventRankings] of eventRankingsMap.entries()) {
-    updateEloForRanking(eventRankings, eloData, tournamentInfo, eventName, teamStateMap, filePath);
+    updateEloForRanking(
+      eventRankings,
+      eloData,
+      tournamentInfo,
+      eventName,
+      teamStateMap,
+      importanceMultiplier,
+      isStateOrNational,
+      tournamentType
+    );
   }
 }
 
@@ -235,11 +354,17 @@ function analyzeAndRankTeams(data) {
   }
 
   const placingsByTeam = new Map();
+  const placeByTeamEvent = new Map();
   data.Placings.forEach((p) => {
     if (!placingsByTeam.has(p.team)) {
       placingsByTeam.set(p.team, []);
     }
     placingsByTeam.get(p.team).push(p);
+
+    if (!placeByTeamEvent.has(p.team)) {
+      placeByTeamEvent.set(p.team, new Map());
+    }
+    placeByTeamEvent.get(p.team).set(p.event, p.place);
   });
 
   log(
@@ -259,14 +384,20 @@ function analyzeAndRankTeams(data) {
     log(`    Total no-show teams: ${noShowTeams.size}`);
   }
 
+  const eventCompetitorSets = new Map();
+  for (const placing of data.Placings) {
+    if (!placing.place || noShowTeams.has(placing.team)) {
+      continue;
+    }
+    if (!eventCompetitorSets.has(placing.event)) {
+      eventCompetitorSets.set(placing.event, new Set());
+    }
+    eventCompetitorSets.get(placing.event).add(placing.team);
+  }
+
   const eventCompetitorCounts = new Map();
   data.Events.forEach((event) => {
-    const competitors = new Set(
-      data.Placings.filter(
-        (p) => p.event === event.name && p.place && !noShowTeams.has(p.team)
-      ).map((p) => p.team)
-    );
-    eventCompetitorCounts.set(event.name, competitors.size);
+    eventCompetitorCounts.set(event.name, eventCompetitorSets.get(event.name)?.size || 0);
   });
   log(`    Event competitor counts calculated for ${eventCompetitorCounts.size} events`);
 
@@ -277,11 +408,11 @@ function analyzeAndRankTeams(data) {
     }
 
     let totalScore = 0;
-    const teamPlacings = placingsByTeam.get(team.number) || [];
+    const teamPlacings = placeByTeamEvent.get(team.number);
     for (const event of data.Events) {
-      const placing = teamPlacings.find((p) => p.event === event.name);
-      if (placing?.place) {
-        totalScore += placing.place;
+      const place = teamPlacings?.get(event.name);
+      if (place) {
+        totalScore += place;
       } else {
         const competitorCount = eventCompetitorCounts.get(event.name) || 1;
         totalScore += competitorCount;
@@ -367,11 +498,10 @@ function analyzeAndRankTeams(data) {
       if (noShowTeams.has(team.number)) {
         continue;
       }
-      const teamPlacing = (placingsByTeam.get(team.number) || []).find(
-        (p) => p.event === event.name
-      );
-      const place = teamPlacing?.place ? teamPlacing.place : competitorCount + 1;
-      eventScoreMap.set(team.number, { teamData: team, score: place });
+      const teamPlacings = placeByTeamEvent.get(team.number);
+      const place = teamPlacings?.get(event.name);
+      const score = place ? place : competitorCount + 1;
+      eventScoreMap.set(team.number, { teamData: team, score });
     }
     eventRankingsMap.set(event.name, createRankedList(eventScoreMap));
   }
@@ -388,7 +518,9 @@ function updateEloForRanking(
   tournamentInfo,
   category,
   teamStateMap,
-  filePath
+  importanceMultiplier,
+  isStateOrNational,
+  tournamentType
 ) {
   if (rankedTeams.length < 2) {
     log(`      Skipping ${category}: insufficient teams (${rankedTeams.length})`);
@@ -422,12 +554,16 @@ function updateEloForRanking(
 
     const tournamentCount = teamData.history.length;
     if (tournamentCount === 0) {
-      volatilityFactors[team.name] = FIRST_TOURNAMENT_VOLATILITY;
+      volatilityFactors[team.name] = config.firstTournamentVolatility;
     } else if (tournamentCount === 1) {
-      volatilityFactors[team.name] = SECOND_TOURNAMENT_VOLATILITY;
+      volatilityFactors[team.name] = config.secondTournamentVolatility;
     } else {
-      volatilityFactors[team.name] = NORMAL_VOLATILITY;
+      volatilityFactors[team.name] = config.normalVolatility;
     }
+  }
+
+  if (category === "__OVERALL__" && tournamentType) {
+    recordPredictionLoss(participatingTeams, initialRatings, tournamentType);
   }
 
   const avgInitialRating =
@@ -443,16 +579,19 @@ function updateEloForRanking(
   const averageElo =
     topTeamRatings.reduce((sum, rating) => sum + rating, 0) / topTeamRatings.length;
   const competitivenessMultiplier =
-    1 + (TOURNAMENT_COMPETITIVENESS_FACTOR * (averageElo - 1500)) / 1500;
+    1 + (config.tournamentCompetitivenessFactor * (averageElo - 1500)) / 1500;
   log(
     `        Top ${topTeamsCount} teams avg Elo: ${averageElo.toFixed(1)}, competitiveness multiplier: ${competitivenessMultiplier.toFixed(3)}`
   );
 
-  const importanceMultiplier = getTournamentImportanceMultiplier(tournamentInfo, filePath);
   log(`        Tournament importance multiplier: ${importanceMultiplier.toFixed(1)}`);
 
   const eloChanges = {};
   const numOpponents = participatingTeams.length - 1;
+  const qRatings = {};
+  for (const team of participatingTeams) {
+    qRatings[team.name] = 10 ** (initialRatings[team.name] / 400);
+  }
 
   for (const teamA of participatingTeams) {
     let expectedScoreRaw = 0;
@@ -463,10 +602,9 @@ function updateEloForRanking(
         continue;
       }
 
-      const ratingA = initialRatings[teamA.name];
-      const ratingB = initialRatings[teamB.name];
-
-      expectedScoreRaw += 1 / (1 + 10 ** ((ratingB - ratingA) / 400));
+      const qA = qRatings[teamA.name];
+      const qB = qRatings[teamB.name];
+      expectedScoreRaw += qA / (qA + qB);
       if (teamA.place < teamB.place) {
         actualScoreRaw += 1.0;
       } else if (teamA.place === teamB.place) {
@@ -478,7 +616,7 @@ function updateEloForRanking(
     const expectedPerformance = expectedScoreRaw / numOpponents;
 
     const baseEloChange =
-      ELO_PERFORMANCE_SCALING_FACTOR * (actualPerformance - expectedPerformance);
+      config.eloPerformanceScalingFactor * (actualPerformance - expectedPerformance);
     const scaledEloChange =
       baseEloChange *
       volatilityFactors[teamA.name] *
@@ -507,6 +645,7 @@ function updateEloForRanking(
   );
 
   const teamsToConvertToJV = [];
+  const schoolsToCull = new Set();
   const MAX_ELO_LOSS = 200;
   let cappedLosses = 0;
 
@@ -519,20 +658,32 @@ function updateEloForRanking(
       cappedLosses++;
     }
 
-    if (
-      team.name.includes(" Varsity") &&
-      initialRatings[team.name] >= 2000 &&
-      eloChanges[team.name] <= -90 &&
-      !isStateOrNationalTournament(tournamentInfo, filePath)
-    ) {
-      teamsToConvertToJV.push(team.name);
-      log(
-        `        Marking ${team.name} for JV conversion (Elo: ${initialRatings[team.name].toFixed(1)}, change: ${eloChanges[team.name].toFixed(1)})`
-      );
-    }
   }
   if (cappedLosses > 0) {
     log(`        Capped ${cappedLosses} team Elo losses`);
+  }
+
+  const bestTeamBySchool = new Map();
+  for (const team of participatingTeams) {
+    const schoolName = getSchoolName(team.name);
+    const currentBest = bestTeamBySchool.get(schoolName);
+    if (!currentBest || team.place < currentBest.place) {
+      bestTeamBySchool.set(schoolName, team);
+    }
+  }
+
+  for (const [schoolName, bestTeam] of bestTeamBySchool.entries()) {
+    if (
+      bestTeam.name.includes(" Varsity") &&
+      eloChanges[bestTeam.name] < -100 &&
+      !isStateOrNational
+    ) {
+      teamsToConvertToJV.push(bestTeam.name);
+      schoolsToCull.add(schoolName);
+      log(
+        `        Marking ${bestTeam.name} for JV conversion (Elo: ${initialRatings[bestTeam.name].toFixed(1)}, change: ${eloChanges[bestTeam.name].toFixed(1)})`
+      );
+    }
   }
 
   if (teamsToConvertToJV.length > 0) {
@@ -541,8 +692,16 @@ function updateEloForRanking(
     );
 
     const filteredTeams = participatingTeams.filter((team) => !team.name.includes(" JV"));
+    const schoolFilteredTeams =
+      schoolsToCull.size > 0
+        ? filteredTeams.filter(
+            (team) =>
+              !schoolsToCull.has(getSchoolName(team.name)) ||
+              teamsToConvertToJV.includes(team.name)
+          )
+        : filteredTeams;
 
-    const convertedTeams = filteredTeams.map((team) => {
+    const convertedTeams = schoolFilteredTeams.map((team) => {
       if (teamsToConvertToJV.includes(team.name)) {
         return {
           ...team,
@@ -571,10 +730,14 @@ function updateEloForRanking(
       recalculatedTopTeamRatings.reduce((sum, rating) => sum + rating, 0) /
       recalculatedTopTeamRatings.length;
     const recalculatedCompetitivenessMultiplier =
-      1 + (TOURNAMENT_COMPETITIVENESS_FACTOR * (recalculatedAverageElo - 1500)) / 1500;
+      1 + (config.tournamentCompetitivenessFactor * (recalculatedAverageElo - 1500)) / 1500;
 
     const recalculatedEloChanges = {};
     const recalculatedNumOpponents = convertedTeams.length - 1;
+    const recalculatedQRatings = {};
+    for (const team of convertedTeams) {
+      recalculatedQRatings[team.name] = 10 ** (recalculatedInitialRatings[team.name] / 400);
+    }
 
     for (const teamA of convertedTeams) {
       let expectedScoreRaw = 0;
@@ -585,10 +748,9 @@ function updateEloForRanking(
           continue;
         }
 
-        const ratingA = recalculatedInitialRatings[teamA.name];
-        const ratingB = recalculatedInitialRatings[teamB.name];
-
-        expectedScoreRaw += 1 / (1 + 10 ** ((ratingB - ratingA) / 400));
+        const qA = recalculatedQRatings[teamA.name];
+        const qB = recalculatedQRatings[teamB.name];
+        expectedScoreRaw += qA / (qA + qB);
         if (teamA.place < teamB.place) {
           actualScoreRaw += 1.0;
         } else if (teamA.place === teamB.place) {
@@ -600,7 +762,7 @@ function updateEloForRanking(
       const expectedPerformance = expectedScoreRaw / recalculatedNumOpponents;
 
       const baseEloChange =
-        ELO_PERFORMANCE_SCALING_FACTOR * (actualPerformance - expectedPerformance);
+        config.eloPerformanceScalingFactor * (actualPerformance - expectedPerformance);
       const volatilityFactor =
         volatilityFactors[teamA.name.replace(" JV", " Varsity")] || volatilityFactors[teamA.name];
       const scaledEloChange =
@@ -644,7 +806,7 @@ function updateEloForRanking(
       let newElo =
         initialRatings[team.name.replace(" JV", " Varsity")] + recalculatedEloChanges[team.name];
 
-      newElo = Math.max(ELO_FLOOR, newElo);
+      newElo = Math.max(config.eloFloor, newElo);
 
       teamData.rating = newElo;
       teamData.history.push({
@@ -682,7 +844,7 @@ function updateEloForRanking(
       );
       let newElo = initialRatings[team.name] + eloChanges[team.name];
 
-      newElo = Math.max(ELO_FLOOR, newElo);
+      newElo = Math.max(config.eloFloor, newElo);
 
       teamData.rating = newElo;
       teamData.history.push({
@@ -705,6 +867,67 @@ function updateEloForRanking(
   }
 }
 
+function getSchoolName(teamName) {
+  return teamName.replace(/ (Varsity|JV)$/, "");
+}
+
+function recordPredictionLoss(participatingTeams, initialRatings, tournamentType) {
+  const predictedPlaces = computePredictedPlaces(participatingTeams, initialRatings);
+  let loss = 0;
+  for (const team of participatingTeams) {
+    const actualPlace = team.place;
+    const predictedPlace = predictedPlaces[team.name];
+    if (!Number.isFinite(actualPlace) || !Number.isFinite(predictedPlace)) {
+      continue;
+    }
+    const rankWeight = 1 / Math.pow(actualPlace, config.rankWeightExponent);
+    loss += rankWeight * Math.abs(predictedPlace - actualPlace);
+  }
+
+  const tournamentWeight =
+    tournamentType === "national" ? config.nationalLossWeight : config.stateLossWeight;
+  const weightedLoss = loss * tournamentWeight;
+
+  predictionStats.totalLoss += weightedLoss;
+  predictionStats.tournamentCount += 1;
+  if (tournamentType === "national") {
+    predictionStats.nationalLoss += weightedLoss;
+  } else if (tournamentType === "state") {
+    predictionStats.stateLoss += weightedLoss;
+  }
+}
+
+function computePredictedPlaces(participatingTeams, initialRatings) {
+  const sortedTeams = [...participatingTeams].sort(
+    (a, b) => initialRatings[b.name] - initialRatings[a.name]
+  );
+  const predictedPlaces = {};
+  let lastRating = null;
+  let lastPlace = 0;
+  for (let i = 0; i < sortedTeams.length; i++) {
+    const teamName = sortedTeams[i].name;
+    const rating = initialRatings[teamName];
+    let place = i + 1;
+    if (i > 0 && rating === lastRating) {
+      place = lastPlace;
+    }
+    predictedPlaces[teamName] = place;
+    lastRating = rating;
+    lastPlace = place;
+  }
+  return predictedPlaces;
+}
+
+function buildMetricsSummary() {
+  return {
+    totalLoss: predictionStats.totalLoss,
+    tournamentCount: predictionStats.tournamentCount,
+    stateLoss: predictionStats.stateLoss,
+    nationalLoss: predictionStats.nationalLoss,
+    config: { ...config },
+  };
+}
+
 /**
  * Calculate damping factor for ELO changes using a continuous function.
  * Uses a smooth curve that applies more damping to larger changes.
@@ -712,8 +935,9 @@ function updateEloForRanking(
 function calculateEloDampingFactor(eloChange) {
   const absChange = Math.abs(eloChange);
 
-  const normalizedChange = absChange / ELO_DAMPING_SCALE;
-  const dampingAmount = ELO_DAMPING_STRENGTH * (normalizedChange / (1 + normalizedChange));
+  const normalizedChange = absChange / config.eloDampingScale;
+  const dampingAmount =
+    config.eloDampingStrength * (normalizedChange / (1 + normalizedChange));
 
   return 1 - dampingAmount;
 }
@@ -722,38 +946,49 @@ function calculateEloDampingFactor(eloChange) {
  * Detect if a tournament is a state or national tournament based on name, filename, and content.
  * Returns the appropriate multiplier (1.0 for regular tournaments).
  */
-function getTournamentImportanceMultiplier(tournamentInfo, filePath) {
+function getTournamentType(tournamentInfo, filePath, _fileContentsLower) {
   const searchTerms = [
     tournamentInfo.name,
     tournamentInfo.filename,
     path.basename(filePath, ".yaml"),
   ];
 
-  try {
-    const fileContents = fs.readFileSync(filePath, "utf8").toLowerCase();
-    searchTerms.push(fileContents);
-  } catch (e) {
-    log(`        Warning: Could not read file contents for importance detection: ${e.message}`);
-  }
-
   const combinedText = searchTerms.join(" ").toLowerCase();
 
   if (
-    combinedText.includes("national tournament") ||
-    combinedText.includes("nationals") ||
-    combinedText.includes("national championship")
+    /\bnational tournament\b/.test(combinedText) ||
+    /\bnationals\b/.test(combinedText) ||
+    /\bnational championship\b/.test(combinedText)
   ) {
-    log(`        Detected national tournament (multiplier: ${NATIONAL_TOURNAMENT_MULTIPLIER})`);
-    return NATIONAL_TOURNAMENT_MULTIPLIER;
+    return "national";
   }
 
   if (
-    combinedText.includes("state tournament") ||
-    combinedText.includes("states") ||
-    combinedText.includes("state championship")
+    /\bstate tournament\b/.test(combinedText) ||
+    /\bstates\b/.test(combinedText) ||
+    /\bstate championship\b/.test(combinedText)
   ) {
-    log(`        Detected state tournament (multiplier: ${STATE_TOURNAMENT_MULTIPLIER})`);
-    return STATE_TOURNAMENT_MULTIPLIER;
+    return "state";
+  }
+
+  return null;
+}
+
+/**
+ * Detect if a tournament is a state or national tournament based on name, filename, and content.
+ * Returns the appropriate multiplier (1.0 for regular tournaments).
+ */
+function getTournamentImportanceMultiplier(tournamentType) {
+  if (tournamentType === "national") {
+    const multiplier = config.nationalTournamentMultiplier * config.nationalTrendMultiplier;
+    log(`        Detected national tournament (multiplier: ${multiplier})`);
+    return multiplier;
+  }
+
+  if (tournamentType === "state") {
+    const multiplier = config.stateTournamentMultiplier * config.stateTrendMultiplier;
+    log(`        Detected state tournament (multiplier: ${multiplier})`);
+    return multiplier;
   }
 
   return 1.0;
@@ -763,37 +998,8 @@ function getTournamentImportanceMultiplier(tournamentInfo, filePath) {
  * Check if a tournament is a state or national tournament.
  * Returns true if it's a state or national tournament, false otherwise.
  */
-function isStateOrNationalTournament(tournamentInfo, filePath) {
-  const searchTerms = [
-    tournamentInfo.name,
-    tournamentInfo.filename,
-    path.basename(filePath, ".yaml"),
-  ];
-
-  try {
-    const fileContents = fs.readFileSync(filePath, "utf8").toLowerCase();
-    searchTerms.push(fileContents);
-  } catch (_e) {}
-
-  const combinedText = searchTerms.join(" ").toLowerCase();
-
-  if (
-    combinedText.includes("national tournament") ||
-    combinedText.includes("nationals") ||
-    combinedText.includes("national championship")
-  ) {
-    return true;
-  }
-
-  if (
-    combinedText.includes("state tournament") ||
-    combinedText.includes("states") ||
-    combinedText.includes("state championship")
-  ) {
-    return true;
-  }
-
-  return false;
+function isStateOrNationalTournament(tournamentInfo, filePath, fileContentsLower) {
+  return getTournamentType(tournamentInfo, filePath, fileContentsLower) !== null;
 }
 
 function getOrInitializeTeam(eloData, teamName, season, category, stateCode) {
@@ -809,7 +1015,7 @@ function getOrInitializeTeam(eloData, teamName, season, category, stateCode) {
   }
 
   if (!eloData[stateCode][teamName].seasons[season].events[category]) {
-    let initialRating = STARTING_ELO;
+    let initialRating = config.startingElo;
     const currentSeasonInt = Number.parseInt(season, 10);
 
     const availableSeasons = Object.keys(eloData[stateCode][teamName].seasons)
@@ -846,7 +1052,7 @@ function getOrInitializeTeam(eloData, teamName, season, category, stateCode) {
  * @param {Object} metadata - The metadata object with mappings
  */
 function generateStateFiles(eloData, division, metadata) {
-  const statesDir = path.join(OUTPUT_DIR, `states${division}`);
+  const statesDir = path.join(config.outputDir, `states${division}`);
   log(`\n  Generating state files for Division ${division}...`);
   log(`  Output directory: ${statesDir}`);
 
@@ -885,8 +1091,9 @@ function generateStateFiles(eloData, division, metadata) {
     const teamsInState = Object.keys(stateData).length;
     totalTeamsInFiles += teamsInState;
 
-    const fileSize = JSON.stringify(stateData).length;
-    fs.writeFileSync(stateFile, JSON.stringify(stateData));
+    const stateJson = JSON.stringify(stateData);
+    const fileSize = stateJson.length;
+    fs.writeFileSync(stateFile, stateJson);
 
     metadataFile.states[stateCode] = getStateName(stateCode);
 
@@ -896,8 +1103,9 @@ function generateStateFiles(eloData, division, metadata) {
   log(`  Total teams across all states: ${totalTeamsInFiles}`);
 
   const metaFile = path.join(statesDir, "meta.json");
-  const metaFileSize = JSON.stringify(metadataFile, null, 2).length;
-  fs.writeFileSync(metaFile, JSON.stringify(metadataFile, null, 2));
+  const metaJson = JSON.stringify(metadataFile, null, 2);
+  const metaFileSize = metaJson.length;
+  fs.writeFileSync(metaFile, metaJson);
 
   log(`  Generated meta.json: ${(metaFileSize / 1024).toFixed(1)} KB`);
   log(`  State-based files created in: ${statesDir}`);

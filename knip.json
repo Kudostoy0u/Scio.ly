@@ -1,6 +1,14 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": ["src/app/**/*.{ts,tsx}", "src/lib/**/*.{ts,tsx}"],
+  "entry": [
+    "src/app/**/page.{ts,tsx}",
+    "src/app/**/route.{ts,tsx}",
+    "src/app/**/layout.{ts,tsx}",
+    "src/app/**/loading.{ts,tsx}",
+    "src/app/**/not-found.{ts,tsx}",
+    "src/instrumentation.{ts,tsx}",
+    "src/instrumentation-client.{ts,tsx}"
+  ],
   "project": ["src/**/*.{ts,tsx}", "*.{ts,tsx,mjs,js}"],
   "ignoreExportsUsedInFile": true,
   "ignoreDependencies": [
