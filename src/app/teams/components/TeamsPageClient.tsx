@@ -2,8 +2,10 @@
 
 import { useAuth } from "@/app/contexts/AuthContext";
 import { trpc } from "@/lib/trpc/client";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { getQueryKey } from "@trpc/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "react-toastify";
 import CreateTeamModal from "./CreateTeamModal";
 import JoinTeamModal from "./JoinTeamModal";
@@ -15,18 +17,57 @@ import TeamsLanding from "./TeamsLanding";
 export default function TeamsPageClient() {
 	const { user } = useAuth();
 	const router = useRouter();
+	const queryClient = useQueryClient();
+	const searchParams = useSearchParams();
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 	const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
 	const [showInviteModal, setShowInviteModal] = useState(false);
 
 	const utils = trpc.useUtils();
+	const listUserTeamsQueryKey = useMemo(
+		() => getQueryKey(trpc.teams.listUserTeams, undefined, "query"),
+		[],
+	);
+	const cachedTeamsData = useSyncExternalStore(
+		(listener) => queryClient.getQueryCache().subscribe(listener),
+		() => queryClient.getQueryState(listUserTeamsQueryKey)?.data,
+		() => queryClient.getQueryState(listUserTeamsQueryKey)?.data,
+	) as
+		| {
+				teams: Array<{
+					id: string;
+					slug: string;
+					name?: string | null;
+					school: string;
+					division?: string | null;
+					role?: string | null;
+				}>;
+		  }
+		| undefined;
+	const viewAll = searchParams.get("view") === "all";
+	const tab = searchParams.get("tab");
+	const skipAutoRedirect = viewAll || tab === "settings";
+	const justUnlinked = useMemo(() => {
+		if (typeof document === "undefined") {
+			return false;
+		}
+		return document.cookie
+			.split(";")
+			.some((cookie) => cookie.trim().startsWith("teamsJustUnlinked="));
+	}, []);
+	const shouldAutoRedirect =
+		!!user?.id &&
+		!skipAutoRedirect &&
+		!justUnlinked &&
+		!!cachedTeamsData?.teams?.length;
+	const hasRedirectedRef = useRef(false);
 	const { data, isLoading } = trpc.teams.listUserTeams.useQuery(undefined, {
-		enabled: !!user?.id,
+		enabled: !!user?.id && !cachedTeamsData,
 		staleTime: 30_000,
 	});
 	const { data: pendingInvites } = trpc.teams.pendingInvites.useQuery(
 		undefined,
-		{ enabled: !!user?.id, staleTime: 10_000 },
+		{ enabled: !!user?.id && !shouldAutoRedirect, staleTime: 10_000 },
 	);
 
 	const acceptInviteMutation = trpc.teams.acceptInvite.useMutation({
@@ -76,8 +117,9 @@ export default function TeamsPageClient() {
 		},
 	});
 
+	const teamsSource = data ?? cachedTeamsData;
 	const userTeams =
-		data?.teams.map((team) => ({
+		teamsSource?.teams.map((team) => ({
 			id: team.id,
 			slug: team.slug,
 			name: team.name || `${team.school} ${team.division}`,
@@ -124,6 +166,32 @@ export default function TeamsPageClient() {
 		}
 	};
 
+	useEffect(() => {
+		if (!shouldAutoRedirect) {
+			return;
+		}
+		if (hasRedirectedRef.current) {
+			return;
+		}
+		const teams = cachedTeamsData?.teams ?? [];
+		const lastVisited =
+			typeof window !== "undefined"
+				? window.localStorage.getItem("teams:lastVisited")
+				: null;
+		const lastMatch = lastVisited
+			? teams.find((team) => team.slug === lastVisited)
+			: null;
+		const targetSlug = lastMatch?.slug ?? teams[0]?.slug;
+		if (targetSlug) {
+			hasRedirectedRef.current = true;
+			router.replace(`/teams/${targetSlug}`);
+		}
+	}, [cachedTeamsData, router, shouldAutoRedirect]);
+
+	if (shouldAutoRedirect) {
+		return null;
+	}
+
 	if (!user?.id) {
 		return (
 			<TeamsLanding
@@ -136,7 +204,7 @@ export default function TeamsPageClient() {
 		);
 	}
 
-	if (isLoading) {
+	if (isLoading && !cachedTeamsData) {
 		return (
 			<div className="flex items-center justify-center min-h-[200px]">
 				<div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />

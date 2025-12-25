@@ -9,7 +9,10 @@
 
 import Modal from "@/app/components/Modal";
 import { useTheme } from "@/app/contexts/ThemeContext";
-import { useInvalidateTeam, useTeamRoster } from "@/lib/hooks/useTeam";
+import {
+	useInvalidateTeam,
+	useTeamRosterCacheOnly,
+} from "@/lib/hooks/useTeam";
 import type { TeamFullData, TeamMember } from "@/lib/server/teams/shared";
 import { trpc } from "@/lib/trpc/client";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -63,7 +66,7 @@ export default function RosterTabUnified({
 	const updateRosterNotesMutation = trpc.teams.updateRosterNotes.useMutation();
 
 	// Get roster data from shared cache
-	const { data: rosterData, isLoading } = useTeamRoster(
+	const { data: rosterData, isLoading } = useTeamRosterCacheOnly(
 		team.slug,
 		activeSubteamId || "",
 	);

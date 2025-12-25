@@ -4,6 +4,7 @@ import { withAuthRetryData } from "@/lib/utils/auth/supabaseRetry";
 import logger from "@/lib/utils/logging/logger";
 
 import { supabase } from "@/lib/supabase";
+import { getCachedUserProfile } from "@/app/utils/userProfileCache";
 import type { Database } from "@/lib/types/database";
 import type { DailyMetrics } from "./metrics";
 
@@ -253,24 +254,17 @@ const syncGreetingName = async (userId: string): Promise<void> => {
 			return;
 		}
 
-		logger.log("Fetching user profile for greeting name, userId:", userId);
-		const { data: profile } = await supabase
-			.from("users")
-			.select("first_name, display_name")
-			.eq("id", userId.trim())
-			.maybeSingle();
+		const cachedGreeting = getLocalGreetingName();
+		if (cachedGreeting) {
+			return;
+		}
 
-		const profileTyped = profile as {
-			first_name?: string;
-			display_name?: string;
-		} | null;
-		const firstName = profileTyped?.first_name;
-		const displayName = profileTyped?.display_name;
-		const chosen = firstName?.trim()
-			? firstName.trim()
-			: displayName?.trim()
-				? displayName.trim().split(" ")[0]
-				: "";
+		logger.log("Fetching user profile for greeting name, userId:", userId);
+		const profile = await getCachedUserProfile(userId.trim());
+		const displayName = profile?.display_name ?? null;
+		const chosen = displayName?.trim()
+			? displayName.trim().split(" ")[0]
+			: "";
 
 		if (chosen) {
 			setLocalGreetingName(chosen);

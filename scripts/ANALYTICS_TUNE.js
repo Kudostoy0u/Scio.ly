@@ -18,6 +18,8 @@ const ranges = {
   nationalTournamentMultiplier: [4.0, 10.0],
   stateTrendMultiplier: [0.8, 1.2],
   nationalTrendMultiplier: [0.8, 1.2],
+  startingElo: [1350, 1650],
+  eloFloor: [50, 200],
   eloPerformanceScalingFactor: [100, 200],
   tournamentCompetitivenessFactor: [0.2, 0.8],
   firstTournamentVolatility: [1.0, 2.0],
@@ -26,8 +28,9 @@ const ranges = {
   eloDampingScale: [80, 160],
   eloDampingStrength: [0.1, 0.5],
   rankWeightExponent: [0.8, 1.5],
-  nationalLossWeight: [1.5, 3.0],
-  stateLossWeight: [0.8, 1.5],
+  maxEloLoss: [120, 260],
+  jvLossThreshold: [80, 140],
+  topTeamsFraction: [0.5, 0.9],
 };
 
 const config = loadConfig(DEFAULTS);

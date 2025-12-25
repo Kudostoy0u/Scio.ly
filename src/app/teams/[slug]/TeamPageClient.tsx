@@ -9,17 +9,19 @@
 
 import ConfirmModal from "@/app/components/ConfirmModal";
 import Modal from "@/app/components/Modal";
+import { useAuth } from "@/app/contexts/AuthContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import {
 	useInvalidateTeam,
 	useTeamCacheInvalidation,
-	useTeamFull,
-	useTeamSubteams,
+	useTeamFullCacheOnly,
 } from "@/lib/hooks/useTeam";
 import { trpc } from "@/lib/trpc/client";
+import { getQueryKey } from "@trpc/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Clipboard, LogOut, Trash2, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { toast } from "react-toastify";
 import AssignmentsTab from "../components/AssignmentsTab";
 import NotImplemented from "../components/NotImplemented";
@@ -38,6 +40,8 @@ type TabName = "roster" | "people" | "stream" | "assignments";
 export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 	const { darkMode } = useTheme();
 	const router = useRouter();
+	const { user, loading: authLoading } = useAuth();
+	const queryClient = useQueryClient();
 	const [activeTab, setActiveTab] = useState<TabName>("roster");
 	const [activeSubteamId, setActiveSubteamId] = useState<string | null>(null);
 	const [showCodes, setShowCodes] = useState(false);
@@ -54,17 +58,40 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 
 	useTeamCacheInvalidation(teamSlug);
 
-	const { data: teamData, isLoading, error } = useTeamFull(teamSlug);
-	const { data: subteams } = useTeamSubteams(teamSlug);
+	const { data: teamData, error } = useTeamFullCacheOnly(teamSlug);
+	const subteams = teamData?.subteams ?? [];
 	const { invalidateTeam, invalidateTeamAndUserTeams, refetchTeam } =
 		useInvalidateTeam();
-	const { data: userTeamsData } = trpc.teams.listUserTeams.useQuery();
+	const userTeamsQueryKey = useMemo(
+		() => getQueryKey(trpc.teams.listUserTeams, undefined, "query"),
+		[],
+	);
+	const hasUserTeamsCache = useSyncExternalStore(
+		(listener) => queryClient.getQueryCache().subscribe(listener),
+		() => !!queryClient.getQueryState(userTeamsQueryKey)?.data,
+		() => !!queryClient.getQueryState(userTeamsQueryKey)?.data,
+	);
+	const { data: userTeamsData } = trpc.teams.listUserTeams.useQuery(undefined, {
+		enabled: hasUserTeamsCache,
+		refetchOnMount: false,
+		refetchOnWindowFocus: false,
+	});
 
 	const createSubteamMutation = trpc.teams.createSubteam.useMutation();
 	const renameSubteamMutation = trpc.teams.renameSubteam.useMutation();
 	const deleteSubteamMutation = trpc.teams.deleteSubteam.useMutation();
 	const leaveTeamMutation = trpc.teams.leaveTeam.useMutation();
 	const archiveTeamMutation = trpc.teams.archiveTeam.useMutation();
+
+	useEffect(() => {
+		if (authLoading) {
+			return;
+		}
+		if (!user) {
+			router.replace("/auth");
+			return;
+		}
+	}, [authLoading, router, user]);
 
 	useEffect(() => {
 		if (typeof window === "undefined") {
@@ -89,6 +116,13 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 		window.addEventListener("hashchange", onHashChange);
 		return () => window.removeEventListener("hashchange", onHashChange);
 	}, []);
+
+	useEffect(() => {
+		if (typeof window === "undefined") {
+			return;
+		}
+		window.localStorage.setItem("teams:lastVisited", teamSlug);
+	}, [teamSlug]);
 
 	useEffect(() => {
 		if (!activeSubteamId && subteams && subteams.length > 0) {
@@ -139,15 +173,7 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 		router.push("/teams?view=all");
 	};
 
-	if (isLoading) {
-		return (
-			<div className="flex items-center justify-center min-h-screen">
-				<div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600" />
-			</div>
-		);
-	}
-
-	if (error || !teamData) {
+	if (error && !teamData) {
 		return (
 			<div className="flex items-center justify-center min-h-screen">
 				<div
@@ -159,8 +185,22 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 		);
 	}
 
-	const isAdmin = teamData.meta.userRole === "admin";
-	const isCaptain = teamData.meta.userRole === "captain" || isAdmin;
+	const teamMeta = teamData?.meta ?? {
+		teamId: "",
+		slug: teamSlug,
+		name: "",
+		school: "",
+		division: "",
+		updatedAt: "",
+		version: 0,
+		userRole: "member" as const,
+		status: "active",
+		memberCode: "",
+		captainCode: null,
+	};
+
+	const isAdmin = teamMeta.userRole === "admin";
+	const isCaptain = teamMeta.userRole === "captain" || isAdmin;
 
 	const navigateToTab = (tab: TabName) => {
 		if (typeof window !== "undefined") {
@@ -303,14 +343,14 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 										<h1
 											className={`text-3xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}
 										>
-											{teamData.meta.name || teamData.meta.school}
+											{teamMeta.name || teamMeta.school || teamSlug}
 										</h1>
 										<p
 											className={`mt-1 text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}
 										>
-											Division {teamData.meta.division} •{" "}
+											Division {teamMeta.division || "—"} •{" "}
 											{isCaptain ? "Captain" : "Member"}{" "}
-											{teamData.meta.status === "archived" && (
+											{teamMeta.status === "archived" && (
 												<span
 													className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${darkMode ? "bg-yellow-900 text-yellow-200" : "bg-yellow-200 text-yellow-900"}`}
 												>
@@ -363,10 +403,10 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 								(activeSubteamId ? (
 									<RosterTabUnified
 										team={{
-											id: teamData.meta.teamId,
-											school: teamData.meta.school,
-											division: teamData.meta.division as "B" | "C",
-											slug: teamData.meta.slug,
+											id: teamMeta.teamId,
+											school: teamMeta.school,
+											division: teamMeta.division as "B" | "C",
+											slug: teamMeta.slug,
 										}}
 										isCaptain={isCaptain}
 										activeSubteamId={activeSubteamId}
@@ -380,7 +420,7 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 												}) => ({
 													id: s.id,
 													name: s.name,
-													team_id: teamData.meta.teamId,
+													team_id: teamMeta.teamId,
 													description: s.description ?? "",
 													created_at: s.createdAt,
 												}),
@@ -422,10 +462,10 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 							{activeTab === "people" && (
 								<PeopleTabUnified
 									team={{
-										id: teamData.meta.teamId,
-										school: teamData.meta.school,
-										division: teamData.meta.division as "B" | "C",
-										slug: teamData.meta.slug,
+										id: teamMeta.teamId,
+										school: teamMeta.school,
+										division: teamMeta.division as "B" | "C",
+										slug: teamMeta.slug,
 									}}
 									isCaptain={isCaptain}
 									isAdmin={isAdmin}
@@ -440,7 +480,7 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 											}) => ({
 												id: s.id,
 												name: s.name,
-												team_id: teamData.meta.teamId,
+												team_id: teamMeta.teamId,
 												description: s.description ?? "",
 												created_at: s.createdAt,
 											}),
@@ -454,10 +494,10 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 								(activeSubteamId ? (
 									<StreamTab
 										team={{
-											id: teamData.meta.teamId,
-											school: teamData.meta.school,
-											division: teamData.meta.division as "B" | "C",
-											slug: teamData.meta.slug,
+											id: teamMeta.teamId,
+											school: teamMeta.school,
+											division: teamMeta.division as "B" | "C",
+											slug: teamMeta.slug,
 										}}
 										isCaptain={isCaptain}
 										activeSubteamId={activeSubteamId}
@@ -530,7 +570,7 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 										onClick={async () => {
 											try {
 												await navigator.clipboard.writeText(
-													teamData.meta.memberCode,
+													teamMeta.memberCode,
 												);
 												toast.success("Member code copied to clipboard!");
 											} catch (_error) {
@@ -546,10 +586,10 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 								<p
 									className={`mt-2 font-mono text-sm break-all ${darkMode ? "text-blue-400" : "text-blue-600"}`}
 								>
-									{teamData.meta.memberCode}
+									{teamMeta.memberCode}
 								</p>
 							</div>
-							{isCaptain && teamData.meta.captainCode && (
+							{isCaptain && teamMeta.captainCode && (
 								<div
 									className={`rounded-lg border p-4 ${darkMode ? "border-gray-700 bg-gray-900/50" : "border-gray-200 bg-gray-50"}`}
 								>
@@ -571,7 +611,7 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 											onClick={async () => {
 												try {
 													await navigator.clipboard.writeText(
-														teamData.meta.captainCode ?? "",
+														teamMeta.captainCode ?? "",
 													);
 													toast.success("Captain code copied to clipboard!");
 												} catch (_error) {
@@ -587,7 +627,7 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 									<p
 										className={`mt-2 font-mono text-sm break-all ${darkMode ? "text-blue-400" : "text-blue-600"}`}
 									>
-										{teamData.meta.captainCode}
+										{teamMeta.captainCode}
 									</p>
 								</div>
 							)}

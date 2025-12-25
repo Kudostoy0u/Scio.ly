@@ -10,7 +10,7 @@
 import NamePromptModal from "@/app/components/NamePromptModal";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
-import { useInvalidateTeam, useTeamMembers } from "@/lib/hooks/useTeam";
+import { useInvalidateTeam, useTeamMembersCacheOnly } from "@/lib/hooks/useTeam";
 import type { TeamMember as TeamMemberV2 } from "@/lib/server/teams";
 import type { TeamMember as StoreTeamMember } from "@/lib/stores/teams/types";
 import { getTRPCProxyClient } from "@/lib/trpc/client";
@@ -60,7 +60,7 @@ export default function PeopleTabUnified({
 	const [linkingMemberId, setLinkingMemberId] = useState<string | null>(null);
 	const [linkInput, setLinkInput] = useState("");
 
-	const { data: members, isLoading } = useTeamMembers(
+	const { data: members, isLoading } = useTeamMembersCacheOnly(
 		team.slug,
 		selectedSubteam === "all" ? undefined : selectedSubteam,
 	);

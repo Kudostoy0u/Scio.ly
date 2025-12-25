@@ -4,7 +4,7 @@ const glob = require("glob");
 const yaml = require("js-yaml");
 
 // --- configuration ---
-const HYPERPARAMS_PATH = path.join(__dirname, "HYPERPARAMS.json");
+const DEFAULT_HYPERPARAMS_PATH = path.join(__dirname, "HYPERPARAMS.json");
 const DEFAULTS = {
   resultsDir: "results",
   outputDir: "./public",
@@ -23,16 +23,20 @@ const DEFAULTS = {
   pastSeasons: 0,
   eloDampingScale: 100,
   eloDampingStrength: 0.3,
-  nationalLossWeight: 2.0,
+  nationalLossWeight: 3.0,
   stateLossWeight: 1.0,
   rankWeightExponent: 1.0,
+  maxEloLoss: 200,
+  jvLossThreshold: 100,
+  topTeamsFraction: 0.7,
   skipOutput: false,
   metricsOut: "",
   printLoss: false,
   enableLogging: false,
 };
 
-const config = loadConfig(DEFAULTS, HYPERPARAMS_PATH);
+const hyperparamsPath = resolveHyperparamsPath(process.argv.slice(2), DEFAULT_HYPERPARAMS_PATH);
+const config = loadConfig(DEFAULTS, hyperparamsPath);
 
 /**
  * Logger function that only outputs if logging is enabled
@@ -42,6 +46,34 @@ function log(..._args) {
   if (config.enableLogging) {
     console.log(..._args);
   }
+}
+
+function resolveHyperparamsPath(args, defaultPath) {
+  const value = getArgValue(args, "hyperparamsPath");
+  return value || defaultPath;
+}
+
+function getArgValue(args, keyName) {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (!arg.startsWith("--")) {
+      continue;
+    }
+    const [rawKey, rawValue] = arg.slice(2).split("=");
+    const key = toCamel(rawKey);
+    if (key !== keyName) {
+      continue;
+    }
+    if (rawValue !== undefined) {
+      return rawValue;
+    }
+    const next = args[i + 1];
+    if (next && !next.startsWith("--")) {
+      return next;
+    }
+    return "";
+  }
+  return "";
 }
 
 function loadConfig(defaults, paramsPath) {
@@ -574,7 +606,10 @@ function updateEloForRanking(
   );
 
   const sortedRatings = Object.values(initialRatings).sort((a, b) => b - a);
-  const topTeamsCount = Math.max(1, Math.floor(participatingTeams.length * 0.7));
+  const topTeamsCount = Math.max(
+    1,
+    Math.floor(participatingTeams.length * config.topTeamsFraction)
+  );
   const topTeamRatings = sortedRatings.slice(0, topTeamsCount);
   const averageElo =
     topTeamRatings.reduce((sum, rating) => sum + rating, 0) / topTeamRatings.length;
@@ -646,7 +681,7 @@ function updateEloForRanking(
 
   const teamsToConvertToJV = [];
   const schoolsToCull = new Set();
-  const MAX_ELO_LOSS = 200;
+  const MAX_ELO_LOSS = config.maxEloLoss;
   let cappedLosses = 0;
 
   for (const team of participatingTeams) {
@@ -675,7 +710,7 @@ function updateEloForRanking(
   for (const [schoolName, bestTeam] of bestTeamBySchool.entries()) {
     if (
       bestTeam.name.includes(" Varsity") &&
-      eloChanges[bestTeam.name] < -100 &&
+      eloChanges[bestTeam.name] < -config.jvLossThreshold &&
       !isStateOrNational
     ) {
       teamsToConvertToJV.push(bestTeam.name);
@@ -721,7 +756,10 @@ function updateEloForRanking(
     const recalculatedSortedRatings = Object.values(recalculatedInitialRatings).sort(
       (a, b) => b - a
     );
-    const recalculatedTopTeamsCount = Math.max(1, Math.floor(convertedTeams.length * 0.7));
+    const recalculatedTopTeamsCount = Math.max(
+      1,
+      Math.floor(convertedTeams.length * config.topTeamsFraction)
+    );
     const recalculatedTopTeamRatings = recalculatedSortedRatings.slice(
       0,
       recalculatedTopTeamsCount

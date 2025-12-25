@@ -1,8 +1,8 @@
 "use client";
 
 import { useAuth } from "@/app/contexts/AuthContext";
+import { getCachedUserProfile } from "@/app/utils/userProfileCache";
 import SyncLocalStorage from "@/lib/database/localStorageReplacement";
-import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 
 const HEX_ID_REGEX = /^[a-f0-9]{8}$/;
@@ -36,27 +36,10 @@ export function useNamePrompt(): NamePromptState {
 			}
 
 			try {
-				const { data: profile, error } = await supabase
-					.from("users")
-					.select("display_name, first_name, last_name, username, email")
-					.eq("id", user.id)
-					.maybeSingle();
-
-				if (error) {
-					setState({
-						needsPrompt: false,
-						currentName: "",
-						currentEmail: user.email || "",
-						isLoading: false,
-					});
-					return;
-				}
-
+				const profile = await getCachedUserProfile(user.id);
 				const profileData = profile as {
 					email?: string;
 					display_name?: string | null;
-					first_name?: string | null;
-					last_name?: string | null;
 					username?: string | null;
 				} | null;
 
@@ -68,12 +51,6 @@ export function useNamePrompt(): NamePromptState {
 
 				if (profileData?.display_name?.trim()) {
 					currentName = profileData.display_name.trim();
-				} else if (profileData?.first_name && profileData?.last_name) {
-					currentName = `${profileData.first_name.trim()} ${profileData.last_name.trim()}`;
-				} else if (profileData?.first_name?.trim()) {
-					currentName = profileData.first_name.trim();
-				} else if (profileData?.last_name?.trim()) {
-					currentName = profileData.last_name.trim();
 				} else if (
 					profileData?.username?.trim() &&
 					!profileData.username.startsWith("user_")

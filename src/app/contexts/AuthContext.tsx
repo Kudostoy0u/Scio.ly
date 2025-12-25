@@ -3,6 +3,10 @@ import logger from "@/lib/utils/logging/logger";
 
 import { resetTeamsClientCache } from "@/lib/query/resetTeamsClientCache";
 import { supabase } from "@/lib/supabase";
+import {
+	getCachedUserProfile,
+	updateUserProfileCache,
+} from "@/app/utils/userProfileCache";
 import type { Database } from "@/lib/types/database";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import {
@@ -201,7 +205,9 @@ async function upsertUserProfile(
 		});
 		if (upsertError) {
 			logger.warn("Failed to upsert user profile:", upsertError);
+			return;
 		}
+		updateUserProfileCache(userId, changes);
 	} catch (error) {
 		logger.warn("Error upserting user profile:", error);
 	}
@@ -214,16 +220,7 @@ async function fetchExistingProfile(userId: string): Promise<{
 	display_name?: string;
 	photo_url?: string;
 } | null> {
-	const { data: existing, error: readError } = await supabase
-		.from("users")
-		.select("id, email, display_name, username, photo_url")
-		.eq("id", userId)
-		.maybeSingle();
-
-	if (readError) {
-		logger.warn("Error reading existing profile:", readError);
-	}
-
+	const existing = await getCachedUserProfile(userId);
 	return existing as {
 		username?: string;
 		email?: string;

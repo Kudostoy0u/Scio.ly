@@ -13,7 +13,7 @@ import logger from "@/lib/utils/logging/logger";
 import { globalApiCache } from "@/lib/utils/storage/globalApiCache";
 import { getQueryKey } from "@trpc/react-query";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 
 export const teamKeys = {
 	all: ["team"] as const,
@@ -44,6 +44,31 @@ export function useTeamFull(teamSlug: string) {
 	);
 }
 
+export function useTeamFullCacheOnly(teamSlug: string) {
+	const queryClient = useQueryClient();
+	const queryKey = useMemo(
+		() => getQueryKey(trpc.teams.full, { teamSlug }, "query"),
+		[teamSlug],
+	);
+	const hasCache = useSyncExternalStore(
+		(listener) => queryClient.getQueryCache().subscribe(listener),
+		() => !!queryClient.getQueryState(queryKey)?.data,
+		() => !!queryClient.getQueryState(queryKey)?.data,
+	);
+
+	return trpc.teams.full.useQuery(
+		{ teamSlug },
+		{
+			enabled: !!teamSlug && hasCache,
+			staleTime: 5 * 60 * 1000,
+			gcTime: 60 * 60 * 1000,
+			refetchOnWindowFocus: false,
+			refetchOnReconnect: false,
+			refetchOnMount: false,
+		},
+	);
+}
+
 export function useTeamMembers(teamSlug: string, subteamId?: string) {
 	const query = useTeamFull(teamSlug);
 	const membersData = query.data?.members;
@@ -63,8 +88,58 @@ export function useTeamMembers(teamSlug: string, subteamId?: string) {
 	return { ...query, data: members };
 }
 
+export function useTeamMembersCacheOnly(teamSlug: string, subteamId?: string) {
+	const query = useTeamFullCacheOnly(teamSlug);
+	const membersData = query.data?.members;
+
+	const members = useMemo(() => {
+		if (!membersData) {
+			return [];
+		}
+		if (!subteamId || subteamId === "all") {
+			return membersData;
+		}
+		return membersData.filter(
+			(m: TeamFullData["members"][0]) => m.subteamId === subteamId,
+		);
+	}, [membersData, subteamId]);
+
+	return { ...query, data: members };
+}
+
 export function useTeamRoster(teamSlug: string, subteamId: string | null) {
 	const query = useTeamFull(teamSlug);
+	const rosterEntriesData = query.data?.rosterEntries;
+
+	const roster = useMemo(() => {
+		if (!(rosterEntriesData && subteamId)) {
+			return { roster: {}, removedEvents: [] as string[] };
+		}
+
+		const rosterObj: Record<string, string[]> = {};
+		for (const entry of rosterEntriesData) {
+			if (entry.subteamId !== subteamId) {
+				continue;
+			}
+			if (!rosterObj[entry.eventName]) {
+				rosterObj[entry.eventName] = [];
+			}
+			const eventSlots = rosterObj[entry.eventName] ?? [];
+			rosterObj[entry.eventName] = eventSlots;
+			eventSlots[entry.slotIndex] = entry.displayName;
+		}
+
+		return { roster: rosterObj, removedEvents: [] as string[] };
+	}, [rosterEntriesData, subteamId]);
+
+	return { ...query, data: roster };
+}
+
+export function useTeamRosterCacheOnly(
+	teamSlug: string,
+	subteamId: string | null,
+) {
+	const query = useTeamFullCacheOnly(teamSlug);
 	const rosterEntriesData = query.data?.rosterEntries;
 
 	const roster = useMemo(() => {
