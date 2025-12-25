@@ -29,6 +29,8 @@ const DEFAULTS = {
   maxEloLoss: 200,
   jvLossThreshold: 100,
   topTeamsFraction: 0.7,
+  seasonTrendMultiplier: 0.2,
+  trendWindow: 3,
   skipOutput: false,
   metricsOut: "",
   printLoss: false,
@@ -572,6 +574,7 @@ function updateEloForRanking(
 
   const initialRatings = {};
   const volatilityFactors = {};
+  const trendMultipliers = {};
 
   for (const team of participatingTeams) {
     const stateCode = teamStateMap[team.name];
@@ -592,6 +595,8 @@ function updateEloForRanking(
     } else {
       volatilityFactors[team.name] = config.normalVolatility;
     }
+
+    trendMultipliers[team.name] = calculateSeasonTrendMultiplier(teamData);
   }
 
   if (category === "__OVERALL__" && tournamentType) {
@@ -656,7 +661,8 @@ function updateEloForRanking(
       baseEloChange *
       volatilityFactors[teamA.name] *
       competitivenessMultiplier *
-      importanceMultiplier;
+      importanceMultiplier *
+      trendMultipliers[teamA.name];
 
     const dampingFactor = calculateEloDampingFactor(scaledEloChange);
     eloChanges[teamA.name] = scaledEloChange * dampingFactor;
@@ -803,11 +809,16 @@ function updateEloForRanking(
         config.eloPerformanceScalingFactor * (actualPerformance - expectedPerformance);
       const volatilityFactor =
         volatilityFactors[teamA.name.replace(" JV", " Varsity")] || volatilityFactors[teamA.name];
+      const trendMultiplier =
+        trendMultipliers[teamA.name.replace(" JV", " Varsity")] ||
+        trendMultipliers[teamA.name] ||
+        1;
       const scaledEloChange =
         baseEloChange *
         volatilityFactor *
         recalculatedCompetitivenessMultiplier *
-        importanceMultiplier;
+        importanceMultiplier *
+        trendMultiplier;
 
       const dampingFactor = calculateEloDampingFactor(scaledEloChange);
       let finalEloChange = scaledEloChange * dampingFactor;

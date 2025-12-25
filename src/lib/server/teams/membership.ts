@@ -256,6 +256,7 @@ export async function createTeamWithDefaultSubteam(input: {
 	supabaseUser?: SupabaseUser | null;
 }) {
 	const startTime = Date.now();
+	const createdAt = new Date().toISOString();
 	logger.dev.structured("info", "Creating team with default subteam", {
 		school: input.school,
 		division: input.division,
@@ -396,7 +397,17 @@ export async function createTeamWithDefaultSubteam(input: {
 			id: teamId,
 			slug: slugCandidate,
 			name: input.school,
+			school: input.school,
 			division: input.division,
+			memberCode,
+			captainCode,
+			defaultSubteam: {
+				id: subteamId,
+				name: "Team A",
+				description: "Default subteam",
+				displayOrder: 0,
+				createdAt,
+			},
 		};
 	} catch (error) {
 		logger.dev.error(

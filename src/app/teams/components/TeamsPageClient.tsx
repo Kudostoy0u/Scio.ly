@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/app/contexts/AuthContext";
+import type { TeamFullData } from "@/lib/server/teams/shared";
 import { trpc } from "@/lib/trpc/client";
 import { getQueryKey } from "@trpc/react-query";
 import { useQueryClient } from "@tanstack/react-query";
@@ -141,6 +142,83 @@ export default function TeamsPageClient() {
 	}) => {
 		try {
 			const result = await createTeamMutation.mutateAsync(teamData);
+			const subteam = result.defaultSubteam;
+			const now = new Date().toISOString();
+			const creatorName =
+				user?.user_metadata?.display_name ||
+				user?.email ||
+				"Team Owner";
+			if (subteam) {
+				const seed: TeamFullData = {
+					meta: {
+						teamId: result.id,
+						slug: result.slug,
+						name: result.name || result.school || teamData.school,
+						school: result.school || teamData.school,
+						division: result.division,
+						updatedAt: now,
+						version: 1,
+						userRole: "admin",
+						status: "active",
+						memberCode: result.memberCode ?? "",
+						captainCode: result.captainCode ?? null,
+					},
+					subteams: [
+						{
+							id: subteam.id,
+							teamId: result.id,
+							name: subteam.name,
+							description: subteam.description,
+							rosterNotes: null,
+							displayOrder: subteam.displayOrder,
+							createdAt: subteam.createdAt || now,
+						},
+					],
+					members: [
+						{
+							id: user?.id ?? "unknown",
+							name: creatorName,
+							email: user?.email ?? null,
+							role: "admin",
+							status: "active",
+							events: [],
+							subteamId: subteam.id,
+							subteamName: subteam.name,
+							subteam: {
+								id: subteam.id,
+								name: subteam.name,
+								description: subteam.description ?? null,
+							},
+							isUnlinked: false,
+							username:
+								typeof user?.user_metadata?.username === "string"
+									? user.user_metadata.username
+									: null,
+							joinedAt: now,
+							isPendingInvitation: false,
+							hasPendingLinkInvite: false,
+						},
+					],
+					rosterEntries: [],
+					assignments: [],
+				};
+				utils.teams.full.setData({ teamSlug: result.slug }, seed);
+			}
+			utils.teams.listUserTeams.setData(undefined, (prev) => {
+				const nextTeams = [
+					...(prev?.teams ?? []),
+					{
+						id: result.id,
+						slug: result.slug,
+						name: result.name || result.school || teamData.school,
+						school: result.school || teamData.school,
+						division: result.division,
+						status: "active",
+						role: "admin" as const,
+					},
+				];
+				return { teams: nextTeams };
+			});
 			toast.success("Team created");
 			await utils.teams.listUserTeams.invalidate();
 			router.push(`/teams/${result.slug}`);

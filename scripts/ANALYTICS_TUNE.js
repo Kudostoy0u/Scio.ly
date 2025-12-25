@@ -31,6 +31,7 @@ const ranges = {
   maxEloLoss: [120, 260],
   jvLossThreshold: [80, 140],
   topTeamsFraction: [0.5, 0.9],
+  seasonTrendMultiplier: [0.0, 0.8],
 };
 
 const config = loadConfig(DEFAULTS);

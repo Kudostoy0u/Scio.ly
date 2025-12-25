@@ -237,13 +237,17 @@ export function useTeamCacheInvalidation(teamSlug: string) {
 			});
 
 			if (!cachedUpdatedAt) {
+				if (options.prefetch && options.manifestUpdatedAt > 0) {
+					staleFlags.push(`${options.label}:bootstrap`);
+					refreshes.push(options.prefetch());
+				}
 				return;
 			}
 
 			if (options.manifestUpdatedAt > cachedUpdatedAt) {
 				staleFlags.push(options.label);
 				invalidations.push(options.invalidate());
-				if (!hasObservers && options.prefetch) {
+				if (options.prefetch && (!hasObservers || cachedUpdatedAt === 0)) {
 					refreshes.push(options.prefetch());
 				}
 			}
