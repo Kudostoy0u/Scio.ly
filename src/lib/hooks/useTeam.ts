@@ -237,7 +237,7 @@ export function useTeamCacheInvalidation(teamSlug: string) {
 			});
 
 			if (!cachedUpdatedAt) {
-				if (options.prefetch && options.manifestUpdatedAt > 0) {
+				if (options.prefetch) {
 					staleFlags.push(`${options.label}:bootstrap`);
 					refreshes.push(options.prefetch());
 				}

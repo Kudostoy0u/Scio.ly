@@ -991,6 +991,47 @@ function calculateEloDampingFactor(eloChange) {
   return 1 - dampingAmount;
 }
 
+function calculateSeasonTrendMultiplier(teamData) {
+  if (!config.seasonTrendMultiplier) {
+    return 1;
+  }
+  const history = teamData?.history || [];
+  if (history.length < 2) {
+    return 1;
+  }
+
+  const windowSize =
+    Number.isFinite(config.trendWindow) && config.trendWindow > 1
+      ? Math.floor(config.trendWindow)
+      : history.length;
+  const startIndex = Math.max(1, history.length - windowSize);
+  let sum = 0;
+  let count = 0;
+
+  for (let i = startIndex; i < history.length; i++) {
+    const prev = history[i - 1]?.e;
+    const curr = history[i]?.e;
+    if (!Number.isFinite(prev) || !Number.isFinite(curr)) {
+      continue;
+    }
+    sum += curr - prev;
+    count++;
+  }
+
+  if (!count) {
+    return 1;
+  }
+
+  const scale =
+    Number.isFinite(config.eloDampingScale) && config.eloDampingScale > 0
+      ? config.eloDampingScale
+      : 100;
+  const normalized = (sum / count) / scale;
+  const trend = Math.tanh(normalized);
+  const multiplier = 1 + config.seasonTrendMultiplier * trend;
+  return Math.min(1.5, Math.max(0.5, multiplier));
+}
+
 /**
  * Detect if a tournament is a state or national tournament based on name, filename, and content.
  * Returns the appropriate multiplier (1.0 for regular tournaments).

@@ -1,8 +1,10 @@
 "use client";
 
 import { useAuth } from "@/app/contexts/AuthContext";
+import { getCachedUserProfile } from "@/app/utils/userProfileCache";
 import type { TeamFullData } from "@/lib/server/teams/shared";
 import { trpc } from "@/lib/trpc/client";
+import { generateDisplayName } from "@/lib/utils/content/displayNameUtils";
 import { getQueryKey } from "@trpc/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -144,10 +146,18 @@ export default function TeamsPageClient() {
 			const result = await createTeamMutation.mutateAsync(teamData);
 			const subteam = result.defaultSubteam;
 			const now = new Date().toISOString();
-			const creatorName =
-				user?.user_metadata?.display_name ||
-				user?.email ||
-				"Team Owner";
+			const profile = user?.id ? await getCachedUserProfile(user.id) : null;
+			const { name: resolvedName } = generateDisplayName(
+				{
+					displayName: profile?.display_name ?? null,
+					firstName: null,
+					lastName: null,
+					username: profile?.username ?? null,
+					email: user?.email ?? null,
+				},
+				user?.id ?? "unknown",
+			);
+			const creatorName = resolvedName || user?.email || "Team Owner";
 			if (subteam) {
 				const seed: TeamFullData = {
 					meta: {
@@ -190,10 +200,7 @@ export default function TeamsPageClient() {
 								description: subteam.description ?? null,
 							},
 							isUnlinked: false,
-							username:
-								typeof user?.user_metadata?.username === "string"
-									? user.user_metadata.username
-									: null,
+							username: profile?.username ?? null,
 							joinedAt: now,
 							isPendingInvitation: false,
 							hasPendingLinkInvite: false,
@@ -203,6 +210,23 @@ export default function TeamsPageClient() {
 					assignments: [],
 				};
 				utils.teams.full.setData({ teamSlug: result.slug }, seed);
+				utils.teams.assignments.setData({ teamSlug: result.slug }, []);
+				utils.teams.getStream.setData(
+					{ teamSlug: result.slug, subteamId: subteam.id },
+					[],
+				);
+				utils.teams.getTimers.setData(
+					{ teamSlug: result.slug, subteamId: subteam.id },
+					[],
+				);
+				utils.teams.getTournaments.setData(
+					{ teamSlug: result.slug, subteamId: subteam.id },
+					[],
+				);
+				utils.teams.getRosterNotes.setData(
+					{ teamSlug: result.slug, subteamId: subteam.id },
+					{ id: subteam.id, rosterNotes: null },
+				);
 			}
 			utils.teams.listUserTeams.setData(undefined, (prev) => {
 				const nextTeams = [
@@ -220,7 +244,6 @@ export default function TeamsPageClient() {
 				return { teams: nextTeams };
 			});
 			toast.success("Team created");
-			await utils.teams.listUserTeams.invalidate();
 			router.push(`/teams/${result.slug}`);
 		} catch (error) {
 			toast.error(
@@ -235,7 +258,21 @@ export default function TeamsPageClient() {
 				code: joinData.code,
 			});
 			toast.success("Joined team");
-			await utils.teams.listUserTeams.invalidate();
+			utils.teams.listUserTeams.setData(undefined, (prev) => {
+				const nextTeams = [
+					...(prev?.teams ?? []),
+					{
+						id: result.id,
+						slug: result.slug,
+						name: result.name || result.school || "Team",
+						school: result.school || result.name || "Team",
+						division: result.division,
+						status: "active",
+						role: "member" as const,
+					},
+				];
+				return { teams: nextTeams };
+			});
 			router.push(`/teams/${result.slug}`);
 		} catch (error) {
 			toast.error(
