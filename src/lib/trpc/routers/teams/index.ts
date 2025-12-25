@@ -1054,7 +1054,42 @@ export const teamsRouter = router({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
-			return getStreamPosts(input.teamSlug, input.subteamId, ctx.user.id);
+			const startTime = Date.now();
+			logger.dev.structured("info", "[TRPC getStream] Request", {
+				userId: ctx.user.id,
+				teamSlug: input.teamSlug,
+				subteamId: input.subteamId,
+			});
+
+			try {
+				const result = await getStreamPosts(
+					input.teamSlug,
+					input.subteamId,
+					ctx.user.id,
+				);
+				const duration = Date.now() - startTime;
+				logger.dev.structured("info", "[TRPC getStream] Success", {
+					userId: ctx.user.id,
+					teamSlug: input.teamSlug,
+					subteamId: input.subteamId,
+					postCount: result.length,
+					duration: `${duration}ms`,
+				});
+				return result;
+			} catch (error) {
+				const duration = Date.now() - startTime;
+				logger.dev.error(
+					"[TRPC getStream] Error",
+					error instanceof Error ? error : new Error(String(error)),
+					{
+						userId: ctx.user.id,
+						teamSlug: input.teamSlug,
+						subteamId: input.subteamId,
+						duration: `${duration}ms`,
+					},
+				);
+				throw error;
+			}
 		}),
 
 	createPost: protectedProcedure
@@ -1175,11 +1210,42 @@ export const teamsRouter = router({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
-			return getUpcomingTournaments(
-				input.teamSlug,
-				input.subteamId,
-				ctx.user.id,
-			);
+			const startTime = Date.now();
+			logger.dev.structured("info", "[TRPC getTournaments] Request", {
+				userId: ctx.user.id,
+				teamSlug: input.teamSlug,
+				subteamId: input.subteamId,
+			});
+
+			try {
+				const result = await getUpcomingTournaments(
+					input.teamSlug,
+					input.subteamId,
+					ctx.user.id,
+				);
+				const duration = Date.now() - startTime;
+				logger.dev.structured("info", "[TRPC getTournaments] Success", {
+					userId: ctx.user.id,
+					teamSlug: input.teamSlug,
+					subteamId: input.subteamId,
+					tournamentCount: result.length,
+					duration: `${duration}ms`,
+				});
+				return result;
+			} catch (error) {
+				const duration = Date.now() - startTime;
+				logger.dev.error(
+					"[TRPC getTournaments] Error",
+					error instanceof Error ? error : new Error(String(error)),
+					{
+						userId: ctx.user.id,
+						teamSlug: input.teamSlug,
+						subteamId: input.subteamId,
+						duration: `${duration}ms`,
+					},
+				);
+				throw error;
+			}
 		}),
 
 	addTimer: protectedProcedure

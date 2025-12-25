@@ -22,6 +22,7 @@ import {
 } from "drizzle-orm";
 import {
 	ensureTeamCacheManifest,
+	touchSubteamCacheManifest,
 	touchTeamCacheManifest,
 } from "./cache-manifest";
 import { listTeamsForUser } from "./membership";
@@ -80,6 +81,31 @@ function normalizePattern(value: unknown): RecurrencePattern {
 		...pattern,
 		exceptions: Array.isArray(pattern.exceptions) ? pattern.exceptions : [],
 	};
+}
+
+async function touchTournamentCacheForTeam(
+	teamId: string,
+	subteamId?: string | null,
+) {
+	if (subteamId) {
+		await touchSubteamCacheManifest(teamId, subteamId, { tournaments: true });
+		return;
+	}
+
+	const subteamRows = await dbPg
+		.select({ id: teamSubteams.id })
+		.from(teamSubteams)
+		.where(eq(teamSubteams.teamId, teamId));
+
+	if (subteamRows.length === 0) {
+		return;
+	}
+
+	await Promise.all(
+		subteamRows.map((subteam) =>
+			touchSubteamCacheManifest(teamId, subteam.id, { tournaments: true }),
+		),
+	);
 }
 
 async function ensureUserCalendarManifest(userId: string) {
@@ -441,6 +467,7 @@ export async function createCalendarEvent(input: {
 		await touchUserCalendarManifest(input.userId);
 	} else if (input.teamId) {
 		await touchTeamCacheManifest(input.teamId, { calendar: true });
+		await touchTournamentCacheForTeam(input.teamId, input.subteamId ?? null);
 	}
 
 	logger.dev.structured("info", "[Calendar] Event created", {
@@ -467,6 +494,7 @@ export async function deleteCalendarEvent(input: {
 		.select({
 			id: calendarEvents.id,
 			teamId: calendarEvents.teamId,
+			subteamId: calendarEvents.subteamId,
 			ownerUserId: calendarEvents.ownerUserId,
 			createdBy: calendarEvents.createdBy,
 		})
@@ -493,6 +521,7 @@ export async function deleteCalendarEvent(input: {
 
 	if (event.teamId) {
 		await touchTeamCacheManifest(event.teamId, { calendar: true });
+		await touchTournamentCacheForTeam(event.teamId, event.subteamId ?? null);
 	} else {
 		await touchUserCalendarManifest(input.userId);
 	}
@@ -523,6 +552,7 @@ export async function updateCalendarEvent(input: {
 		.select({
 			id: calendarEvents.id,
 			teamId: calendarEvents.teamId,
+			subteamId: calendarEvents.subteamId,
 			ownerUserId: calendarEvents.ownerUserId,
 			createdBy: calendarEvents.createdBy,
 		})
@@ -597,6 +627,7 @@ export async function updateCalendarEvent(input: {
 
 	if (event.teamId) {
 		await touchTeamCacheManifest(event.teamId, { calendar: true });
+		await touchTournamentCacheForTeam(event.teamId, event.subteamId ?? null);
 	} else {
 		await touchUserCalendarManifest(input.userId);
 	}
@@ -624,6 +655,7 @@ export async function skipCalendarOccurrence(input: {
 		.select({
 			id: calendarEvents.id,
 			teamId: calendarEvents.teamId,
+			subteamId: calendarEvents.subteamId,
 			ownerUserId: calendarEvents.ownerUserId,
 			createdBy: calendarEvents.createdBy,
 			isRecurring: calendarEvents.isRecurring,
@@ -671,6 +703,7 @@ export async function skipCalendarOccurrence(input: {
 
 	if (event.teamId) {
 		await touchTeamCacheManifest(event.teamId, { calendar: true });
+		await touchTournamentCacheForTeam(event.teamId, event.subteamId ?? null);
 	} else {
 		await touchUserCalendarManifest(input.userId);
 	}

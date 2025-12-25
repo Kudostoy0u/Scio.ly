@@ -320,24 +320,6 @@ export default function StreamTab({
 		}
 	};
 
-	// Load data when subteam changes
-	useEffect(() => {
-		if (activeSubteamId) {
-			utils.teams.getStream.invalidate({
-				teamSlug: team.slug,
-				subteamId: activeSubteamId,
-			});
-			utils.teams.getTimers.invalidate({
-				teamSlug: team.slug,
-				subteamId: activeSubteamId,
-			});
-			utils.teams.getTournaments.invalidate({
-				teamSlug: team.slug,
-				subteamId: activeSubteamId,
-			});
-		}
-	}, [activeSubteamId, team.slug, utils]);
-
 	// Close dropdown when clicking outside
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
