@@ -276,6 +276,43 @@ export async function declineInvite(teamSlug: string, userId: string) {
 	return { ok: true };
 }
 
+export async function cancelPendingInvite(input: {
+	teamSlug: string;
+	invitedUserId: string;
+	actorId: string;
+}) {
+	const { team } = await assertCaptainAccess(input.teamSlug, input.actorId);
+
+	await dbPg.transaction(async (tx) => {
+		await tx
+			.update(teamInvitations)
+			.set({ status: "cancelled", updatedAt: new Date().toISOString() })
+			.where(
+				and(
+					eq(teamInvitations.teamId, team.id),
+					eq(teamInvitations.status, "pending"),
+					eq(teamInvitations.invitedUserId, input.invitedUserId),
+				),
+			);
+
+		await tx
+			.update(teamMemberships)
+			.set({ status: "inactive", updatedAt: new Date().toISOString() })
+			.where(
+				and(
+					eq(teamMemberships.teamId, team.id),
+					eq(teamMemberships.userId, input.invitedUserId),
+					eq(teamMemberships.status, "pending"),
+				),
+			);
+
+		await bumpTeamVersion(team.id, tx);
+		await touchTeamCacheManifest(team.id, { members: true, full: true }, tx);
+	});
+
+	return { ok: true };
+}
+
 export async function createInvitation(input: {
 	teamSlug: string;
 	invitedUsername: string;

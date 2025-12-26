@@ -13,7 +13,7 @@ import logger from "@/lib/utils/logging/logger";
 import { globalApiCache } from "@/lib/utils/storage/globalApiCache";
 import { getQueryKey } from "@trpc/react-query";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 export const teamKeys = {
 	all: ["team"] as const,
@@ -55,11 +55,19 @@ export function useTeamFullCacheOnly(teamSlug: string) {
 		() => !!queryClient.getQueryState(queryKey)?.data,
 		() => !!queryClient.getQueryState(queryKey)?.data,
 	);
+	const [shouldEnableQuery, setShouldEnableQuery] = useState(false);
+
+	// Defer query initialization to avoid render-phase updates
+	useEffect(() => {
+		if (!!teamSlug && hasCache) {
+			setShouldEnableQuery(true);
+		}
+	}, [teamSlug, hasCache]);
 
 	return trpc.teams.full.useQuery(
 		{ teamSlug },
 		{
-			enabled: !!teamSlug && hasCache,
+			enabled: !!teamSlug && hasCache && shouldEnableQuery,
 			staleTime: 5 * 60 * 1000,
 			gcTime: 60 * 60 * 1000,
 			refetchOnWindowFocus: false,
@@ -187,13 +195,18 @@ const toTimestamp = (value: string | null | undefined) => {
 export function useTeamCacheInvalidation(teamSlug: string) {
 	const utils = trpc.useUtils();
 	const queryClient = useQueryClient();
-	const { data: manifest } = trpc.teams.cacheManifest.useQuery(
+	const {
+		data: manifest,
+		error,
+		isError,
+	} = trpc.teams.cacheManifest.useQuery(
 		{ teamSlug },
 		{
 			enabled: !!teamSlug,
 			staleTime: 0,
 			refetchOnWindowFocus: false,
 			refetchOnMount: true,
+			retry: false,
 		},
 	);
 
@@ -287,7 +300,8 @@ export function useTeamCacheInvalidation(teamSlug: string) {
 					{ teamSlug, subteamId },
 					"query",
 				),
-				invalidate: () => utils.teams.getStream.invalidate({ teamSlug, subteamId }),
+				invalidate: () =>
+					utils.teams.getStream.invalidate({ teamSlug, subteamId }),
 				prefetch: () => utils.teams.getStream.prefetch({ teamSlug, subteamId }),
 			});
 
@@ -299,7 +313,8 @@ export function useTeamCacheInvalidation(teamSlug: string) {
 					{ teamSlug, subteamId },
 					"query",
 				),
-				invalidate: () => utils.teams.getTimers.invalidate({ teamSlug, subteamId }),
+				invalidate: () =>
+					utils.teams.getTimers.invalidate({ teamSlug, subteamId }),
 				prefetch: () => utils.teams.getTimers.prefetch({ teamSlug, subteamId }),
 			});
 
@@ -347,10 +362,9 @@ export function useTeamCacheInvalidation(teamSlug: string) {
 		} else {
 			logger.log("[TeamCache] Cache up to date", { teamSlug });
 		}
-
 	}, [manifest, queryClient, teamSlug, utils]);
 
-	return { manifest };
+	return { manifest, error, isError };
 }
 
 export function useInvalidateTeam() {

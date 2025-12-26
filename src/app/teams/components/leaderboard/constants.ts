@@ -1,3 +1,8 @@
+import {
+	DIVISION_B_EVENTS_2026,
+	DIVISION_C_EVENTS_2026,
+} from "@/app/analytics/utils/eloDataProcessor/processors/comparisonProcessor";
+
 export const EVENT_WHITELISTS: Record<string, Record<string, string[]>> = {
 	"2018": {
 		C: [
@@ -414,5 +419,9 @@ export const EVENT_WHITELISTS: Record<string, Record<string, string[]>> = {
 			"Wind Power",
 			"Write It Do It",
 		],
+	},
+	"2026": {
+		C: DIVISION_C_EVENTS_2026,
+		B: DIVISION_B_EVENTS_2026,
 	},
 };

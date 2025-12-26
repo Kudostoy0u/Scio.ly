@@ -288,7 +288,10 @@ export async function addTimer(
 			message: "Team ID is missing",
 		});
 	}
-	await touchSubteamCacheManifest(team.id, input.subteamId, { timers: true });
+	await touchSubteamCacheManifest(team.id, input.subteamId, {
+		timers: true,
+		tournaments: true,
+	});
 
 	return { timerId: timer?.id };
 }
@@ -333,7 +336,10 @@ export async function removeTimer(
 			message: "Team ID is missing",
 		});
 	}
-	await touchSubteamCacheManifest(team.id, input.subteamId, { timers: true });
+	await touchSubteamCacheManifest(team.id, input.subteamId, {
+		timers: true,
+		tournaments: true,
+	});
 
 	return { success: true };
 }

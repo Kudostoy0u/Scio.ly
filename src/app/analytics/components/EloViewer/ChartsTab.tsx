@@ -1,5 +1,6 @@
 "use client";
 import type { ChartData, ChartType } from "@/app/analytics/types/elo";
+import { memo, useMemo } from "react";
 import { Line } from "react-chartjs-2";
 import { getChartConfig } from "../ChartConfig";
 import ChartRangeSlider from "../ChartRangeSlider";
@@ -42,7 +43,7 @@ interface ChartsTabProps {
 	onRangeChange: (startIndex: number, endIndex: number) => void;
 }
 
-export default function ChartsTab({
+const ChartsTab = memo(function ChartsTab({
 	darkMode,
 	chartType,
 	viewMode,
@@ -71,17 +72,27 @@ export default function ChartsTab({
 	onClearAllEvents,
 	onRangeChange,
 }: ChartsTabProps) {
-	const chartConfig =
-		Object.keys(chartData).length > 0
-			? getChartConfig(
-					chartData,
-					chartType,
-					viewMode,
-					darkMode,
-					rangeFilter || undefined,
-					dataPointsForSlider,
-				)
-			: null;
+	// Memoize chart config to prevent unnecessary recalculations
+	const chartConfig = useMemo(() => {
+		if (Object.keys(chartData).length === 0) {
+			return null;
+		}
+		return getChartConfig(
+			chartData,
+			chartType,
+			viewMode,
+			darkMode,
+			rangeFilter || undefined,
+			dataPointsForSlider,
+		);
+	}, [
+		chartData,
+		chartType,
+		viewMode,
+		darkMode,
+		rangeFilter,
+		dataPointsForSlider,
+	]);
 
 	return (
 		<div>
@@ -223,7 +234,12 @@ export default function ChartsTab({
 						</div>
 					)}
 					{chartConfig && !isLoading && (
-						<Line data={chartConfig.data} options={chartConfig.options} />
+						<Line
+							key={`${chartType}-${viewMode}-${Object.keys(chartData).length}-${selectedSchools.length}-${selectedEvents.length}`}
+							data={chartConfig.data}
+							options={chartConfig.options}
+							redraw
+						/>
 					)}
 				</div>
 
@@ -238,4 +254,6 @@ export default function ChartsTab({
 			</div>
 		</div>
 	);
-}
+});
+
+export default ChartsTab;

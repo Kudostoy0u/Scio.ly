@@ -151,7 +151,15 @@ export async function listAssignments(teamSlug: string, userId: string) {
 		rosterByAssignment.get(entry.assignmentId)?.push(entry);
 	}
 
-	return assignments.map((a) => {
+	const visibleAssignments = isCaptain
+		? assignments
+		: assignments.filter(
+				(a) =>
+					(rosterByAssignment.get(a.id)?.length ?? 0) > 0 ||
+					userSubmissionsMap.has(a.id),
+			);
+
+	return visibleAssignments.map((a) => {
 		const userSubmission = userSubmissionsMap.get(a.id);
 		const assignmentRoster = rosterByAssignment.get(a.id) || [];
 

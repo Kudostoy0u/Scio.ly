@@ -3,7 +3,7 @@ export interface EloHistoryEntry {
 	t: number; // tournament id
 	p: number; // place
 	e: number; // elo
-	l: string; // duosmiumlink
+	l: string; // duosmium result slug or full link
 }
 
 export interface EloEvent {
@@ -105,6 +105,8 @@ export interface EloMetadata {
 	tournaments?: Record<string, string>;
 	tournamentTimeline?: Record<string, TournamentTimelineEntry[]>;
 	states?: Record<string, string>;
+	stateToGroup?: Record<string, string>;
+	stateGroups?: Record<string, string[]>;
 	lastUpdated?: string;
 	[key: string]: unknown;
 }

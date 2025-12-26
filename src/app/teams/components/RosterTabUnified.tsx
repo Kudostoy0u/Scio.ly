@@ -9,10 +9,7 @@
 
 import Modal from "@/app/components/Modal";
 import { useTheme } from "@/app/contexts/ThemeContext";
-import {
-	useInvalidateTeam,
-	useTeamRosterCacheOnly,
-} from "@/lib/hooks/useTeam";
+import { useInvalidateTeam, useTeamRosterCacheOnly } from "@/lib/hooks/useTeam";
 import type { TeamFullData, TeamMember } from "@/lib/server/teams/shared";
 import { trpc } from "@/lib/trpc/client";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -638,14 +635,26 @@ export default function RosterTabUnified({
 		}
 
 		setIsSavingNotes(true);
+		const snapshot = utils.teams.full.getData({ teamSlug: team.slug });
+		updateTeamData(team.slug, (prev) => {
+			if (!prev) return prev;
+			return {
+				...prev,
+				subteams: prev.subteams.map((subteam) =>
+					subteam.id === activeSubteamId
+						? { ...subteam, rosterNotes: notes }
+						: subteam,
+				),
+			};
+		});
 		try {
 			await updateRosterNotesMutation.mutateAsync({
 				teamSlug: team.slug,
 				subteamId: activeSubteamId,
 				notes,
 			});
-			invalidateTeam(team.slug);
 		} catch (error) {
+			updateTeamData(team.slug, () => snapshot);
 			console.error("Failed to save roster notes:", error);
 			toast.error(
 				error instanceof Error ? error.message : "Failed to save notes",

@@ -18,7 +18,7 @@ const QuoteFiltersSchema = z.object({
 	charLengthMax: z.coerce.number().int().positive().optional(),
 });
 
-	const fetchQuotes = async (
+const fetchQuotes = async (
 	language: string,
 	limit: number,
 	charLengthRange?: { min: number; max: number },

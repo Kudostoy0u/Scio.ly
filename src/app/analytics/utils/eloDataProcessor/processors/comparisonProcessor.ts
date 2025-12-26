@@ -10,7 +10,8 @@ import type {
 import { findSchool } from "../utils/schoolHelpers";
 
 // 2026 Division B Events
-const DIVISION_B_EVENTS_2026 = [
+// Single source of truth for 2026 Division B events
+export const DIVISION_B_EVENTS_2026 = [
 	"Anatomy and Physiology",
 	"Disease Detectives",
 	"Entomology",
@@ -37,7 +38,8 @@ const DIVISION_B_EVENTS_2026 = [
 ];
 
 // 2026 Division C Events
-const DIVISION_C_EVENTS_2026 = [
+// Single source of truth for 2026 Division C events
+export const DIVISION_C_EVENTS_2026 = [
 	"Anatomy and Physiology",
 	"Designer Genes",
 	"Disease Detectives",

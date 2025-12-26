@@ -4,8 +4,10 @@ import { useTheme } from "@/app/contexts/ThemeContext";
 import { trpc } from "@/lib/trpc/client";
 import { Calendar, Landmark, Settings, Users } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "react-toastify";
+import { getQueryKey } from "@trpc/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import NotImplemented from "./NotImplemented";
 import { TeamActionSection } from "./TeamActionSection";
 import TeamCalendar from "./TeamCalendar";
@@ -64,17 +66,41 @@ export default function TeamsLanding({
 		}
 	}, [searchParams]);
 	const [showLinkInviteModal, setShowLinkInviteModal] = useState(false);
+	const [shouldFetchLinkInvites, setShouldFetchLinkInvites] = useState(false);
+	const hasMountedRef = useRef(false);
+	const queryClient = useQueryClient();
 	const acceptLinkInvite = trpc.teams.acceptLinkInvite.useMutation();
 	const declineLinkInvite = trpc.teams.declineLinkInvite.useMutation();
 	const utils = trpc.useUtils();
 
-	// Fetch pending link invitations
-	const { data: linkInvitesData } = trpc.teams.pendingLinkInvites.useQuery(
+	// Read from cache using useSyncExternalStore to avoid render-phase updates
+	const linkInvitesQueryKey = getQueryKey(
+		trpc.teams.pendingLinkInvites,
 		undefined,
-		{
-			enabled: !isPreviewMode,
-		},
+		"query",
 	);
+	const cachedLinkInvitesData = useSyncExternalStore(
+		(listener) => queryClient.getQueryCache().subscribe(listener),
+		() => queryClient.getQueryState(linkInvitesQueryKey)?.data,
+		() => queryClient.getQueryState(linkInvitesQueryKey)?.data,
+	) as { linkInvites: Array<unknown> } | undefined;
+
+	// Enable query after initial render to avoid render-phase updates
+	useEffect(() => {
+		hasMountedRef.current = true;
+		if (!isPreviewMode) {
+			setShouldFetchLinkInvites(true);
+		}
+	}, [isPreviewMode]);
+
+	// Fetch pending link invitations (only after mount)
+	const { data: fetchedLinkInvitesData } =
+		trpc.teams.pendingLinkInvites.useQuery(undefined, {
+			enabled: shouldFetchLinkInvites && !isPreviewMode,
+		});
+
+	// Use fetched data if available, otherwise fall back to cached data
+	const linkInvitesData = fetchedLinkInvitesData ?? cachedLinkInvitesData;
 
 	// Show modal if there are pending link invites
 	useEffect(() => {
@@ -398,18 +424,73 @@ export default function TeamsLanding({
 						)}
 						onClose={() => setShowLinkInviteModal(false)}
 						onAccept={async (invite) => {
-							await acceptLinkInvite.mutateAsync({ linkInviteId: invite.id });
-							toast.success("Joined team");
-							await Promise.all([
-								utils.teams.pendingLinkInvites.invalidate(),
-								utils.teams.listUserTeams.invalidate(),
-							]);
+							const snapshotInvites = linkInvitesData;
+							const snapshotTeams = utils.teams.listUserTeams.getData();
+							utils.teams.pendingLinkInvites.setData(undefined, (prev) => {
+								const nextInvites =
+									prev?.linkInvites?.filter((item) => item.id !== invite.id) ??
+									[];
+								return { linkInvites: nextInvites };
+							});
+							utils.teams.listUserTeams.setData(undefined, (prev) => {
+								const exists = prev?.teams?.some(
+									(team) => team.slug === invite.teamSlug,
+								);
+								if (exists) {
+									return prev ?? { teams: [] };
+								}
+								const nextTeams = [
+									...(prev?.teams ?? []),
+									{
+										id: invite.teamSlug,
+										slug: invite.teamSlug,
+										name: invite.teamName,
+										school: invite.school,
+										division: invite.division,
+										status: "active",
+										role: "member" as const,
+									},
+								];
+								return { teams: nextTeams };
+							});
+							try {
+								await acceptLinkInvite.mutateAsync({
+									linkInviteId: invite.id,
+								});
+								toast.success("Joined team");
+							} catch (error) {
+								utils.teams.pendingLinkInvites.setData(
+									undefined,
+									() => snapshotInvites,
+								);
+								utils.teams.listUserTeams.setData(
+									undefined,
+									() => snapshotTeams,
+								);
+								throw error;
+							}
 							setShowLinkInviteModal(false);
 						}}
 						onDecline={async (invite) => {
-							await declineLinkInvite.mutateAsync({ linkInviteId: invite.id });
-							toast.info("Invite dismissed");
-							await utils.teams.pendingLinkInvites.invalidate();
+							const snapshotInvites = linkInvitesData;
+							utils.teams.pendingLinkInvites.setData(undefined, (prev) => {
+								const nextInvites =
+									prev?.linkInvites?.filter((item) => item.id !== invite.id) ??
+									[];
+								return { linkInvites: nextInvites };
+							});
+							try {
+								await declineLinkInvite.mutateAsync({
+									linkInviteId: invite.id,
+								});
+								toast.info("Invite dismissed");
+							} catch (error) {
+								utils.teams.pendingLinkInvites.setData(
+									undefined,
+									() => snapshotInvites,
+								);
+								throw error;
+							}
 							setShowLinkInviteModal(false);
 						}}
 					/>

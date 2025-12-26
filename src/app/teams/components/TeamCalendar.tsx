@@ -98,6 +98,100 @@ export default function TeamCalendar({
 		return { baseEventId, occurrenceDate };
 	};
 
+	const personalCalendarKey = {};
+	const teamCalendarKey = { teamIds: targetTeamIds };
+
+	const snapshotCalendarCache = () => ({
+		personal: utils.teams.personalCalendarEvents.getData(personalCalendarKey),
+		team:
+			targetTeamIds.length > 0
+				? utils.teams.teamCalendarEvents.getData(teamCalendarKey)
+				: undefined,
+	});
+
+	const restoreCalendarCache = (snapshot: {
+		personal: CalendarEvent[] | undefined;
+		team: CalendarEvent[] | undefined;
+	}) => {
+		utils.teams.personalCalendarEvents.setData(
+			personalCalendarKey,
+			snapshot.personal,
+		);
+		if (targetTeamIds.length > 0) {
+			utils.teams.teamCalendarEvents.setData(teamCalendarKey, snapshot.team);
+		}
+	};
+
+	const updatePersonalEvents = (
+		updater: (events: CalendarEvent[]) => CalendarEvent[],
+	) => {
+		utils.teams.personalCalendarEvents.setData(
+			personalCalendarKey,
+			(current) => {
+				if (!current) {
+					return current;
+				}
+				return updater(current);
+			},
+		);
+	};
+
+	const updateTeamEvents = (
+		updater: (events: CalendarEvent[]) => CalendarEvent[],
+	) => {
+		if (targetTeamIds.length === 0) {
+			return;
+		}
+		utils.teams.teamCalendarEvents.setData(teamCalendarKey, (current) => {
+			if (!current) {
+				return current;
+			}
+			return updater(current);
+		});
+	};
+
+	const addEventToCache = (event: CalendarEvent, isPersonal: boolean) => {
+		if (isPersonal) {
+			utils.teams.personalCalendarEvents.setData(
+				personalCalendarKey,
+				(current) => {
+					const next = current ? [...current] : [];
+					next.push(event);
+					return next;
+				},
+			);
+			return;
+		}
+		if (event.team_id && targetTeamIds.includes(event.team_id)) {
+			utils.teams.teamCalendarEvents.setData(teamCalendarKey, (current) => {
+				const next = current ? [...current] : [];
+				next.push(event);
+				return next;
+			});
+		}
+	};
+
+	const updateEventInCache = (
+		eventId: string,
+		updater: (event: CalendarEvent) => CalendarEvent,
+		isPersonal: boolean,
+	) => {
+		const applyUpdate = (events: CalendarEvent[]) =>
+			events.map((event) => (event.id === eventId ? updater(event) : event));
+		if (isPersonal) {
+			updatePersonalEvents(applyUpdate);
+		} else {
+			updateTeamEvents(applyUpdate);
+		}
+	};
+
+	const removeEventFromCaches = (eventId: string) => {
+		const removeEvent = (events: CalendarEvent[]) =>
+			events.filter((event) => event.id !== eventId);
+		updatePersonalEvents(removeEvent);
+		updateTeamEvents(removeEvent);
+	};
+
 	const canCreateTeamEvent = (teamId: string | undefined) => {
 		if (!teamId) {
 			return false;
@@ -124,16 +218,16 @@ export default function TeamCalendar({
 		const eventId = deleteEventConfirm;
 		setDeleteEventConfirm(null);
 
+		const snapshot = snapshotCalendarCache();
+		removeEventFromCaches(eventId);
+
 		deleteEventMutation
 			.mutateAsync({ eventId })
 			.then(() => {
 				toast.success("Event deleted successfully");
-				utils.teams.personalCalendarEvents.invalidate();
-				if (targetTeamIds.length > 0) {
-					utils.teams.teamCalendarEvents.invalidate({ teamIds: targetTeamIds });
-				}
 			})
 			.catch((error) => {
+				restoreCalendarCache(snapshot);
 				toast.error(
 					error instanceof Error ? error.message : "Failed to delete event",
 				);
@@ -149,6 +243,35 @@ export default function TeamCalendar({
 			eventId: recurringDeleteTarget.eventId,
 			occurrenceDate: recurringDeleteTarget.occurrenceDate,
 		});
+		const snapshot = snapshotCalendarCache();
+		const applyOccurrenceSkip = (event: CalendarEvent) => {
+			const pattern =
+				event.recurrence_pattern && typeof event.recurrence_pattern === "object"
+					? { ...event.recurrence_pattern }
+					: {};
+			const existing = Array.isArray(pattern.exceptions)
+				? pattern.exceptions
+				: [];
+			pattern.exceptions = Array.from(
+				new Set([...existing, recurringDeleteTarget.occurrenceDate]),
+			);
+			return { ...event, recurrence_pattern: pattern };
+		};
+		updatePersonalEvents((events) =>
+			events.map((event) =>
+				event.id === recurringDeleteTarget.eventId
+					? applyOccurrenceSkip(event)
+					: event,
+			),
+		);
+		updateTeamEvents((events) =>
+			events.map((event) =>
+				event.id === recurringDeleteTarget.eventId
+					? applyOccurrenceSkip(event)
+					: event,
+			),
+		);
+
 		skipOccurrenceMutation
 			.mutateAsync({
 				eventId: recurringDeleteTarget.eventId,
@@ -157,12 +280,9 @@ export default function TeamCalendar({
 			.then(() => {
 				toast.success("Recurring event occurrence removed");
 				setRecurringDeleteTarget(null);
-				utils.teams.personalCalendarEvents.invalidate();
-				if (targetTeamIds.length > 0) {
-					utils.teams.teamCalendarEvents.invalidate({ teamIds: targetTeamIds });
-				}
 			})
 			.catch((error) => {
+				restoreCalendarCache(snapshot);
 				toast.error(
 					error instanceof Error
 						? error.message
@@ -179,6 +299,8 @@ export default function TeamCalendar({
 			return;
 		}
 		setIsDeletingRecurring(true);
+		const snapshot = snapshotCalendarCache();
+		removeEventFromCaches(recurringDeleteTarget.eventId);
 		try {
 			logger.dev.structured("debug", "[Calendar] Delete recurring series", {
 				eventId: recurringDeleteTarget.eventId,
@@ -188,11 +310,8 @@ export default function TeamCalendar({
 			});
 			toast.success("Recurring meeting deleted");
 			setRecurringDeleteTarget(null);
-			utils.teams.personalCalendarEvents.invalidate();
-			if (targetTeamIds.length > 0) {
-				utils.teams.teamCalendarEvents.invalidate({ teamIds: targetTeamIds });
-			}
 		} catch (error) {
+			restoreCalendarCache(snapshot);
 			toast.error(
 				error instanceof Error
 					? error.message
@@ -312,14 +431,32 @@ export default function TeamCalendar({
 			? createTimezoneAwareDateTime(eventForm.date, eventForm.end_time)
 			: null;
 
-		try {
-			const eventType =
-				eventForm.meeting_type === "personal"
-					? "personal"
-					: eventForm.event_type;
+		const eventType =
+			eventForm.meeting_type === "personal" ? "personal" : eventForm.event_type;
+		const isPersonal = eventForm.meeting_type === "personal";
+		const teamId = eventForm.selected_team_id || undefined;
+		const subteamId = eventForm.selected_subteam_id || undefined;
 
+		const snapshot = snapshotCalendarCache();
+		try {
 			// Check if we're editing an existing event
 			if (selectedEvent) {
+				updateEventInCache(
+					selectedEvent.id,
+					(event) => ({
+						...event,
+						title: eventForm.title,
+						description: eventForm.description || undefined,
+						start_time: startTime,
+						end_time: endTime || undefined,
+						location: eventForm.location || undefined,
+						event_type: eventType,
+						is_all_day: eventForm.is_all_day,
+						is_recurring: eventForm.is_recurring,
+						recurrence_pattern: eventForm.recurrence_pattern,
+					}),
+					!selectedEvent.team_id,
+				);
 				await updateEventMutation.mutateAsync({
 					eventId: selectedEvent.id,
 					title: eventForm.title,
@@ -335,7 +472,28 @@ export default function TeamCalendar({
 
 				toast.success("Event updated successfully!");
 			} else {
-				await createEventMutation.mutateAsync({
+				const optimisticId = `temp-${Date.now()}-${Math.random()
+					.toString(36)
+					.slice(2, 10)}`;
+				const optimisticEvent: CalendarEvent = {
+					id: optimisticId,
+					title: eventForm.title,
+					description: eventForm.description || undefined,
+					start_time: startTime,
+					end_time: endTime || undefined,
+					location: eventForm.location || undefined,
+					event_type: eventType,
+					is_all_day: eventForm.is_all_day,
+					is_recurring: eventForm.is_recurring,
+					recurrence_pattern: eventForm.recurrence_pattern,
+					created_by: user.id,
+					owner_user_id: isPersonal ? user.id : null,
+					team_id: isPersonal ? undefined : teamId,
+					subteam_id: isPersonal ? undefined : subteamId,
+				};
+				addEventToCache(optimisticEvent, isPersonal);
+
+				const createResult = await createEventMutation.mutateAsync({
 					title: eventForm.title,
 					description: eventForm.description || null,
 					startTime,
@@ -350,17 +508,21 @@ export default function TeamCalendar({
 					subteamId: eventForm.selected_subteam_id || null,
 				});
 
+				if (createResult?.eventId) {
+					updateEventInCache(
+						optimisticId,
+						(event) => ({ ...event, id: createResult.eventId }),
+						isPersonal,
+					);
+				}
 				toast.success("Event created successfully!");
 			}
 
 			setShowEventModal(false);
 			setSelectedEvent(null);
 			setEventForm(getDefaultEventForm());
-			utils.teams.personalCalendarEvents.invalidate();
-			if (targetTeamIds.length > 0) {
-				utils.teams.teamCalendarEvents.invalidate({ teamIds: targetTeamIds });
-			}
 		} catch (error) {
+			restoreCalendarCache(snapshot);
 			toast.error(
 				error instanceof Error ? error.message : "Failed to save event",
 			);
@@ -382,6 +544,11 @@ export default function TeamCalendar({
 			}
 		}
 
+		const isPersonal = recurringForm.meeting_type === "personal";
+		const teamId = recurringForm.selected_team_id || undefined;
+		const subteamId = recurringForm.selected_subteam_id || undefined;
+
+		const snapshot = snapshotCalendarCache();
 		try {
 			const recurrencePattern = {
 				days_of_week: recurringForm.days_of_week,
@@ -407,7 +574,28 @@ export default function TeamCalendar({
 					)
 				: null;
 
-			await createEventMutation.mutateAsync({
+			const optimisticId = `temp-${Date.now()}-${Math.random()
+				.toString(36)
+				.slice(2, 10)}`;
+			const optimisticEvent: CalendarEvent = {
+				id: optimisticId,
+				title: recurringForm.title,
+				description: recurringForm.description || undefined,
+				start_time: startTime,
+				end_time: endTime || undefined,
+				location: recurringForm.location || undefined,
+				event_type: isPersonal ? "personal" : "meeting",
+				is_all_day: false,
+				is_recurring: true,
+				recurrence_pattern: recurrencePattern,
+				created_by: user.id,
+				owner_user_id: isPersonal ? user.id : null,
+				team_id: isPersonal ? undefined : teamId,
+				subteam_id: isPersonal ? undefined : subteamId,
+			};
+			addEventToCache(optimisticEvent, isPersonal);
+
+			const createResult = await createEventMutation.mutateAsync({
 				title: recurringForm.title,
 				description: recurringForm.description || null,
 				startTime,
@@ -423,14 +611,18 @@ export default function TeamCalendar({
 				subteamId: recurringForm.selected_subteam_id || null,
 			});
 
+			if (createResult?.eventId) {
+				updateEventInCache(
+					optimisticId,
+					(event) => ({ ...event, id: createResult.eventId }),
+					isPersonal,
+				);
+			}
 			toast.success("Recurring meeting created successfully!");
 			setShowRecurringModal(false);
 			setRecurringForm(getDefaultRecurringForm());
-			utils.teams.personalCalendarEvents.invalidate();
-			if (targetTeamIds.length > 0) {
-				utils.teams.teamCalendarEvents.invalidate({ teamIds: targetTeamIds });
-			}
 		} catch (error) {
+			restoreCalendarCache(snapshot);
 			toast.error(
 				error instanceof Error
 					? error.message

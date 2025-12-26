@@ -5,7 +5,7 @@ import type { EloData, EloMetadata } from "@/app/analytics/types/elo";
  *
  * CURRENT STRUCTURE:
  * - Loads from state-based JSON files: /public/statesB/ and /public/statesC/
- * - Individual state JSON files: IL.json, CA.json, etc.
+ * - State group JSON files: group-0.json, group-1.json, etc. (10 states per file)
  * - meta.json in each folder containing number->name mappings
  * - Lazy loading of state data as needed
  * - Preloads default schools for fast initial display
@@ -15,7 +15,12 @@ export interface DataLoadOptions {
 	division: "b" | "c";
 	states?: string[];
 	forceReload?: boolean;
-	onBatchLoaded?: (loadedStates: string[], totalStates: number) => void;
+	priorityStates?: string[]; // Custom priority states to load first
+	onBatchLoaded?: (
+		loadedStates: string[],
+		totalStates: number,
+		updatedData?: EloData,
+	) => void;
 }
 
 export interface DataLoadResult {
@@ -25,17 +30,14 @@ export interface DataLoadResult {
 	error: string | null;
 }
 
-// Default schools to preload for fast initial display
-const DEFAULT_SCHOOLS = {
-	c: ["IL", "TX"], // Stevenson (IL) + Seven Lakes (TX)
-	b: ["IL", "TX"], // Same states for Division B
-};
+// Priority order for loading states
+const PRIORITY_STATES = ["IL", "TX", "CA", "NY", "OH", "PA"];
 
 const dataCache = new Map<
 	string,
 	{ data: EloData; metadata: EloMetadata; timestamp: number }
 >();
-const loadingStates = new Set<string>();
+const loadingGroups = new Set<string>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
@@ -62,34 +64,94 @@ async function loadMetadata(division: "b" | "c"): Promise<EloMetadata> {
 async function loadSpecificStates(
 	division: "b" | "c",
 	states: string[],
+	metadata: EloMetadata,
 ): Promise<EloData> {
 	const data: EloData = {};
+	const stateToGroup = metadata.stateToGroup || {};
+	const hasGrouping = Object.keys(stateToGroup).length > 0;
+	const stateSet = new Set(states);
+
+	if (!hasGrouping) {
+		for (const stateCode of states) {
+			const stateData = await loadStateData(division, stateCode);
+			if (stateData) {
+				data[stateCode] = stateData as EloData[string];
+			}
+		}
+		return data;
+	}
+
+	const groupsToLoad = new Set<string>();
+
 	for (const stateCode of states) {
-		const stateData = await loadStateData(division, stateCode);
-		if (stateData) {
-			data[stateCode] = stateData as EloData[string];
+		const groupId = stateToGroup[stateCode];
+		if (groupId) {
+			groupsToLoad.add(groupId);
+		}
+	}
+
+	for (const groupId of groupsToLoad) {
+		const groupData = await loadGroupData(division, groupId);
+		if (groupData) {
+			for (const [stateCode, stateData] of Object.entries(groupData)) {
+				if (stateSet.has(stateCode)) {
+					data[stateCode] = stateData as EloData[string];
+				}
+			}
 		}
 	}
 	return data;
 }
 
-async function loadDefaultStates(division: "b" | "c"): Promise<EloData> {
-	const defaultStates = DEFAULT_SCHOOLS[division];
-	const data: EloData = {};
+/**
+ * Organize states into priority order: priority states first, then all others
+ */
+function organizeStatesByPriority(
+	allStates: string[],
+	customPriority?: string[],
+): string[] {
+	const priorityList = customPriority || PRIORITY_STATES;
+	const prioritySet = new Set(priorityList);
+	const priorityStates = priorityList.filter((state) =>
+		allStates.includes(state),
+	);
+	const otherStates = allStates
+		.filter((state) => !prioritySet.has(state))
+		.sort();
+	return [...priorityStates, ...otherStates];
+}
 
-	for (const stateCode of defaultStates) {
-		const stateData = await loadStateData(division, stateCode);
-		if (stateData) {
-			data[stateCode] = stateData as EloData[string];
+function organizeGroupsByPriority(
+	allStates: string[],
+	stateToGroup: Record<string, string>,
+	customPriority?: string[],
+): string[] {
+	const orderedStates = organizeStatesByPriority(allStates, customPriority);
+	const groups: string[] = [];
+	const seenGroups = new Set<string>();
+
+	for (const stateCode of orderedStates) {
+		const groupId = stateToGroup[stateCode];
+		if (!groupId || seenGroups.has(groupId)) {
+			continue;
 		}
+		seenGroups.add(groupId);
+		groups.push(groupId);
 	}
-	return data;
+
+	return groups;
 }
 
 export async function loadEloData(
 	options: DataLoadOptions,
 ): Promise<DataLoadResult> {
-	const { division, states, forceReload = false, onBatchLoaded } = options;
+	const {
+		division,
+		states,
+		forceReload = false,
+		priorityStates,
+		onBatchLoaded,
+	} = options;
 
 	try {
 		const cacheKey = `${division}-${states?.join(",") || "all"}`;
@@ -112,37 +174,38 @@ export async function loadEloData(
 
 		// If specific states requested, load only those
 		if (states) {
-			const data = await loadSpecificStates(division, states);
+			const data = await loadSpecificStates(division, states, metadata);
 			dataCache.set(cacheKey, { data, metadata, timestamp: Date.now() });
 			return { data, metadata, loading: false, error: null };
 		}
 
-		// For full data load, start with default schools for fast display
-		const data = await loadDefaultStates(division);
+		// For full data load, return empty data immediately and start loading in background
+		const allStates = Object.keys(metadata.states || {});
+		const stateToGroup = metadata.stateToGroup || {};
+		const hasGrouping = Object.keys(stateToGroup).length > 0;
+		const organizedGroups = hasGrouping
+			? organizeGroupsByPriority(allStates, stateToGroup, priorityStates)
+			: organizeStatesByPriority(allStates, priorityStates);
+		const data: EloData = {};
 
-		// Cache initial data for immediate display
+		// Cache empty initial data for immediate display
 		dataCache.set(cacheKey, { data, metadata, timestamp: Date.now() });
 
-		// Lazy load remaining states in background
-		const allStates = Object.keys(metadata.states || {});
-		const defaultStates = DEFAULT_SCHOOLS[division];
-		const remainingStates = allStates.filter(
-			(state) => !defaultStates.includes(state),
-		);
-
-		// Start background loading
+		// Start loading all states in priority order in background
 		loadRemainingStates(
 			division,
-			remainingStates,
+			organizedGroups,
 			data,
 			metadata,
 			cacheKey,
 			onBatchLoaded,
+			allStates.length,
 		);
 
+		// Return empty data immediately with total states count in metadata for progress tracking
 		return {
 			data,
-			metadata,
+			metadata: { ...metadata, totalStates: allStates.length },
 			loading: false,
 			error: null,
 		};
@@ -159,6 +222,23 @@ export async function loadEloData(
 /**
  * Load data for a single state
  */
+async function loadGroupData(
+	division: "b" | "c",
+	groupId: string,
+): Promise<Record<string, Record<string, unknown>> | null> {
+	try {
+		const groupResponse = await fetch(
+			`/states${division.toUpperCase()}/${groupId}.json`,
+		);
+		if (groupResponse.ok) {
+			return await groupResponse.json();
+		}
+		return null;
+	} catch (_error) {
+		return null;
+	}
+}
+
 async function loadStateData(
 	division: "b" | "c",
 	stateCode: string,
@@ -177,48 +257,65 @@ async function loadStateData(
 }
 
 /**
- * Load remaining states in background and update cache in batches
- * Updates state every 5 states loaded to improve performance
+ * Load states in background and update cache in batches
+ * Updates state every 2 states loaded for frequent re-renders
  */
 async function loadRemainingStates(
 	division: "b" | "c",
-	remainingStates: string[],
+	groupsToLoad: string[],
 	data: EloData,
 	metadata: EloMetadata,
 	cacheKey: string,
-	onBatchLoaded?: (loadedStates: string[], totalStates: number) => void,
+	onBatchLoaded?: (
+		loadedStates: string[],
+		totalStates: number,
+		updatedData?: EloData,
+	) => void,
+	totalStates?: number,
 ) {
-	const batchSize = 5;
+	const batchSize = 8; // Load 8 states at a time for better performance
 	const batches: string[][] = [];
+	const stateToGroup = metadata.stateToGroup || {};
+	const hasGrouping = Object.keys(stateToGroup).length > 0;
 
-	// Split states into batches of 5
-	for (let i = 0; i < remainingStates.length; i += batchSize) {
-		batches.push(remainingStates.slice(i, i + batchSize));
+	// Split states into batches of 8
+	for (let i = 0; i < groupsToLoad.length; i += batchSize) {
+		batches.push(groupsToLoad.slice(i, i + batchSize));
 	}
 
 	// Process each batch
 	for (const batch of batches) {
 		const batchData: Record<string, Record<string, unknown>> = {};
-		const batchLoadingStates = new Set<string>();
+		const batchLoadedStates = new Set<string>();
 
 		// Load all states in current batch
-		const loadPromises = batch.map(async (stateCode) => {
-			if (loadingStates.has(stateCode)) {
+		const loadPromises = batch.map(async (groupId) => {
+			if (loadingGroups.has(groupId)) {
 				return null;
 			}
 
-			loadingStates.add(stateCode);
-			batchLoadingStates.add(stateCode);
+			loadingGroups.add(groupId);
 
 			try {
-				const stateData = await loadStateData(division, stateCode);
-				if (stateData) {
-					batchData[stateCode] = stateData;
+				if (!hasGrouping) {
+					const stateData = await loadStateData(division, groupId);
+					if (stateData) {
+						batchData[groupId] = stateData;
+						batchLoadedStates.add(groupId);
+					}
+					return stateData;
 				}
-				return stateData;
+
+				const groupData = await loadGroupData(division, groupId);
+				if (groupData) {
+					for (const [stateCode, stateData] of Object.entries(groupData)) {
+						batchData[stateCode] = stateData;
+						batchLoadedStates.add(stateCode);
+					}
+				}
+				return groupData;
 			} finally {
-				loadingStates.delete(stateCode);
-				batchLoadingStates.delete(stateCode);
+				loadingGroups.delete(groupId);
 			}
 		});
 
@@ -227,22 +324,30 @@ async function loadRemainingStates(
 
 		// Update data and cache with entire batch
 		if (Object.keys(batchData).length > 0) {
-			Object.assign(data, batchData);
+			// Add batch data to the data object
+			for (const [stateCode, stateData] of Object.entries(batchData)) {
+				data[stateCode] = stateData as EloData[string];
+			}
+
+			// Create a new object reference for React to detect the change
+			// This ensures React sees the state update
+			const updatedData: EloData = { ...data };
+
 			dataCache.set(cacheKey, {
-				data: { ...data },
+				data: updatedData,
 				metadata,
 				timestamp: Date.now(),
 			});
 
-			// Notify UI about batch completion
-			if (onBatchLoaded) {
-				onBatchLoaded(Object.keys(batchData), remainingStates.length);
+			// Notify UI about batch completion with updated data
+			if (onBatchLoaded && totalStates) {
+				onBatchLoaded(Array.from(batchLoadedStates), totalStates, updatedData);
 			}
 		}
 
-		// Small delay between batches to prevent overwhelming the browser
+		// Minimal delay between batches to maximize throughput
 		if (batches.indexOf(batch) < batches.length - 1) {
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 10));
 		}
 	}
 }

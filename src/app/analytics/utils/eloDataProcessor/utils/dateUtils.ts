@@ -3,6 +3,7 @@
  */
 
 import type { EloData, EloMetadata } from "@/app/analytics/types/elo";
+import { normalizeDuosmiumLink } from "./linkUtils";
 
 /**
  * Format a date string (YYYY-MM-DD) to a human-readable format (e.g., "May 24th, 2025")
@@ -53,7 +54,7 @@ export const getAllTournamentDates = (
 			}
 			tournamentsByDate.get(tournament.date)?.push({
 				tournament: tournament.tournamentName,
-				link: tournament.link,
+				link: normalizeDuosmiumLink(tournament.link),
 			});
 		}
 
@@ -79,7 +80,7 @@ export const getAllTournamentDates = (
 				x: new Date(date),
 				y: 0,
 				tournament: tournamentLabel,
-				link: firstTournament.link,
+				link: normalizeDuosmiumLink(firstTournament.link),
 			});
 		}
 	}

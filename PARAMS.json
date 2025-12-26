@@ -1,0 +1,21 @@
+{
+  "bestLoss": 4799812.09,
+  "params": {
+    "divisions": "C",
+    "starting-elo": 1432.0618374291714,
+    "elo-floor": 121.6209973530508,
+    "elo-performance-scaling-factor": 112.84443607030568,
+    "tournament-competitiveness-factor": 0.4510368093294207,
+    "first-tournament-volatility": 0.8814653345499541,
+    "second-tournament-volatility": 1.007616032614201,
+    "normal-volatility": 1.373423801788833,
+    "state-tournament-multiplier": 1.6959129398950141,
+    "national-tournament-multiplier": 6.560487971798821,
+    "elo-damping-scale": 55.89914451048698,
+    "elo-damping-strength": 0.29860576539553885,
+    "momentum-volatility-scale": 132.42941298850135,
+    "max-momentum-volatility": 1.3463156704629544,
+    "score-normalization-scale": 0.836345590840657,
+    "jv-conversion-loss-ratio": 0.014623862642420018
+  }
+}

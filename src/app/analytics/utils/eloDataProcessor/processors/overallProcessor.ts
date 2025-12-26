@@ -10,6 +10,7 @@ import type {
 	OverallTournamentData,
 } from "@/app/analytics/types/elo";
 import { findSchool } from "../utils/schoolHelpers";
+import { normalizeDuosmiumLink } from "../utils/linkUtils";
 
 export const processOverallBySeason = (
 	eloData: EloData,
@@ -59,7 +60,7 @@ export const processOverallByTournament = (
 							tournament: tournamentName || `Tournament ${entry.t}`,
 							place: entry.p,
 							elo: entry.e,
-							duosmiumLink: entry.l,
+							duosmiumLink: normalizeDuosmiumLink(entry.l),
 							season,
 						});
 					}

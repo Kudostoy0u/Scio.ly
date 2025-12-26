@@ -42,6 +42,7 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 	const router = useRouter();
 	const { user, loading: authLoading } = useAuth();
 	const queryClient = useQueryClient();
+	const utils = trpc.useUtils();
 	const [activeTab, setActiveTab] = useState<TabName>("roster");
 	const [activeSubteamId, setActiveSubteamId] = useState<string | null>(null);
 	const [showCodes, setShowCodes] = useState(false);
@@ -56,12 +57,12 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 		"home",
 	);
 
-	useTeamCacheInvalidation(teamSlug);
+	const { error: manifestError, isError: manifestHasError } =
+		useTeamCacheInvalidation(teamSlug);
 
 	const { data: teamData, error } = useTeamFullCacheOnly(teamSlug);
 	const subteams = teamData?.subteams ?? [];
-	const { invalidateTeam, invalidateTeamAndUserTeams, refetchTeam } =
-		useInvalidateTeam();
+	const { updateTeamData } = useInvalidateTeam();
 	const userTeamsQueryKey = useMemo(
 		() => getQueryKey(trpc.teams.listUserTeams, undefined, "query"),
 		[],
@@ -83,6 +84,18 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 	const leaveTeamMutation = trpc.teams.leaveTeam.useMutation();
 	const archiveTeamMutation = trpc.teams.archiveTeam.useMutation();
 
+	const teamQueryKey = { teamSlug };
+	const snapshotTeam = () => utils.teams.full.getData(teamQueryKey);
+	const restoreTeam = (snapshot: typeof teamData | undefined) => {
+		updateTeamData(teamSlug, () => snapshot);
+	};
+	const snapshotUserTeams = () => utils.teams.listUserTeams.getData();
+	const restoreUserTeams = (
+		snapshot: ReturnType<typeof utils.teams.listUserTeams.getData>,
+	) => {
+		utils.teams.listUserTeams.setData(undefined, () => snapshot);
+	};
+
 	useEffect(() => {
 		if (authLoading) {
 			return;
@@ -92,6 +105,39 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 			return;
 		}
 	}, [authLoading, router, user]);
+
+	useEffect(() => {
+		if (!manifestHasError || !manifestError) {
+			return;
+		}
+		const errorCode =
+			manifestError &&
+			typeof manifestError === "object" &&
+			"data" in manifestError &&
+			manifestError.data &&
+			typeof manifestError.data === "object" &&
+			"code" in manifestError.data
+				? (manifestError.data.code as string)
+				: null;
+		if (errorCode !== "NOT_FOUND" && errorCode !== "FORBIDDEN") {
+			return;
+		}
+		utils.teams.listUserTeams.setData(undefined, (prev) => {
+			if (!prev) return prev;
+			return {
+				...prev,
+				teams: (prev.teams ?? []).filter((team) => team.slug !== teamSlug),
+			};
+		});
+		utils.teams.full.setData({ teamSlug }, undefined);
+		if (typeof window !== "undefined") {
+			const lastVisited = window.localStorage.getItem("teams:lastVisited");
+			if (lastVisited === teamSlug) {
+				window.localStorage.removeItem("teams:lastVisited");
+			}
+		}
+		router.replace("/teams?view=all");
+	}, [manifestError, manifestHasError, router, teamSlug, utils]);
 
 	useEffect(() => {
 		if (typeof window === "undefined") {
@@ -210,14 +256,63 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 	};
 
 	const handleCreateSubteam = async () => {
+		const snapshot = snapshotTeam();
+		const tempId = `temp-${Date.now()}-${Math.random()
+			.toString(36)
+			.slice(2, 10)}`;
+		const nextOrder =
+			Math.max(0, ...subteams.map((subteam) => subteam.displayOrder ?? 0)) + 1;
+		const baseIndex = subteams.length;
+		const letter = String.fromCharCode("A".charCodeAt(0) + baseIndex);
+		const tempName = `Team ${letter}`;
+		const tempCreatedAt = new Date().toISOString();
+		if (teamMeta.teamId) {
+			updateTeamData(teamSlug, (prev) => {
+				if (!prev) return prev;
+				return {
+					...prev,
+					subteams: [
+						...prev.subteams,
+						{
+							id: tempId,
+							teamId: teamMeta.teamId,
+							name: tempName,
+							description: null,
+							rosterNotes: null,
+							displayOrder: nextOrder,
+							createdAt: tempCreatedAt,
+						},
+					],
+				};
+			});
+			setActiveSubteamId(tempId);
+		}
+
 		try {
 			const created = await createSubteamMutation.mutateAsync({
 				teamSlug,
 			});
 			toast.success("Subteam created");
+			updateTeamData(teamSlug, (prev) => {
+				if (!prev) return prev;
+				return {
+					...prev,
+					subteams: prev.subteams.map((subteam) =>
+						subteam.id === tempId
+							? {
+									...subteam,
+									id: created.id,
+									name: created.name,
+									description: created.description,
+									displayOrder: created.displayOrder,
+								}
+							: subteam,
+					),
+				};
+			});
 			setActiveSubteamId(created.id);
-			await invalidateTeam(teamSlug);
 		} catch (mutationError) {
+			restoreTeam(snapshot);
 			toast.error(
 				mutationError instanceof Error
 					? mutationError.message
@@ -230,6 +325,18 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 		if (!newName.trim()) {
 			return;
 		}
+		const snapshot = snapshotTeam();
+		updateTeamData(teamSlug, (prev) => {
+			if (!prev) return prev;
+			return {
+				...prev,
+				subteams: prev.subteams.map((subteam) =>
+					subteam.id === subteamId
+						? { ...subteam, name: newName.trim() }
+						: subteam,
+				),
+			};
+		});
 		try {
 			await renameSubteamMutation.mutateAsync({
 				teamSlug,
@@ -237,10 +344,8 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 				newName: newName.trim(),
 			});
 			toast.success("Subteam renamed");
-			// Invalidate and refetch team data to ensure roster updates with new subteam name
-			await invalidateTeam(teamSlug);
-			await refetchTeam(teamSlug);
 		} catch (mutationError) {
+			restoreTeam(snapshot);
 			toast.error(
 				mutationError instanceof Error
 					? mutationError.message
@@ -262,16 +367,25 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 		const { subteamId } = deleteSubteamConfirm;
 		setDeleteSubteamConfirm(null);
 
+		const snapshot = snapshotTeam();
+		const nextSubteamId =
+			subteams?.find((subteam) => subteam.id !== subteamId)?.id ?? null;
+		updateTeamData(teamSlug, (prev) => {
+			if (!prev) return prev;
+			return {
+				...prev,
+				subteams: prev.subteams.filter((subteam) => subteam.id !== subteamId),
+			};
+		});
+		if (activeSubteamId === subteamId) {
+			setActiveSubteamId(nextSubteamId);
+		}
+
 		try {
 			await deleteSubteamMutation.mutateAsync({ teamSlug, subteamId });
 			toast.success("Subteam deleted");
-			await invalidateTeam(teamSlug);
-			if (activeSubteamId === subteamId) {
-				setActiveSubteamId(
-					subteams?.find((s: { id: string }) => s.id !== subteamId)?.id ?? null,
-				);
-			}
 		} catch (mutationError) {
+			restoreTeam(snapshot);
 			toast.error(
 				mutationError instanceof Error
 					? mutationError.message
@@ -281,13 +395,23 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 	};
 
 	const handleLeaveTeam = async () => {
+		const snapshotTeams = snapshotUserTeams();
+		const snapshot = snapshotTeam();
+		utils.teams.listUserTeams.setData(undefined, (current) => {
+			if (!current) return current;
+			return {
+				...current,
+				teams: (current.teams ?? []).filter((team) => team.slug !== teamSlug),
+			};
+		});
+		utils.teams.full.setData(teamQueryKey, undefined);
 		try {
 			await leaveTeamMutation.mutateAsync({ teamSlug });
 			toast.success("You left the team");
-			// Invalidate team and user teams list since leaving removes team from list
-			await invalidateTeamAndUserTeams(teamSlug);
 			router.push("/teams");
 		} catch (mutationError) {
+			restoreTeam(snapshot);
+			restoreUserTeams(snapshotTeams);
 			toast.error(
 				mutationError instanceof Error
 					? mutationError.message
@@ -297,13 +421,23 @@ export default function TeamPageClient({ teamSlug }: TeamPageClientProps) {
 	};
 
 	const handleArchiveTeam = async () => {
+		const snapshotTeams = snapshotUserTeams();
+		const snapshot = snapshotTeam();
+		utils.teams.listUserTeams.setData(undefined, (current) => {
+			if (!current) return current;
+			return {
+				...current,
+				teams: (current.teams ?? []).filter((team) => team.slug !== teamSlug),
+			};
+		});
+		utils.teams.full.setData(teamQueryKey, undefined);
 		try {
 			await archiveTeamMutation.mutateAsync({ teamSlug });
 			toast.success("Team deleted");
-			// Invalidate all team-related caches including user teams list
-			await invalidateTeamAndUserTeams(teamSlug);
 			router.push("/teams");
 		} catch (mutationError) {
+			restoreTeam(snapshot);
+			restoreUserTeams(snapshotTeams);
 			toast.error(
 				mutationError instanceof Error
 					? mutationError.message

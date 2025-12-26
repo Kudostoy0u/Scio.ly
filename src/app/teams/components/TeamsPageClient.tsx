@@ -8,7 +8,13 @@ import { generateDisplayName } from "@/lib/utils/content/displayNameUtils";
 import { getQueryKey } from "@trpc/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	useSyncExternalStore,
+} from "react";
 import { toast } from "react-toastify";
 import CreateTeamModal from "./CreateTeamModal";
 import JoinTeamModal from "./JoinTeamModal";
@@ -58,28 +64,30 @@ export default function TeamsPageClient() {
 			.split(";")
 			.some((cookie) => cookie.trim().startsWith("teamsJustUnlinked="));
 	}, []);
+	const pendingInvitesQuery = trpc.teams.pendingInvites.useQuery(undefined, {
+		enabled: !!user?.id,
+		staleTime: 0,
+		refetchOnMount: "always",
+		refetchOnWindowFocus: false,
+	});
+	const pendingInvites = pendingInvitesQuery.data;
+	const hasPendingInvites = (pendingInvites?.invites?.length ?? 0) > 0;
 	const shouldAutoRedirect =
 		!!user?.id &&
 		!skipAutoRedirect &&
 		!justUnlinked &&
-		!!cachedTeamsData?.teams?.length;
+		!!cachedTeamsData?.teams?.length &&
+		!hasPendingInvites &&
+		pendingInvitesQuery.isFetched;
 	const hasRedirectedRef = useRef(false);
 	const { data, isLoading } = trpc.teams.listUserTeams.useQuery(undefined, {
 		enabled: !!user?.id && !cachedTeamsData,
 		staleTime: 30_000,
 	});
-	const { data: pendingInvites } = trpc.teams.pendingInvites.useQuery(
-		undefined,
-		{ enabled: !!user?.id && !shouldAutoRedirect, staleTime: 10_000 },
-	);
 
 	const acceptInviteMutation = trpc.teams.acceptInvite.useMutation({
 		onSuccess: async (res) => {
 			toast.success("Joined team");
-			await Promise.all([
-				utils.teams.listUserTeams.invalidate(),
-				utils.teams.pendingInvites.invalidate(),
-			]);
 			router.push(`/teams/${res.slug}`);
 		},
 		onError: (error) => {
@@ -91,7 +99,6 @@ export default function TeamsPageClient() {
 
 	const declineInviteMutation = trpc.teams.declineInvite.useMutation({
 		onSuccess: async () => {
-			await utils.teams.pendingInvites.invalidate();
 			toast.info("Invite dismissed");
 		},
 		onError: (error) => {
@@ -354,14 +361,67 @@ export default function TeamsPageClient() {
 					)}
 					onClose={() => setShowInviteModal(false)}
 					onAccept={async (invite) => {
-						await acceptInviteMutation.mutateAsync({
-							teamSlug: invite.teamSlug,
+						const snapshotInvites = pendingInvites;
+						const snapshotTeams = utils.teams.listUserTeams.getData();
+						utils.teams.pendingInvites.setData(undefined, (prev) => {
+							const nextInvites =
+								prev?.invites?.filter(
+									(item) => item.slug !== invite.teamSlug,
+								) ?? [];
+							return { invites: nextInvites };
 						});
+						utils.teams.listUserTeams.setData(undefined, (prev) => {
+							const exists = prev?.teams?.some(
+								(team) => team.slug === invite.teamSlug,
+							);
+							if (exists) {
+								return prev ?? { teams: [] };
+							}
+							const nextTeams = [
+								...(prev?.teams ?? []),
+								{
+									id: invite.teamSlug,
+									slug: invite.teamSlug,
+									name: invite.teamName,
+									school: invite.school,
+									division: invite.division,
+									status: "active",
+									role: invite.role,
+								},
+							];
+							return { teams: nextTeams };
+						});
+						try {
+							await acceptInviteMutation.mutateAsync({
+								teamSlug: invite.teamSlug,
+							});
+						} catch {
+							utils.teams.pendingInvites.setData(
+								undefined,
+								() => snapshotInvites,
+							);
+							utils.teams.listUserTeams.setData(undefined, () => snapshotTeams);
+						}
 					}}
 					onDecline={async (invite) => {
-						await declineInviteMutation.mutateAsync({
-							teamSlug: invite.teamSlug,
+						const snapshotInvites = pendingInvites;
+						utils.teams.pendingInvites.setData(undefined, (prev) => {
+							const nextInvites =
+								prev?.invites?.filter(
+									(item) => item.slug !== invite.teamSlug,
+								) ?? [];
+							return { invites: nextInvites };
 						});
+						try {
+							await declineInviteMutation.mutateAsync({
+								teamSlug: invite.teamSlug,
+							});
+						} catch {
+							utils.teams.pendingInvites.setData(
+								undefined,
+								() => snapshotInvites,
+							);
+						}
 					}}
 				/>
 			) : null}

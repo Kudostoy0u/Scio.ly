@@ -15,12 +15,14 @@ interface ActiveTimersProps {
 	darkMode: boolean;
 	activeTimers: Event[];
 	onRemoveTimer: (eventId: string) => void;
+	canRemove: boolean;
 }
 
 export default function ActiveTimers({
 	darkMode,
 	activeTimers,
 	onRemoveTimer,
+	canRemove,
 }: ActiveTimersProps) {
 	// Counter to force re-render for countdown (updates frequently for smooth fractional display)
 	const [, setTick] = useState(0);
@@ -96,14 +98,16 @@ export default function ActiveTimers({
 											{event.event_type}
 										</span>
 									</div>
-									<button
-										type="button"
-										onClick={() => onRemoveTimer(event.id)}
-										className="text-gray-400 hover:text-red-500 transition-colors"
-										title="Remove timer"
-									>
-										<X className="w-4 h-4" />
-									</button>
+									{canRemove && (
+										<button
+											type="button"
+											onClick={() => onRemoveTimer(event.id)}
+											className="text-gray-400 hover:text-red-500 transition-colors"
+											title="Remove timer"
+										>
+											<X className="w-4 h-4" />
+										</button>
+									)}
 								</div>
 
 								{event.location && (

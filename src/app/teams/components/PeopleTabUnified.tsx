@@ -10,7 +10,10 @@
 import NamePromptModal from "@/app/components/NamePromptModal";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
-import { useInvalidateTeam, useTeamMembersCacheOnly } from "@/lib/hooks/useTeam";
+import {
+	useInvalidateTeam,
+	useTeamMembersCacheOnly,
+} from "@/lib/hooks/useTeam";
 import type { TeamMember as TeamMemberV2 } from "@/lib/server/teams";
 import type { TeamMember as StoreTeamMember } from "@/lib/stores/teams/types";
 import { getTRPCProxyClient } from "@/lib/trpc/client";

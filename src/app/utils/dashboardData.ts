@@ -262,9 +262,7 @@ const syncGreetingName = async (userId: string): Promise<void> => {
 		logger.log("Fetching user profile for greeting name, userId:", userId);
 		const profile = await getCachedUserProfile(userId.trim());
 		const displayName = profile?.display_name ?? null;
-		const chosen = displayName?.trim()
-			? displayName.trim().split(" ")[0]
-			: "";
+		const chosen = displayName?.trim() ? displayName.trim().split(" ")[0] : "";
 
 		if (chosen) {
 			setLocalGreetingName(chosen);

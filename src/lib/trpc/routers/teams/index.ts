@@ -4,6 +4,7 @@ import {
 	addComment,
 	addTimer,
 	archiveTeam,
+	cancelPendingInvite,
 	cancelLinkInvitation,
 	createAssignment,
 	createCalendarEvent,
@@ -116,7 +117,28 @@ export const teamsRouter = router({
 	cacheManifest: protectedProcedure
 		.input(z.object({ teamSlug: z.string().min(1) }))
 		.query(async ({ ctx, input }) => {
-			return getTeamCacheManifest(input.teamSlug, ctx.user.id);
+			try {
+				const manifest = await getTeamCacheManifest(
+					input.teamSlug,
+					ctx.user.id,
+				);
+				return manifest;
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				if (message.toLowerCase().includes("team not found")) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Team not found",
+					});
+				}
+				if (message.toLowerCase().includes("access denied")) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Access denied",
+					});
+				}
+				throw error;
+			}
 		}),
 
 	calendarManifest: protectedProcedure.query(async ({ ctx }) => {
@@ -653,6 +675,21 @@ export const teamsRouter = router({
 		.input(z.object({ teamSlug: z.string().min(1) }))
 		.mutation(async ({ ctx, input }) => {
 			return declineInvite(input.teamSlug, ctx.user.id);
+		}),
+
+	cancelInvite: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				invitedUserId: z.uuid(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			return cancelPendingInvite({
+				teamSlug: input.teamSlug,
+				invitedUserId: input.invitedUserId,
+				actorId: ctx.user.id,
+			});
 		}),
 
 	createSubteam: protectedProcedure

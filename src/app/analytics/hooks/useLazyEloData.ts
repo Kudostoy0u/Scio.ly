@@ -29,7 +29,7 @@ export function useLazyEloData(options: DataLoadOptions) {
 
 	// Callback for batch loading progress
 	const handleBatchLoaded = useCallback(
-		(batchStates: string[], totalStates: number) => {
+		(batchStates: string[], totalStates: number, updatedData?: EloData) => {
 			setLoadedStates((prev) => {
 				const newSet = new Set(prev);
 				for (const state of batchStates) {
@@ -37,7 +37,24 @@ export function useLazyEloData(options: DataLoadOptions) {
 				}
 				return newSet;
 			});
-			setLoadingProgress({ loaded: batchStates.length, total: totalStates });
+			// Update progress - track cumulative loaded states
+			setLoadingProgress((prev) => {
+				const newLoaded = prev.loaded + batchStates.length;
+				const isComplete = newLoaded >= totalStates;
+				// Hide progress bar when loading is complete
+				if (isComplete) {
+					setBackgroundLoading(false);
+				}
+				return {
+					loaded: newLoaded,
+					total: totalStates,
+				};
+			});
+			// Update data every batch (every 8 states) for leaderboard
+			// Batches are now 8 states, so this updates every 8 states
+			if (updatedData) {
+				setData(updatedData);
+			}
 		},
 		[],
 	);
@@ -48,28 +65,32 @@ export function useLazyEloData(options: DataLoadOptions) {
 			division: options.division,
 			states: options.states,
 			forceReload: options.forceReload,
+			priorityStates: options.priorityStates,
 			onBatchLoaded: handleBatchLoaded,
 		}),
-		[options.division, options.states, options.forceReload, handleBatchLoaded],
+		[
+			options.division,
+			options.states,
+			options.forceReload,
+			options.priorityStates,
+			handleBatchLoaded,
+		],
 	);
 
 	const handleInitialDataLoad = useCallback(
-		(resultData: EloData | null) => {
-			if (!resultData) {
-				return;
-			}
-
-			const initialStates = new Set(Object.keys(resultData));
-			setLoadedStates(initialStates);
-
-			// Set background loading if we expect more data
-			if (!memoizedOptions.states && initialStates.size > 0) {
+		(resultData: EloData | null, totalStates?: number) => {
+			// Always set background loading if we expect more data (even if initial data is empty)
+			if (!memoizedOptions.states && totalStates && totalStates > 0) {
 				setBackgroundLoading(true);
-
-				// Stop showing background loading after 5 seconds
-				setTimeout(() => {
-					setBackgroundLoading(false);
-				}, 5000);
+				const initialStates = resultData ? Object.keys(resultData) : [];
+				setLoadedStates(new Set(initialStates));
+				setLoadingProgress({
+					loaded: initialStates.length,
+					total: totalStates,
+				});
+			} else if (resultData) {
+				const initialStates = new Set(Object.keys(resultData));
+				setLoadedStates(initialStates);
 			}
 		},
 		[memoizedOptions.states],
@@ -80,18 +101,28 @@ export function useLazyEloData(options: DataLoadOptions) {
 			try {
 				setLoading(true);
 				setError(null);
+				// Don't reset progress to 0/0 - let handleInitialDataLoad set it properly
+				// This prevents the loading indicator from disappearing
 
 				const result = await loadEloData(memoizedOptions);
+				// Set data immediately (may be empty initially)
 				setData(result.data);
 				setMetadata(result.metadata ?? null);
 				setError(result.error);
 
-				handleInitialDataLoad(result.data);
+				const totalStates =
+					(result.metadata as EloMetadata & { totalStates?: number })
+						?.totalStates || 0;
+				handleInitialDataLoad(result.data, totalStates);
 			} catch (err) {
 				setError(
 					err instanceof Error ? err.message : "Failed to load Elo data",
 				);
+				// Reset progress on error
+				setLoadingProgress({ loaded: 0, total: 0 });
+				setBackgroundLoading(false);
 			} finally {
+				// Set loading to false immediately so UI can render
 				setLoading(false);
 			}
 		};
