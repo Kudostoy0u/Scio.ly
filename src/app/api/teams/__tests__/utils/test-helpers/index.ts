@@ -6,6 +6,5 @@
 
 export * from "./types";
 export * from "./dataCreators";
-export * from "./mockRequest";
 export * from "./assertions";
 export * from "./getters";

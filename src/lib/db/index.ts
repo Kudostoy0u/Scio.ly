@@ -73,21 +73,6 @@ if (!globalThis.__drizzleDbPg__) {
 
 export { client, pool };
 
-export async function testConnection(): Promise<boolean> {
-	try {
-		await client`SELECT 1`;
-		return true;
-	} catch (error) {
-		throw new Error(
-			`Database connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-		);
-	}
-}
-
-export async function closeConnection(): Promise<void> {
-	await client.end();
-}
-
 // Explicit exports to avoid barrel file performance issues
 // Schema exports are intentionally kept as re-exports due to large size and frequent usage
 export * from "./schema";

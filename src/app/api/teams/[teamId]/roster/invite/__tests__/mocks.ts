@@ -39,24 +39,3 @@ export const mockDbPg = vi.mocked(dbPg) as typeof dbPg & {
 	insert: ReturnType<typeof vi.fn>;
 	update: ReturnType<typeof vi.fn>;
 };
-
-export type DrizzleMockChain = {
-	from: ReturnType<typeof vi.fn>;
-	innerJoin?: ReturnType<typeof vi.fn>;
-	where?: ReturnType<typeof vi.fn>;
-	limit?: ReturnType<typeof vi.fn>;
-	values?: ReturnType<typeof vi.fn>;
-	returning?: ReturnType<typeof vi.fn>;
-	set?: ReturnType<typeof vi.fn>;
-	// Required Drizzle properties that we mock
-	fields?: unknown;
-	session?: unknown;
-	dialect?: unknown;
-	withList?: unknown;
-	distinct?: unknown;
-	table?: unknown;
-	overridingSystemValue?: unknown;
-	select?: unknown;
-	_?: unknown;
-	setToken?: unknown;
-};

@@ -1,9 +1,7 @@
 import { dbPg } from "@/lib/db";
-import { users } from "@/lib/db/schema";
 import { teamMemberships, teamRoster, teams } from "@/lib/db/schema";
 import logger from "@/lib/utils/logging/logger";
 import { and, eq } from "drizzle-orm";
-import { generateDisplayName } from "../content/displayNameUtils";
 
 export interface TeamAccessResult {
 	hasAccess: boolean;
@@ -93,24 +91,4 @@ export async function hasLeadershipAccess(
 	return (
 		access.isCreator || access.role === "captain" || access.role === "admin"
 	);
-}
-
-/**
- * Get user's display information
- */
-export async function getUserDisplayInfo(userId: string) {
-	const [user] = await dbPg
-		.select()
-		.from(users)
-		.where(eq(users.id, userId))
-		.limit(1);
-
-	if (!user) return { name: "Unknown", email: "" };
-
-	const { name } = generateDisplayName(user, userId);
-	return {
-		name,
-		email: user.email,
-		username: user.username,
-	};
 }

@@ -10,19 +10,6 @@
 export const mod26 = (n: number): number => ((n % 26) + 26) % 26;
 
 /**
- * Converts a letter to its numeric position (A=0, B=1, ..., Z=25, Ñ=26)
- * @param {string} letter - Letter to convert
- * @returns {number} Numeric position of the letter
- */
-export const letterToNumber = (letter: string): number => {
-	const upperLetter = letter.toUpperCase();
-	if (upperLetter === "Ñ") {
-		return 26; // ñ is position 26 (after z)
-	}
-	return upperLetter.charCodeAt(0) - 65;
-};
-
-/**
  * Converts a numeric position to its letter (0=A, 1=B, ..., 25=Z, 26=Ñ)
  * @param {number} num - Numeric position to convert
  * @returns {string} Letter corresponding to the position
@@ -143,23 +130,4 @@ export const letterToCoordinates = (
 		}
 	}
 	return "00";
-};
-
-/**
- * Shuffles an array in place
- * @param {T[]} arr - Array to shuffle
- * @returns {T[]} Shuffled array
- */
-export const shuffleArray = <T>(arr: T[]): T[] => {
-	const a = [...arr];
-	for (let i = a.length - 1; i > 0; i--) {
-		const j = Math.floor(Math.random() * (i + 1));
-		const temp = a[i];
-		const swapVal = a[j];
-		if (temp !== undefined && swapVal !== undefined) {
-			a[i] = swapVal;
-			a[j] = temp;
-		}
-	}
-	return a;
 };

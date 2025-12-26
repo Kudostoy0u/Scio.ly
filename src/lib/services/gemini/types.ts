@@ -2,12 +2,6 @@
  * Types and interfaces for Gemini service
  */
 
-export interface GeminiStreamChunk {
-	type: "text" | "final";
-	chunk?: string;
-	data?: Record<string, unknown>;
-}
-
 export interface QuestionAnalysisResult {
 	analysis: string;
 	correctness: string;
@@ -46,17 +40,6 @@ export interface EditValidationResult {
 
 export interface ReportEditResult {
 	improvedReason: string;
-}
-
-export interface GeminiClientConfig {
-	apiKey: string;
-}
-
-export interface GeminiGenerationConfig {
-	temperature: number;
-	topK: number;
-	topP: number;
-	maxOutputTokens: number;
 }
 
 export interface QuoteValidationResult {

@@ -178,5 +178,3 @@ export const StorageKeys = {
 	// Other
 	SHARE_CODE: "shareCode",
 } as const;
-
-export type StorageKey = (typeof StorageKeys)[keyof typeof StorageKeys];

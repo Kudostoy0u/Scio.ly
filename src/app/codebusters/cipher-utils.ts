@@ -6,7 +6,6 @@
 // Re-export utility functions
 export {
 	mod26,
-	letterToNumber,
 	numberToLetter,
 	formatTime,
 } from "./ciphers/utils/cipherUtils";

@@ -260,25 +260,6 @@ export function dedupeById(arr: Question[]): Question[] {
 	return out;
 }
 
-export function dedupeByText(arr: Question[]): Question[] {
-	const seen = new Set<string>();
-	const out: Question[] = [];
-	for (const q of arr) {
-		const text =
-			typeof q.question === "string"
-				? normalizeQuestionText(q.question).trim().toLowerCase()
-				: "";
-		if (text) {
-			if (seen.has(text)) {
-				continue;
-			}
-			seen.add(text);
-		}
-		out.push(q);
-	}
-	return out;
-}
-
 export function finalizeQuestions(questions: Question[]): Question[] {
 	const finalized = normalizeQuestionMedia(questions);
 	for (const question of finalized) {

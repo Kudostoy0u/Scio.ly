@@ -15,13 +15,6 @@ interface UpdateLeaderboardStatsParams {
 }
 
 /**
- * Parameters for join_leaderboard_by_code RPC call
- */
-interface JoinLeaderboardByCodeParams {
-	p_join_code: string;
-}
-
-/**
  * Updates leaderboard statistics for a user
  * Updates the user's leaderboard stats with questions attempted and correct answers
  *
@@ -69,30 +62,3 @@ export async function updateLeaderboardStats(
  * await checkAndJoinFromUrl();
  * ```
  */
-export async function checkAndJoinFromUrl() {
-	const urlParams = new URLSearchParams(window.location.search);
-	const joinCode = urlParams.get("join");
-
-	if (joinCode) {
-		const {
-			data: { user },
-		} = await supabase.auth.getUser();
-
-		if (user) {
-			const params: JoinLeaderboardByCodeParams = {
-				p_join_code: joinCode.toUpperCase(),
-			};
-
-			await supabase.rpc(
-				"join_leaderboard_by_code" as never,
-				params as unknown as never,
-			);
-
-			urlParams.delete("join");
-			const newUrl =
-				window.location.pathname +
-				(urlParams.toString() ? `?${urlParams.toString()}` : "");
-			window.history.replaceState({}, "", newUrl);
-		}
-	}
-}

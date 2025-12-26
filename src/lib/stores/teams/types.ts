@@ -223,14 +223,3 @@ export interface TeamStoreActions {
 		eventName: string,
 	) => void;
 }
-
-export const CACHE_DURATIONS = {
-	userTeams: 5 * 60 * 1000, // 5 minutes
-	subteams: 10 * 60 * 1000, // 10 minutes
-	roster: 5 * 60 * 1000, // 5 minutes
-	members: 2 * 60 * 1000, // 2 minutes
-	stream: 2 * 60 * 1000, // 2 minutes
-	assignments: 3 * 60 * 1000, // 3 minutes
-	tournaments: 5 * 60 * 1000, // 5 minutes
-	timers: 1 * 60 * 1000, // 1 minute
-} as const;

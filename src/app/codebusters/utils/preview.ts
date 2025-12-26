@@ -22,20 +22,3 @@ export function clearPreviewLocalStorage(): void {
 		// Ignore errors when clearing localStorage
 	}
 }
-
-export function showPreviewToasts(toast: {
-	info: (msg: string, opts?: { autoClose?: number }) => void;
-}): void {
-	try {
-		toast.info("Tip: Use the delete icon on a question to replace it.", {
-			autoClose: 6000,
-		});
-		setTimeout(() => {
-			toast.info("When finished, click “Send Test” at the bottom to assign.", {
-				autoClose: 6000,
-			});
-		}, 1200);
-	} catch {
-		// Ignore errors when showing preview toasts
-	}
-}

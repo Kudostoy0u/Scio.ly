@@ -18,10 +18,6 @@ const nextId = (prefix?: string) =>
 const rosterKey = (teamUnitId: string, eventName: string, slotIndex: number) =>
 	`${teamUnitId}:${eventName}:${slotIndex}`;
 
-export function getTeamGroup(groupId: string) {
-	return mockDb.teamGroups.get(groupId);
-}
-
 export function getTeamUnit(teamUnitId: string) {
 	return mockDb.teamUnits.get(teamUnitId);
 }

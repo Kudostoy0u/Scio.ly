@@ -1,6 +1,6 @@
 import { dbPg } from "@/lib/db";
-import { teamMemberships, teamSubteams, teams } from "@/lib/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { teamSubteams, teams } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 /**
  * Team group information interface (V2 Aligned)
@@ -35,38 +35,4 @@ export async function resolveTeamSlugToUnits(
 		teamId: team.id,
 		subteamIds: subteams.length > 0 ? subteams.map((s) => s.id) : [team.id],
 	};
-}
-
-/**
- * Gets user team memberships (V2 Only)
- */
-export async function getUserTeamMemberships(
-	userId: string,
-	teamUnitIds: string[],
-) {
-	return await dbPg
-		.select({
-			id: teamMemberships.id,
-			role: teamMemberships.role,
-			team_id: teamMemberships.teamId,
-		})
-		.from(teamMemberships)
-		.where(
-			and(
-				eq(teamMemberships.userId, userId),
-				inArray(teamMemberships.teamId, teamUnitIds),
-				eq(teamMemberships.status, "active"),
-			),
-		);
-}
-
-/**
- * Checks if a user is a captain (V2 Only)
- */
-export async function isUserCaptain(
-	userId: string,
-	teamUnitIds: string[],
-): Promise<boolean> {
-	const memberships = await getUserTeamMemberships(userId, teamUnitIds);
-	return memberships.some((m) => m.role === "captain" || m.role === "admin");
 }

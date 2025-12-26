@@ -25,36 +25,3 @@ export const BINDER_EVENT_NAMES = new Set<string>([
 ]);
 
 // const BADGE_PRIORITY: Array<'build' | 'misc' | 'binder' | 'notesheet'> = ['build', 'misc', 'binder', 'notesheet'];
-
-export const EVENTS_WITH_NOTESHEETS: string[] = [];
-
-export const TRADITIONAL_NOTESHEET_EVENTS = {
-	B: [
-		"Anatomy - Nervous",
-		"Anatomy - Endocrine",
-		"Astronomy",
-		"Dynamic Planet",
-		"Ecology",
-		"Entomology",
-		"Forestry",
-		"Geologic Mapping",
-		"Meteorology",
-		"Optics",
-		"Rocks and Minerals",
-		"Wind Power",
-	],
-	C: [
-		"Anatomy - Nervous",
-		"Anatomy - Endocrine",
-		"Astronomy",
-		"Dynamic Planet",
-		"Ecology",
-		"Entomology",
-		"Forestry",
-		"Geologic Mapping",
-		"Meteorology",
-		"Optics",
-		"Rocks and Minerals",
-		"Wind Power",
-	],
-};

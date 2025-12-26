@@ -165,8 +165,3 @@ export interface CipherResult {
 		}>;
 	};
 }
-
-export interface HillSolution {
-	matrix: string[][];
-	plaintext: { [key: number]: string };
-}

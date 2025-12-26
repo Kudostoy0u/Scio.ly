@@ -93,17 +93,6 @@ export const parseRequestBody = async <T extends z.ZodRawShape>(
 	return schema.parse(body);
 };
 
-export const buildWhereCondition = <T>(conditions: T[]) => {
-	if (conditions.length === 0) {
-		return undefined;
-	}
-	if (conditions.length === 1) {
-		return conditions[0];
-	}
-
-	return conditions;
-};
-
 export const createRateLimiter = (maxRequests: number, windowMs: number) => {
 	const requests = new Map<string, { count: number; resetTime: number }>();
 
@@ -160,37 +149,6 @@ export const sanitizeInput = (input: string): string => {
 		.replace(/>/g, "&gt;")
 		.replace(/"/g, "&quot;")
 		.replace(/'/g, "&#x27;");
-};
-
-const uuidRegex =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-export const validateUUID = (uuid: string): boolean => {
-	return uuidRegex.test(uuid);
-};
-
-export const createPaginationParams = (page?: string, limit?: string) => {
-	const pageNum = page ? Number.parseInt(page) : 1;
-	const limitNum = limit ? Number.parseInt(limit) : 10;
-
-	return {
-		offset: (pageNum - 1) * limitNum,
-		limit: Math.min(limitNum, 100),
-		page: pageNum,
-	};
-};
-
-export const createSortParams = (sortBy?: string, sortOrder?: string) => {
-	const validSortOrders = ["asc", "desc"] as const;
-	const order =
-		sortOrder && validSortOrders.includes(sortOrder as "asc" | "desc")
-			? (sortOrder as "asc" | "desc")
-			: "desc";
-
-	return {
-		sortBy: sortBy || "createdAt",
-		sortOrder: order,
-	};
 };
 
 /**

@@ -11,14 +11,6 @@ export const DIFFICULTY_CONSTRAINTS = {
 	DEFAULT: 0.5,
 } as const;
 
-export const DIFFICULTY_LEVELS = {
-	EASY: { min: 0.0, max: 0.4, label: "Easy" },
-	MEDIUM: { min: 0.4, max: 0.7, label: "Medium" },
-	HARD: { min: 0.7, max: 1.0, label: "Hard" },
-} as const;
-
-export type DifficultyLevel = keyof typeof DIFFICULTY_LEVELS;
-
 /**
  * Validates that a difficulty value is within valid range
  * @param value - The difficulty value to validate
@@ -82,50 +74,4 @@ export function parseDifficulty(
 	throw new Error(
 		`Invalid difficulty type: expected string or number, got ${typeof value}. Value: ${JSON.stringify(value)}`,
 	);
-}
-
-/**
- * Gets the difficulty level label for a given difficulty value
- * @param difficulty - The difficulty value
- * @returns The difficulty level label
- */
-export function getDifficultyLevel(difficulty: DifficultyValue): string {
-	if (difficulty <= DIFFICULTY_LEVELS.EASY.max) {
-		return DIFFICULTY_LEVELS.EASY.label;
-	}
-	if (difficulty <= DIFFICULTY_LEVELS.MEDIUM.max) {
-		return DIFFICULTY_LEVELS.MEDIUM.label;
-	}
-	return DIFFICULTY_LEVELS.HARD.label;
-}
-
-/**
- * Converts difficulty level names to numeric ranges
- * @param levels - Array of difficulty level names
- * @returns Object with min and max values
- */
-export function getDifficultyRange(levels: string[]): {
-	min: number;
-	max: number;
-} {
-	if (levels.length === 0) {
-		throw new Error(
-			"No difficulty levels provided. At least one level is required.",
-		);
-	}
-
-	const ranges = levels.map((level) => {
-		const upperLevel = level.toUpperCase() as DifficultyLevel;
-		if (!(upperLevel in DIFFICULTY_LEVELS)) {
-			throw new Error(
-				`Invalid difficulty level: "${level}". Must be one of: ${Object.keys(DIFFICULTY_LEVELS).join(", ")}`,
-			);
-		}
-		return DIFFICULTY_LEVELS[upperLevel];
-	});
-
-	const minValue = Math.min(...ranges.map((r) => r.min));
-	const maxValue = Math.max(...ranges.map((r) => r.max));
-
-	return { min: minValue, max: maxValue };
 }

@@ -16,12 +16,3 @@ export function assertUserIsMember(
 		);
 	}
 }
-
-export function assertUserIsNotMember(userId: string, teamId: string): void {
-	const membership = mockDb.memberships.get(`${userId}:${teamId}`);
-	if (membership) {
-		throw new Error(
-			`User ${userId} is unexpectedly a member of team ${teamId}`,
-		);
-	}
-}

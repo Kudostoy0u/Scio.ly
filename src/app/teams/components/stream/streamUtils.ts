@@ -1,6 +1,5 @@
 // Utility functions for Stream components
 
-import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import type { TimeRemaining } from "./streamTypes";
 
 // Calculate time remaining for a tournament
@@ -116,32 +115,5 @@ export const getEventTypeColor = (eventType: string, darkMode = false) => {
 			return darkMode
 				? "bg-gray-700/50 text-gray-200 border-gray-600"
 				: "bg-gray-100 text-gray-800";
-	}
-};
-
-// localStorage utilities for stream data
-export const getStreamCacheKey = (teamSlug: string, subteamId: string) =>
-	`stream_posts_${teamSlug}_${subteamId}`;
-
-export const getTimersCacheKey = (teamSlug: string, subteamId: string) =>
-	`active_timers_${teamSlug}_${subteamId}`;
-
-export const getEventsCacheKey = (teamSlug: string, subteamId: string) =>
-	`upcoming_events_${teamSlug}_${subteamId}`;
-
-export const loadFromCache = <T>(key: string): T[] => {
-	try {
-		const cached = SyncLocalStorage.getItem(key);
-		return cached ? JSON.parse(cached) : [];
-	} catch (_error) {
-		return [];
-	}
-};
-
-export const saveToCache = <T>(key: string, data: T[]) => {
-	try {
-		SyncLocalStorage.setItem(key, JSON.stringify(data));
-	} catch (_error) {
-		// Ignore errors
 	}
 };

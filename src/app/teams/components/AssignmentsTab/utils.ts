@@ -12,14 +12,6 @@ export function hasEveryoneDeclined(assignment: Assignment): boolean {
 	return !assignment.roster || assignment.roster.length === 0;
 }
 
-export function clearAssignmentData(assignmentId: string) {
-	const assignmentKey = `assignment_${assignmentId}`;
-	SyncLocalStorage.removeItem(`${assignmentKey}_questions`);
-	SyncLocalStorage.removeItem(`${assignmentKey}_answers`);
-	SyncLocalStorage.removeItem(`${assignmentKey}_grading`);
-	SyncLocalStorage.removeItem(`${assignmentKey}_session`);
-}
-
 export function formatDate(dateString: string) {
 	return new Date(dateString).toLocaleDateString("en-US", {
 		year: "numeric",

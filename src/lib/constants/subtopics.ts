@@ -57,11 +57,6 @@ export function getEventSubtopics(eventName: string): string[] {
 	return [];
 }
 
-// Get all available events that have subtopics
-export function getEventsWithSubtopics(): string[] {
-	return Object.keys(subtopicsData as SubtopicsData);
-}
-
 // Get all subtopics data (for advanced use cases)
 export function getAllSubtopics(): SubtopicsData {
 	return subtopicsData as SubtopicsData;

@@ -8,11 +8,6 @@ export const NORMAL_DEFAULTS = {
 	timeLimit: 15,
 };
 
-export const CODEBUSTERS_DEFAULTS = {
-	questionCount: 3,
-	timeLimit: 15,
-};
-
 export const savePreferences = (
 	eventName: string,
 	questionCount: number,
@@ -24,27 +19,4 @@ export const savePreferences = (
 		: NORMAL_EVENT_PREFERENCES;
 	const preferences = { questionCount, timeLimit };
 	SyncLocalStorage.setItem(key, JSON.stringify(preferences));
-};
-
-export const loadPreferences = (eventName: string) => {
-	const isCodebusters = eventName === "Codebusters";
-	const key = isCodebusters
-		? CODEBUSTERS_PREFERENCES
-		: NORMAL_EVENT_PREFERENCES;
-	const defaults = isCodebusters ? CODEBUSTERS_DEFAULTS : NORMAL_DEFAULTS;
-
-	try {
-		const saved = SyncLocalStorage.getItem(key);
-		if (saved) {
-			const preferences = JSON.parse(saved);
-			return {
-				questionCount: preferences.questionCount || defaults.questionCount,
-				timeLimit: preferences.timeLimit || defaults.timeLimit,
-			};
-		}
-	} catch (_error) {
-		// Ignore errors
-	}
-
-	return defaults;
 };

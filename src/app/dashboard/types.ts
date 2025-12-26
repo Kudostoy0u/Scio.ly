@@ -21,56 +21,6 @@ export interface ContactFormData {
 }
 
 /**
- * Daily data interface for analytics
- * Represents daily activity metrics
- */
-export interface DailyData {
-	/** Date string */
-	date: string;
-	/** Activity count for the day */
-	count: number;
-}
-
-/**
- * Weekly data interface for analytics
- * Contains weekly activity and accuracy metrics
- */
-export interface WeeklyData {
-	/** Array of daily question data */
-	questions: DailyData[];
-	/** Weekly accuracy percentage */
-	accuracy: number;
-}
-
-/**
- * Historical metrics interface
- * Contains user's historical performance data
- */
-export interface HistoricalMetrics {
-	/** Total questions attempted */
-	questionsAttempted: number;
-	/** Total correct answers */
-	correctAnswers: number;
-	/** Events that have been practiced */
-	eventsPracticed: string[];
-}
-
-/**
- * Current metrics interface
- * Contains current user performance metrics
- */
-export interface Metrics {
-	/** Total questions attempted */
-	questionsAttempted: number;
-	/** Total correct answers */
-	correctAnswers: number;
-	/** Events that have been practiced */
-	eventsPracticed: string[];
-	/** Current accuracy percentage */
-	accuracy: number;
-}
-
-/**
  * Welcome message component props
  * Props for the dashboard welcome message component
  */

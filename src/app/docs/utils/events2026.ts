@@ -5,8 +5,6 @@ export type { DocsEvent, EventBadgeKind, EventBadge } from "./types/eventTypes";
 export {
 	MISC_EVENT_NAMES,
 	BINDER_EVENT_NAMES,
-	EVENTS_WITH_NOTESHEETS,
-	TRADITIONAL_NOTESHEET_EVENTS,
 } from "./constants/eventConstants";
 
 // Re-export utility functions

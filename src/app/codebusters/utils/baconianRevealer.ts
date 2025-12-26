@@ -1,47 +1,5 @@
 import type { QuoteData } from "../types";
 
-export const processBaconianChar = (
-	ch: string,
-	currentGroup: string,
-	parsedTokens: { token: string; isGroup: boolean }[],
-): string => {
-	if (ch && (ch === "A" || ch === "B")) {
-		const newGroup = currentGroup + ch;
-		if (newGroup.length === 5) {
-			parsedTokens.push({ token: newGroup, isGroup: true });
-			return "";
-		}
-		return newGroup;
-	}
-	if (ch === " ") {
-		return currentGroup;
-	}
-	if (currentGroup.length === 5) {
-		parsedTokens.push({ token: currentGroup, isGroup: true });
-	}
-	if (ch) {
-		parsedTokens.push({ token: ch, isGroup: false });
-	}
-	return "";
-};
-
-export const extractBaconianGroups = (
-	parsedTokens: { token: string; isGroup: boolean }[],
-): {
-	groupParsedIdxs: number[];
-	groupTokens: string[];
-} => {
-	const groupParsedIdxs: number[] = [];
-	const groupTokens: string[] = [];
-	parsedTokens.forEach((t, idx) => {
-		if (t.isGroup) {
-			groupParsedIdxs.push(idx);
-			groupTokens.push(t.token);
-		}
-	});
-	return { groupParsedIdxs, groupTokens };
-};
-
 export const parseBaconianTokens = (
 	encrypted: string,
 ): {

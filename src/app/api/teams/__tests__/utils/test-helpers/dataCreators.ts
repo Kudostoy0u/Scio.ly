@@ -111,26 +111,6 @@ export function createRosterEntry(
 	});
 }
 
-export function createStreamPost(
-	subteamId: string,
-	authorId: string,
-	content: string,
-): string {
-	const postId = nextId("post");
-	// Resolve teamId from subteamId
-	const subteam = mockDb.teamUnits.get(subteamId);
-	const teamId = subteam?.teamId ?? subteamId;
-
-	mockDb.streamPosts.set(postId, {
-		id: postId,
-		teamId,
-		subteamId,
-		authorId,
-		content,
-	});
-	return postId;
-}
-
 export function cleanupTestData(
 	_userIds: string[],
 	_teamGroupIds: string[],

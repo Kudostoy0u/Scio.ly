@@ -21,16 +21,6 @@ export const teamKeys = {
 	full: (slug: string) => [...teamKeys.all, slug, "full"] as const,
 };
 
-export function useTeamMeta(teamSlug: string) {
-	return trpc.teams.meta.useQuery(
-		{ teamSlug },
-		{
-			enabled: !!teamSlug,
-			staleTime: 60 * 1000,
-		},
-	);
-}
-
 export function useTeamFull(teamSlug: string) {
 	return trpc.teams.full.useQuery(
 		{ teamSlug },
@@ -77,25 +67,6 @@ export function useTeamFullCacheOnly(teamSlug: string) {
 	);
 }
 
-export function useTeamMembers(teamSlug: string, subteamId?: string) {
-	const query = useTeamFull(teamSlug);
-	const membersData = query.data?.members;
-
-	const members = useMemo(() => {
-		if (!membersData) {
-			return [];
-		}
-		if (!subteamId || subteamId === "all") {
-			return membersData;
-		}
-		return membersData.filter(
-			(m: TeamFullData["members"][0]) => m.subteamId === subteamId,
-		);
-	}, [membersData, subteamId]);
-
-	return { ...query, data: members };
-}
-
 export function useTeamMembersCacheOnly(teamSlug: string, subteamId?: string) {
 	const query = useTeamFullCacheOnly(teamSlug);
 	const membersData = query.data?.members;
@@ -113,34 +84,6 @@ export function useTeamMembersCacheOnly(teamSlug: string, subteamId?: string) {
 	}, [membersData, subteamId]);
 
 	return { ...query, data: members };
-}
-
-export function useTeamRoster(teamSlug: string, subteamId: string | null) {
-	const query = useTeamFull(teamSlug);
-	const rosterEntriesData = query.data?.rosterEntries;
-
-	const roster = useMemo(() => {
-		if (!(rosterEntriesData && subteamId)) {
-			return { roster: {}, removedEvents: [] as string[] };
-		}
-
-		const rosterObj: Record<string, string[]> = {};
-		for (const entry of rosterEntriesData) {
-			if (entry.subteamId !== subteamId) {
-				continue;
-			}
-			if (!rosterObj[entry.eventName]) {
-				rosterObj[entry.eventName] = [];
-			}
-			const eventSlots = rosterObj[entry.eventName] ?? [];
-			rosterObj[entry.eventName] = eventSlots;
-			eventSlots[entry.slotIndex] = entry.displayName;
-		}
-
-		return { roster: rosterObj, removedEvents: [] as string[] };
-	}, [rosterEntriesData, subteamId]);
-
-	return { ...query, data: roster };
 }
 
 export function useTeamRosterCacheOnly(
@@ -172,16 +115,6 @@ export function useTeamRosterCacheOnly(
 	}, [rosterEntriesData, subteamId]);
 
 	return { ...query, data: roster };
-}
-
-export function useTeamSubteams(teamSlug: string) {
-	const query = useTeamFull(teamSlug);
-	return { ...query, data: query.data?.subteams ?? [] };
-}
-
-export function useTeamAssignments(teamSlug: string) {
-	const query = useTeamFull(teamSlug);
-	return { ...query, data: query.data?.assignments ?? [] };
 }
 
 const toTimestamp = (value: string | null | undefined) => {

@@ -307,32 +307,6 @@ export const buildApiParams = (
 };
 
 /**
- * Filter questions by type (multiple-choice or free-response)
- * Returns questions that match the specified type
- *
- * @param {Question[]} questions - Array of questions to filter
- * @param {string} types - Type to filter by ("multiple-choice" or "free-response")
- * @returns {Question[]} Filtered array of questions
- * @example
- * ```typescript
- * const mcQuestions = filterQuestionsByType(questions, "multiple-choice");
- * const frQuestions = filterQuestionsByType(questions, "free-response");
- * ```
- */
-export const filterQuestionsByType = (
-	questions: Question[],
-	types: string,
-): Question[] => {
-	if (types === "multiple-choice") {
-		return questions.filter((q) => q.options && q.options.length > 0);
-	}
-	if (types === "free-response") {
-		return questions.filter((q) => !q.options || q.options.length === 0);
-	}
-	return questions;
-};
-
-/**
  * Shuffle an array using Fisher-Yates algorithm
  * Returns a new array with elements in random order
  *

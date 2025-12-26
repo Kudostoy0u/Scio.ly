@@ -45,22 +45,6 @@ async function getQuotesForLanguage(
 }
 
 /**
- * Get quotes for both English and Spanish in parallel.
- * Useful when you need a mix of both languages.
- */
-export async function getEnglishAndSpanish(
-	enCount: number,
-	esCount: number,
-	charLengthRange?: { min: number; max: number },
-) {
-	const [en, es] = await Promise.all([
-		getQuotesForLanguage("en", enCount, charLengthRange),
-		getQuotesForLanguage("es", esCount, charLengthRange),
-	]);
-	return { en, es };
-}
-
-/**
  * Get quotes by language with optional character length filtering.
  * Simplified version that uses the single quotes table with BTREE index.
  */

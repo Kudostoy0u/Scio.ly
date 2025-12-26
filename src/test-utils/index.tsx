@@ -66,15 +66,6 @@ vi.mock("@/lib/supabase", () => ({
 	},
 }));
 
-// Mock database pool
-vi.mock("@/lib/db/pool", () => ({
-	pool: {
-		query: vi.fn(() => Promise.resolve({ rows: [], rowCount: 0 })),
-		connect: vi.fn(() => Promise.resolve({ release: vi.fn() })),
-		end: vi.fn(() => Promise.resolve()),
-	},
-}));
-
 // Mock postgres connection
 vi.mock("postgres", () => {
 	return vi.fn(() => ({
@@ -132,8 +123,6 @@ vi.mock("@/lib/db/index", () => {
 	return {
 		db: mockDb,
 		dbPg: mockDbPg,
-		testConnection: vi.fn(() => Promise.resolve(true)),
-		closeConnection: vi.fn(() => Promise.resolve()),
 	};
 });
 

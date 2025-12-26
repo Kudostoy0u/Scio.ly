@@ -264,34 +264,6 @@ export const markTestSubmitted = (): void => {
 	saveTestSession(session);
 };
 
-export const isTestExpired = (): boolean => {
-	const session = getCurrentTestSession();
-	if (!session) {
-		return true;
-	}
-
-	return session.timeState.timeLeft <= 0;
-};
-
-export const formatTime = (seconds: number): string => {
-	const minutes = Math.floor(seconds / 60);
-	const secs = seconds % 60;
-	return `${minutes}:${secs < 10 ? "0" : ""}${secs}`;
-};
-
-export const isSessionStale = (maxInactiveMinutes = 30): boolean => {
-	const session = getCurrentTestSession();
-	if (!session) {
-		return true;
-	}
-
-	const now = Date.now();
-	const inactiveMs = now - session.lastActivity;
-	const inactiveMinutes = inactiveMs / (1000 * 60);
-
-	return inactiveMinutes > maxInactiveMinutes;
-};
-
 export const resetTestSession = (
 	eventName: string,
 	timeLimit: number,

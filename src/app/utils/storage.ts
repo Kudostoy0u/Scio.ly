@@ -8,24 +8,6 @@ import { db } from "./db";
  * Provides client-side storage management and event name processing
  */
 
-/**
- * Convert event name to URL-friendly slug
- * Transforms event names into lowercase, hyphenated slugs for URLs
- *
- * @param {string} name - Event name to slugify
- * @returns {string} URL-friendly slug
- * @example
- * ```typescript
- * const slug = slugifyEventName('Anatomy & Physiology');
- * console.log(slug); // "anatomy-physiology"
- * ```
- */
-export function slugifyEventName(name: string): string {
-	return String(name)
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-");
-}
-
 /** Cached downloads broadcast channel */
 let downloadsChannel: BroadcastChannel | null = null;
 
@@ -246,18 +228,4 @@ export async function saveOfflineEvent(
 		logger.error("Failed to save offline event:", error);
 		return false;
 	}
-}
-
-export async function removeOfflineEvent(eventSlug: string): Promise<void> {
-	try {
-		await ensureDbOpen();
-		await db.questions.delete(eventSlug);
-		broadcastDownloadUpdate(eventSlug);
-	} catch {
-		// ignore errors
-	}
-}
-
-export async function syncOfflineDownloads(): Promise<void> {
-	// TODO: Implement offline downloads synchronization
 }
