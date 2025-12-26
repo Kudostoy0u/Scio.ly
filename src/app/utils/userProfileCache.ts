@@ -89,27 +89,28 @@ export async function getCachedUserProfile(
 		return existingRequest;
 	}
 
-	const request = supabase
-		.from("users")
-		.select("id, email, display_name, username, photo_url")
-		.eq("id", userId)
-		.maybeSingle()
-		.then(({ data, error }) => {
-			if (error) {
-				logger.warn("Failed to fetch cached user profile:", error);
-				return null;
-			}
-			if (!data) {
-				return null;
-			}
-			const profile = data as CachedUserProfile;
-			inMemoryCache.set(userId, { data: profile, timestamp: Date.now() });
-			writeToStorage(userId, profile);
-			return profile;
-		})
-		.finally(() => {
-			inFlight.delete(userId);
-		});
+	const request = Promise.resolve(
+		supabase
+			.from("users")
+			.select("id, email, display_name, username, photo_url")
+			.eq("id", userId)
+			.maybeSingle()
+			.then(({ data, error }) => {
+				if (error) {
+					logger.warn("Failed to fetch cached user profile:", error);
+					return null;
+				}
+				if (!data) {
+					return null;
+				}
+				const profile = data as CachedUserProfile;
+				inMemoryCache.set(userId, { data: profile, timestamp: Date.now() });
+				writeToStorage(userId, profile);
+				return profile;
+			}),
+	).finally(() => {
+		inFlight.delete(userId);
+	});
 
 	inFlight.set(userId, request);
 	return request;

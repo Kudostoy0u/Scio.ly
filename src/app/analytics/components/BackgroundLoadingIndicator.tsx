@@ -36,6 +36,11 @@ export function BackgroundLoadingIndicator({
 					className="h-full w-1/4 bg-blue-600 animate-pulse"
 					role="progressbar"
 					aria-label="Loading data..."
+					aria-valuenow={0}
+					aria-valuemin={0}
+					aria-valuemax={100}
+					aria-busy="true"
+					tabIndex={0}
 				/>
 			) : (
 				<div
@@ -46,6 +51,7 @@ export function BackgroundLoadingIndicator({
 					aria-valuemin={0}
 					aria-valuemax={loadingProgress.total}
 					aria-label={`Loading: ${loadingProgress.loaded} of ${loadingProgress.total} states`}
+					tabIndex={0}
 				/>
 			)}
 		</div>

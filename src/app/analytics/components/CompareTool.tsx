@@ -487,7 +487,13 @@ const CompareTool: React.FC<CompareToolProps> = ({ eloData, division }) => {
 
 		return () => clearTimeout(retryTimeout);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [eloData, isLoadingFromHash, handleCompare]);
+	}, [
+		eloData,
+		isLoadingFromHash,
+		handleCompare,
+		initialSchools.school1,
+		initialSchools.school2,
+	]);
 
 	// Clear comparison results when either school is removed
 	useEffect(() => {
@@ -548,7 +554,14 @@ const CompareTool: React.FC<CompareToolProps> = ({ eloData, division }) => {
 
 		return undefined;
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [school1, school2, eloData, comparisonResults.length, overallResult]);
+	}, [
+		school1,
+		school2,
+		eloData,
+		comparisonResults.length,
+		overallResult,
+		handleCompare,
+	]);
 
 	return (
 		<div

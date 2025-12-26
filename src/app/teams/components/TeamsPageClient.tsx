@@ -5,8 +5,8 @@ import { getCachedUserProfile } from "@/app/utils/userProfileCache";
 import type { TeamFullData } from "@/lib/server/teams/shared";
 import { trpc } from "@/lib/trpc/client";
 import { generateDisplayName } from "@/lib/utils/content/displayNameUtils";
-import { getQueryKey } from "@trpc/react-query";
 import { useQueryClient } from "@tanstack/react-query";
+import { getQueryKey } from "@trpc/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
 	useEffect,
@@ -132,8 +132,11 @@ export default function TeamsPageClient() {
 		teamsSource?.teams.map((team) => ({
 			id: team.id,
 			slug: team.slug,
-			name: team.name || `${team.school} ${team.division}`,
-			school: team.school,
+			name:
+				team.name ||
+				`${team.school ?? ""} ${team.division ?? ""}`.trim() ||
+				"Team",
+			school: team.school ?? "",
 			division: (team.division ?? "C") as "B" | "C",
 			members: [
 				{
@@ -266,13 +269,19 @@ export default function TeamsPageClient() {
 			});
 			toast.success("Joined team");
 			utils.teams.listUserTeams.setData(undefined, (prev) => {
+				const school =
+					("school" in result &&
+						typeof result.school === "string" &&
+						result.school) ||
+					result.name ||
+					"Team";
 				const nextTeams = [
 					...(prev?.teams ?? []),
 					{
 						id: result.id,
 						slug: result.slug,
-						name: result.name || result.school || "Team",
-						school: result.school || result.name || "Team",
+						name: result.name || "Team",
+						school,
 						division: result.division,
 						status: "active",
 						role: "member" as const,
@@ -386,7 +395,10 @@ export default function TeamsPageClient() {
 									school: invite.school,
 									division: invite.division,
 									status: "active",
-									role: invite.role,
+									role: (invite.role ?? "member") as
+										| "admin"
+										| "captain"
+										| "member",
 								},
 							];
 							return { teams: nextTeams };

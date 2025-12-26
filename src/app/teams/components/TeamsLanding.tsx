@@ -2,12 +2,12 @@
 
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { trpc } from "@/lib/trpc/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { getQueryKey } from "@trpc/react-query";
 import { Calendar, Landmark, Settings, Users } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "react-toastify";
-import { getQueryKey } from "@trpc/react-query";
-import { useQueryClient } from "@tanstack/react-query";
 import NotImplemented from "./NotImplemented";
 import { TeamActionSection } from "./TeamActionSection";
 import TeamCalendar from "./TeamCalendar";
@@ -79,11 +79,20 @@ export default function TeamsLanding({
 		undefined,
 		"query",
 	);
+	type LinkInvite = {
+		id: string;
+		teamId: string;
+		slug: string;
+		teamName: string;
+		school: string;
+		division: string;
+		rosterDisplayName: string;
+	};
 	const cachedLinkInvitesData = useSyncExternalStore(
 		(listener) => queryClient.getQueryCache().subscribe(listener),
 		() => queryClient.getQueryState(linkInvitesQueryKey)?.data,
 		() => queryClient.getQueryState(linkInvitesQueryKey)?.data,
-	) as { linkInvites: Array<unknown> } | undefined;
+	) as { linkInvites: LinkInvite[] } | undefined;
 
 	// Enable query after initial render to avoid render-phase updates
 	useEffect(() => {
@@ -413,7 +422,7 @@ export default function TeamsLanding({
 				linkInvitesData.linkInvites.length > 0 && (
 					<TeamInvitationModal
 						invites={linkInvitesData.linkInvites.map(
-							(invite): TeamInvitationModalInvite => ({
+							(invite: LinkInvite): TeamInvitationModalInvite => ({
 								id: invite.id,
 								teamSlug: invite.slug,
 								teamName: invite.teamName,
@@ -428,8 +437,9 @@ export default function TeamsLanding({
 							const snapshotTeams = utils.teams.listUserTeams.getData();
 							utils.teams.pendingLinkInvites.setData(undefined, (prev) => {
 								const nextInvites =
-									prev?.linkInvites?.filter((item) => item.id !== invite.id) ??
-									[];
+									prev?.linkInvites?.filter(
+										(item: LinkInvite) => item.id !== invite.id,
+									) ?? [];
 								return { linkInvites: nextInvites };
 							});
 							utils.teams.listUserTeams.setData(undefined, (prev) => {
@@ -475,8 +485,9 @@ export default function TeamsLanding({
 							const snapshotInvites = linkInvitesData;
 							utils.teams.pendingLinkInvites.setData(undefined, (prev) => {
 								const nextInvites =
-									prev?.linkInvites?.filter((item) => item.id !== invite.id) ??
-									[];
+									prev?.linkInvites?.filter(
+										(item: LinkInvite) => item.id !== invite.id,
+									) ?? [];
 								return { linkInvites: nextInvites };
 							});
 							try {

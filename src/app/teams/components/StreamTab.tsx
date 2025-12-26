@@ -117,7 +117,7 @@ export default function StreamTab({
 			tournament_start_time: null,
 			author_name: authorProfile.name || "unknown",
 			author_email: authorProfile.email || "",
-			author_photo_url: authorProfile.photoUrl,
+			author_photo_url: authorProfile.photoUrl ?? null,
 			created_at: new Date().toISOString(),
 			attachment_url: attachmentData?.url || null,
 			attachment_title: attachmentData?.title || null,
@@ -125,8 +125,26 @@ export default function StreamTab({
 		};
 
 		utils.teams.getStream.setData(streamInput, (current) => [
-			optimisticPost,
-			...(current ?? []),
+			{
+				...optimisticPost,
+				author_photo_url: optimisticPost.author_photo_url ?? null,
+				attachment_url: optimisticPost.attachment_url ?? null,
+				attachment_title: optimisticPost.attachment_title ?? null,
+				comments: (optimisticPost.comments ?? []).map((c) => ({
+					...c,
+					author_photo_url: c.author_photo_url ?? null,
+				})),
+			},
+			...(current ?? []).map((post) => ({
+				...post,
+				author_photo_url: post.author_photo_url ?? null,
+				attachment_url: post.attachment_url ?? null,
+				attachment_title: post.attachment_title ?? null,
+				comments: (post.comments ?? []).map((c) => ({
+					...c,
+					author_photo_url: c.author_photo_url ?? null,
+				})),
+			})),
 		]);
 
 		setPosting(true);
@@ -180,6 +198,7 @@ export default function StreamTab({
 			location: event.location ?? null,
 			event_type: event.event_type,
 			has_timer: true,
+			added_at: new Date().toISOString(),
 		};
 
 		utils.teams.getTimers.setData(timerInput, (current) => {
@@ -296,7 +315,7 @@ export default function StreamTab({
 			content: commentContent.trim(),
 			author_name: authorProfile.name || "unknown",
 			author_email: authorProfile.email || "",
-			author_photo_url: authorProfile.photoUrl,
+			author_photo_url: authorProfile.photoUrl ?? null,
 			created_at: new Date().toISOString(),
 		};
 
@@ -305,9 +324,26 @@ export default function StreamTab({
 				post.id === postId
 					? {
 							...post,
-							comments: [...(post.comments ?? []), optimisticComment],
+							author_photo_url: post.author_photo_url ?? null,
+							comments: [
+								...(post.comments ?? []).map((c) => ({
+									...c,
+									author_photo_url: c.author_photo_url ?? null,
+								})),
+								{
+									...optimisticComment,
+									author_photo_url: optimisticComment.author_photo_url ?? null,
+								},
+							],
 						}
-					: post,
+					: {
+							...post,
+							author_photo_url: post.author_photo_url ?? null,
+							comments: (post.comments ?? []).map((c) => ({
+								...c,
+								author_photo_url: c.author_photo_url ?? null,
+							})),
+						},
 			),
 		);
 
@@ -534,14 +570,14 @@ export default function StreamTab({
 				tournament_start_time: post.tournament_start_time || null,
 				author_name: post.author_name || "Unknown",
 				author_email: post.author_email || "",
-				author_photo_url: post.author_photo_url || null,
+				author_photo_url: post.author_photo_url ?? null,
 				created_at: post.created_at || new Date().toISOString(),
 				attachment_url: post.attachment_url,
 				attachment_title: post.attachment_title,
 				comments: (post.comments || []).map((c) => ({
 					...c,
 					post_id: post.id,
-					author_photo_url: c.author_photo_url || null,
+					author_photo_url: c.author_photo_url ?? null,
 					created_at: c.created_at || new Date().toISOString(),
 				})),
 			})),

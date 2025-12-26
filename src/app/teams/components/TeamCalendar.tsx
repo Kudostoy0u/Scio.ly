@@ -4,6 +4,7 @@ import ConfirmModal from "@/app/components/ConfirmModal";
 import Modal from "@/app/components/Modal";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
+import type { CalendarEvent as ServerCalendarEvent } from "@/lib/server/teams/calendar";
 import { trpc } from "@/lib/trpc/client";
 import logger from "@/lib/utils/logging/logger";
 import { useState } from "react";
@@ -29,6 +30,30 @@ import {
 	getDefaultEventForm,
 	getDefaultRecurringForm,
 } from "./calendar/calendarUtils";
+
+// Convert server CalendarEvent to client CalendarEvent
+const toClientCalendarEvent = (event: ServerCalendarEvent): CalendarEvent => ({
+	id: event.id,
+	title: event.title,
+	description: event.description ?? undefined,
+	start_time: event.start_time,
+	end_time: event.end_time ?? undefined,
+	location: event.location ?? undefined,
+	event_type: event.event_type,
+	is_all_day: event.is_all_day,
+	is_recurring: event.is_recurring,
+	recurrence_pattern: event.recurrence_pattern ?? undefined,
+	created_by: event.created_by,
+	owner_user_id: event.owner_user_id ?? undefined,
+	team_id: event.team_id,
+	subteam_id: event.subteam_id,
+	attendees: event.attendees?.map((a) => ({
+		user_id: a.user_id,
+		status: a.status ?? "pending",
+		name: a.name ?? "",
+		email: a.email ?? "",
+	})),
+});
 
 interface TeamCalendarProps {
 	teamId?: string;
@@ -101,13 +126,18 @@ export default function TeamCalendar({
 	const personalCalendarKey = {};
 	const teamCalendarKey = { teamIds: targetTeamIds };
 
-	const snapshotCalendarCache = () => ({
-		personal: utils.teams.personalCalendarEvents.getData(personalCalendarKey),
-		team:
+	const snapshotCalendarCache = () => {
+		const personal =
+			utils.teams.personalCalendarEvents.getData(personalCalendarKey);
+		const team =
 			targetTeamIds.length > 0
 				? utils.teams.teamCalendarEvents.getData(teamCalendarKey)
-				: undefined,
-	});
+				: undefined;
+		return {
+			personal: personal?.map(toClientCalendarEvent),
+			team: team?.map(toClientCalendarEvent),
+		};
+	};
 
 	const restoreCalendarCache = (snapshot: {
 		personal: CalendarEvent[] | undefined;
@@ -115,10 +145,35 @@ export default function TeamCalendar({
 	}) => {
 		utils.teams.personalCalendarEvents.setData(
 			personalCalendarKey,
-			snapshot.personal,
+			snapshot.personal
+				? (snapshot.personal.map((e) => ({
+						...e,
+						description: e.description ?? null,
+						end_time: e.end_time ?? null,
+						location: e.location ?? null,
+						recurrence_pattern: e.recurrence_pattern ?? null,
+						owner_user_id: e.owner_user_id ?? null,
+						creator_email: null,
+						creator_name: null,
+					})) as ServerCalendarEvent[])
+				: snapshot.personal,
 		);
 		if (targetTeamIds.length > 0) {
-			utils.teams.teamCalendarEvents.setData(teamCalendarKey, snapshot.team);
+			utils.teams.teamCalendarEvents.setData(
+				teamCalendarKey,
+				snapshot.team
+					? (snapshot.team.map((e) => ({
+							...e,
+							description: e.description ?? null,
+							end_time: e.end_time ?? null,
+							location: e.location ?? null,
+							recurrence_pattern: e.recurrence_pattern ?? null,
+							owner_user_id: e.owner_user_id ?? null,
+							creator_email: null,
+							creator_name: null,
+						})) as ServerCalendarEvent[])
+					: snapshot.team,
+			);
 		}
 	};
 
@@ -131,7 +186,18 @@ export default function TeamCalendar({
 				if (!current) {
 					return current;
 				}
-				return updater(current);
+				const clientEvents = current.map(toClientCalendarEvent);
+				const updated = updater(clientEvents);
+				return updated.map((e) => ({
+					...e,
+					description: e.description ?? null,
+					end_time: e.end_time ?? null,
+					location: e.location ?? null,
+					recurrence_pattern: e.recurrence_pattern ?? null,
+					owner_user_id: e.owner_user_id ?? null,
+					creator_email: null,
+					creator_name: null,
+				})) as ServerCalendarEvent[];
 			},
 		);
 	};
@@ -146,17 +212,46 @@ export default function TeamCalendar({
 			if (!current) {
 				return current;
 			}
-			return updater(current);
+			const clientEvents = current.map(toClientCalendarEvent);
+			const updated = updater(clientEvents);
+			return updated.map((e) => ({
+				...e,
+				description: e.description ?? null,
+				end_time: e.end_time ?? null,
+				location: e.location ?? null,
+				recurrence_pattern: e.recurrence_pattern ?? null,
+				owner_user_id: e.owner_user_id ?? null,
+				creator_email: null,
+				creator_name: null,
+			})) as ServerCalendarEvent[];
 		});
 	};
 
 	const addEventToCache = (event: CalendarEvent, isPersonal: boolean) => {
+		const serverEvent: ServerCalendarEvent = {
+			...event,
+			description: event.description ?? null,
+			end_time: event.end_time ?? null,
+			location: event.location ?? null,
+			recurrence_pattern: event.recurrence_pattern ?? null,
+			owner_user_id: event.owner_user_id ?? null,
+			creator_email: null,
+			creator_name: null,
+			attendees: event.attendees?.map((a) => ({
+				user_id: a.user_id,
+				status: a.status ?? null,
+				responded_at: null,
+				notes: null,
+				email: a.email ?? null,
+				name: a.name ?? null,
+			})),
+		};
 		if (isPersonal) {
 			utils.teams.personalCalendarEvents.setData(
 				personalCalendarKey,
 				(current) => {
 					const next = current ? [...current] : [];
-					next.push(event);
+					next.push(serverEvent);
 					return next;
 				},
 			);
@@ -165,7 +260,7 @@ export default function TeamCalendar({
 		if (event.team_id && targetTeamIds.includes(event.team_id)) {
 			utils.teams.teamCalendarEvents.setData(teamCalendarKey, (current) => {
 				const next = current ? [...current] : [];
-				next.push(event);
+				next.push(serverEvent);
 				return next;
 			});
 		}
@@ -490,6 +585,7 @@ export default function TeamCalendar({
 					owner_user_id: isPersonal ? user.id : null,
 					team_id: isPersonal ? undefined : teamId,
 					subteam_id: isPersonal ? undefined : subteamId,
+					attendees: undefined,
 				};
 				addEventToCache(optimisticEvent, isPersonal);
 

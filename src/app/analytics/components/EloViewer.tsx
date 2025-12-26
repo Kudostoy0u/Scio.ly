@@ -361,7 +361,7 @@ const EloViewer: React.FC<EloViewerProps> = ({
 		const states = new Set<string>();
 		for (const school of selectedSchools) {
 			const stateMatch = school.match(STATE_CODE_REGEX);
-			if (stateMatch && stateMatch[1]) {
+			if (stateMatch?.[1]) {
 				states.add(stateMatch[1]);
 			}
 		}
@@ -401,15 +401,7 @@ const EloViewer: React.FC<EloViewerProps> = ({
 			setChartData({});
 			setIsLoading(false);
 		}
-	}, [
-		selectedSchools,
-		chartType,
-		viewMode,
-		selectedEvents,
-		requiredStatesAvailable,
-		eloData,
-		generateChart,
-	]);
+	}, [selectedSchools, requiredStatesAvailable, generateChart]);
 
 	// Update URL query params when chart filters change (only for charts tab)
 	useEffect(() => {

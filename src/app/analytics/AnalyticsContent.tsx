@@ -2,7 +2,7 @@
 
 import Header from "@/app/components/Header";
 import { useTheme } from "@/app/contexts/ThemeContext";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { BackgroundLoadingIndicator } from "./components/BackgroundLoadingIndicator";
 import { DivisionSelector } from "./components/DivisionSelector";
 import EloViewer from "./components/EloViewer";
@@ -25,8 +25,8 @@ function getPriorityStatesFromHash(): string[] {
 
 	try {
 		const params = new URLSearchParams(hash.slice(9)); // Remove "#compare?"
-		let school1 = params.get("school1") || "";
-		let school2 = params.get("school2") || "";
+		const school1 = params.get("school1") || "";
+		const school2 = params.get("school2") || "";
 
 		// Handle double-encoded URLs by decoding multiple times
 		let decoded1 = school1;
@@ -53,12 +53,12 @@ function getPriorityStatesFromHash(): string[] {
 
 		// Extract state codes from school names
 		const match1 = decoded1.match(STATE_CODE_REGEX);
-		if (match1 && match1[1]) {
+		if (match1?.[1]) {
 			states.add(match1[1]);
 		}
 
 		const match2 = decoded2.match(STATE_CODE_REGEX);
-		if (match2 && match2[1]) {
+		if (match2?.[1]) {
 			states.add(match2[1]);
 		}
 

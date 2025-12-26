@@ -17,8 +17,8 @@ import {
 	useTeamFullCacheOnly,
 } from "@/lib/hooks/useTeam";
 import { trpc } from "@/lib/trpc/client";
-import { getQueryKey } from "@trpc/react-query";
 import { useQueryClient } from "@tanstack/react-query";
+import { getQueryKey } from "@trpc/react-query";
 import { Clipboard, LogOut, Trash2, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";

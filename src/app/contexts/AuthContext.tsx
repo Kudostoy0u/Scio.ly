@@ -1,12 +1,12 @@
 "use client";
 import logger from "@/lib/utils/logging/logger";
 
-import { resetTeamsClientCache } from "@/lib/query/resetTeamsClientCache";
-import { supabase } from "@/lib/supabase";
 import {
 	getCachedUserProfile,
 	updateUserProfileCache,
 } from "@/app/utils/userProfileCache";
+import { resetTeamsClientCache } from "@/lib/query/resetTeamsClientCache";
+import { supabase } from "@/lib/supabase";
 import type { Database } from "@/lib/types/database";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import {

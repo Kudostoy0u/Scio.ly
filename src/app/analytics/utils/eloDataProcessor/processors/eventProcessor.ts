@@ -9,8 +9,8 @@ import type {
 	EventSeasonData,
 	EventTournamentData,
 } from "@/app/analytics/types/elo";
-import { findSchool } from "../utils/schoolHelpers";
 import { normalizeDuosmiumLink } from "../utils/linkUtils";
+import { findSchool } from "../utils/schoolHelpers";
 
 function processEventHistory(
 	eventData: {

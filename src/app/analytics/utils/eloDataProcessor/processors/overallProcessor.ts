@@ -9,8 +9,8 @@ import type {
 	OverallSeasonData,
 	OverallTournamentData,
 } from "@/app/analytics/types/elo";
-import { findSchool } from "../utils/schoolHelpers";
 import { normalizeDuosmiumLink } from "../utils/linkUtils";
+import { findSchool } from "../utils/schoolHelpers";
 
 export const processOverallBySeason = (
 	eloData: EloData,

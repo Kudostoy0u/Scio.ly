@@ -3,8 +3,8 @@ import SyncLocalStorage from "@/lib/database/localStorageReplacement";
 import { withAuthRetryData } from "@/lib/utils/auth/supabaseRetry";
 import logger from "@/lib/utils/logging/logger";
 
-import { supabase } from "@/lib/supabase";
 import { getCachedUserProfile } from "@/app/utils/userProfileCache";
+import { supabase } from "@/lib/supabase";
 import type { Database } from "@/lib/types/database";
 import type { DailyMetrics } from "./metrics";
 

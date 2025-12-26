@@ -11,8 +11,8 @@ import type { TeamFullData } from "@/lib/server/teams";
 import { trpc } from "@/lib/trpc/client";
 import logger from "@/lib/utils/logging/logger";
 import { globalApiCache } from "@/lib/utils/storage/globalApiCache";
-import { getQueryKey } from "@trpc/react-query";
 import { useQueryClient } from "@tanstack/react-query";
+import { getQueryKey } from "@trpc/react-query";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 export const teamKeys = {
