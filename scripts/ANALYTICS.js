@@ -50,9 +50,9 @@ let ELO_DAMPING_STRENGTH = 0.3;
 const ENABLE_LOGGING = false; // Set to false to disable all logging
 const DEBUG_OUTPUT = false;
 let PARALLEL_DIVISIONS = true;
-let DIVISIONS_TO_PROCESS = ["C"]; // Set to ["B"], ["C"], or ["B", "C"]
-let SEASONS_TO_INCLUDE = 7; // 0 = all seasons
-let WRITE_OUTPUT = false; // Write JSON output to public/
+let DIVISIONS_TO_PROCESS = ["B", "C"]; // Set to ["B"], ["C"], or ["B", "C"]
+let SEASONS_TO_INCLUDE = 0; // 0 = all seasons
+let WRITE_OUTPUT = true; // Write JSON output to public/
 let REPORT_NATIONALS_LOSS = true; // Log nationals loss metrics
 let LOSS_WEIGHT_POWER = 2; // Higher = more weight for top finishers
 let TOP_WEIGHT_SCALE = 12; // Lower = sharper emphasis near the top
@@ -65,16 +65,18 @@ let SCORE_NORMALIZATION_SCALE = 1;
 let LOSS_OUTPUT = "none"; // none | total
 let JV_CONVERSION_LOSS_RATIO = 0.02;
 let NATIONALS_LOSS_YEAR_WHITELIST = new Set([2025]);
-const NATIONALS_LOSS_DEBUG_YEARS = new Set([2025]);
+const NATIONALS_LOSS_DEBUG_YEARS = new Set([]);
 let ELO_EXPECTED_SCALE = 400;
 let TOP_TEAMS_FRACTION = 0.7;
 let MISSING_PLACEMENT_PENALTY_FACTOR = 0.2;
 let DEADLAST_PLACEMENT_PENALTY_FACTOR = 0.273261;
-let SCORE_DIFF_POWER = 1;
 let MOMENTUM_WINDOW_SIZE = 0;
 let JV_CONVERSION_MIN_TOURNAMENTS = 0;
-const DEBUG_TOURNAMENT_FILENAMES = new Set(["2025-04-05_WI_states_c"]);
-const DEBUG_TEAM_NAMES = new Set(["Marquette University High School Varsity", "Madison West High School Varsity"]);
+let SATELLITE_TOURNAMENT_MULTIPLIER = 1;
+let NATIONALS_ATTENDANCE_WEIGHT = 0;
+let NATIONALS_RECENT_GAIN_WEIGHT = 0;
+const DEBUG_TOURNAMENT_FILENAMES = new Set([]);
+const DEBUG_TEAM_NAMES = new Set([]);
 
 const cliArgs = parseArgs(process.argv.slice(2));
 const hasCliOverrides = Object.keys(cliArgs).length > 0;
@@ -251,7 +253,6 @@ function applyCliOverrides(args) {
   );
   // DEADLAST_PLACEMENT_PENALTY_FACTOR is fixed
   // SEASON_QUINTILE_WEIGHT_* are removed
-  SCORE_DIFF_POWER = parseNumber(args["score-diff-power"], SCORE_DIFF_POWER);
   if (args["momentum-window-size"] !== undefined) {
     const parsed = Number.parseInt(args["momentum-window-size"], 10);
     if (Number.isFinite(parsed) && parsed >= 0) {
@@ -264,6 +265,18 @@ function applyCliOverrides(args) {
       JV_CONVERSION_MIN_TOURNAMENTS = parsed;
     }
   }
+  SATELLITE_TOURNAMENT_MULTIPLIER = parseNumber(
+    args["satellite-tournament-multiplier"],
+    SATELLITE_TOURNAMENT_MULTIPLIER
+  );
+  NATIONALS_ATTENDANCE_WEIGHT = parseNumber(
+    args["nationals-attendance-weight"],
+    NATIONALS_ATTENDANCE_WEIGHT
+  );
+  NATIONALS_RECENT_GAIN_WEIGHT = parseNumber(
+    args["nationals-recent-gain-weight"],
+    NATIONALS_RECENT_GAIN_WEIGHT
+  );
 }
 
 const metadata = {
@@ -274,6 +287,7 @@ const metadata = {
   eventIds: [], // [eventname, ...]
   tournamentIds: [], // [tournamentname, ...]
 };
+const nationalTournamentIds = new Set();
 const eventCountCache = new Map();
 const lastRatingByCategoryCache = new Map();
 const tournamentNameCache = new Map();
@@ -527,6 +541,8 @@ function processTournament(data, eloData, filePath, fileContentsLower) {
   const importanceMultiplier = getTournamentImportanceMultiplierFromText(tournamentSearchTextLower);
   const isStateOrNational = isStateOrNationalTournamentFromText(tournamentSearchTextLower);
   const isNationalTournament = isNationalTournamentFromText(tournamentSearchTextLower);
+  const isSatelliteTournament = tournamentSearchTextLower.includes("satellite");
+  const satelliteMultiplier = isSatelliteTournament ? SATELLITE_TOURNAMENT_MULTIPLIER : 1;
 
   if (!metadata.tournaments.has(tournamentInfo.name)) {
     metadata.tournaments.set(tournamentInfo.name, nextTournamentId);
@@ -534,43 +550,60 @@ function processTournament(data, eloData, filePath, fileContentsLower) {
     log(`  New tournament registered: ID ${nextTournamentId}`);
     nextTournamentId++;
   }
+  const tournamentId = metadata.tournaments.get(tournamentInfo.name);
+  if (isNationalTournament) {
+    nationalTournamentIds.add(tournamentId);
+  }
 
   const worstPlacingsDropped =
     Number.parseInt(data?.Tournament?.["worst placings dropped"], 10) || 0;
 
-  const {
-    canonicalTeamMap,
-    overallRankings,
-    eventRankingsMap,
-    teamStateMap,
-    placingsByTeam,
-    eventCompetitorCounts,
-    eligibleEvents,
-    teamNumberByName,
-    teamAvgPlacements,
-    teamPlacementCounts,
-  } = analyzeAndRankTeams(data, worstPlacingsDropped);
+  const trackSplits = shouldSplitByTrack(data);
+  const trackGroups = trackSplits ? getTracksForSplitting(data) : [null];
+  let nationalsLossTotal = 0;
 
-  log(`  Processed teams: ${overallRankings.length} ranked teams`);
-  log("  Processing overall rankings...");
+  for (const track of trackGroups) {
+    const scopedData = track ? filterTournamentByTrack(data, track) : data;
+    const scopedLabel = track ? `track ${track}` : "all tracks";
 
-  let nationalsLoss = 0;
-  if (
-    REPORT_NATIONALS_LOSS &&
-    isNationalTournament &&
-    shouldIncludeNationalsLossYear(tournamentInfo.season)
-  ) {
-    nationalsLoss = reportNationalsLoss(overallRankings, eloData, tournamentInfo, teamStateMap);
-  }
+    const {
+      overallRankings,
+      eventRankingsMap,
+      teamStateMap,
+      placingsByTeam,
+      eventCompetitorCounts,
+      eligibleEvents,
+      teamNumberByName,
+      teamAvgPlacements,
+      teamPlacementCounts,
+    } = analyzeAndRankTeams(scopedData, worstPlacingsDropped);
 
-  updateEloForRanking(
-    overallRankings,
-    eloData,
-    tournamentInfo,
-    "__OVERALL__",
-    teamStateMap,
-      importanceMultiplier,
+    log(`  Processed teams (${scopedLabel}): ${overallRankings.length} ranked teams`);
+    log(`  Processing overall rankings (${scopedLabel})...`);
+
+    if (
+      !track &&
+      REPORT_NATIONALS_LOSS &&
+      isNationalTournament &&
+      shouldIncludeNationalsLossYear(tournamentInfo.season)
+    ) {
+      nationalsLossTotal += reportNationalsLoss(
+        overallRankings,
+        eloData,
+        tournamentInfo,
+        teamStateMap
+      );
+    }
+
+    updateEloForRanking(
+      overallRankings,
+      eloData,
+      tournamentInfo,
+      "__OVERALL__",
+      teamStateMap,
+      importanceMultiplier * satelliteMultiplier,
       isStateOrNational,
+      isNationalTournament,
       {
         type: "overall",
         placingsByTeam,
@@ -583,25 +616,106 @@ function processTournament(data, eloData, filePath, fileContentsLower) {
       }
     );
 
-  log(`  Processing ${eventRankingsMap.size} event rankings...`);
-  for (const [eventName, eventRankings] of eventRankingsMap.entries()) {
-    updateEloForRanking(
-      eventRankings,
-      eloData,
-      tournamentInfo,
-      eventName,
-      teamStateMap,
-      importanceMultiplier,
-      isStateOrNational,
-      {
-        type: "event",
+    log(`  Processing ${eventRankingsMap.size} event rankings (${scopedLabel})...`);
+    for (const [eventName, eventRankings] of eventRankingsMap.entries()) {
+      updateEloForRanking(
+        eventRankings,
+        eloData,
+        tournamentInfo,
         eventName,
-        eventCompetitorCounts,
-      }
-    );
+        teamStateMap,
+        importanceMultiplier * satelliteMultiplier,
+        isStateOrNational,
+        isNationalTournament,
+        {
+          type: "event",
+          eventName,
+          eventCompetitorCounts,
+        }
+      );
+    }
   }
 
-  return nationalsLoss;
+  return nationalsLossTotal;
+}
+
+function shouldSplitByTrack(data) {
+  const teams = data?.Teams || [];
+  const activeTeams = teams.filter((team) => !team.exhibition);
+  const trackSet = new Set(activeTeams.map((team) => team.track).filter(Boolean));
+  if (trackSet.size <= 1) {
+    return false;
+  }
+
+  const teamTrack = new Map();
+  for (const team of activeTeams) {
+    teamTrack.set(team.number, team.track);
+  }
+
+  const placingsByEvent = new Map();
+  for (const placing of data.Placings || []) {
+    if (placing.place === null || placing.place === undefined) {
+      continue;
+    }
+    const track = teamTrack.get(placing.team);
+    if (!track) {
+      continue;
+    }
+    let eventPlacings = placingsByEvent.get(placing.event);
+    if (!eventPlacings) {
+      eventPlacings = [];
+      placingsByEvent.set(placing.event, eventPlacings);
+    }
+    eventPlacings.push({ place: placing.place, track });
+  }
+
+  for (const eventPlacings of placingsByEvent.values()) {
+    const placeTracks = new Map();
+    for (const entry of eventPlacings) {
+      const tracks = placeTracks.get(entry.place);
+      if (tracks) {
+        tracks.add(entry.track);
+      } else {
+        placeTracks.set(entry.place, new Set([entry.track]));
+      }
+    }
+    for (const tracks of placeTracks.values()) {
+      if (tracks.size > 1) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function getTracksForSplitting(data) {
+  const tracks = new Set();
+  for (const team of data?.Teams || []) {
+    if (team.exhibition) {
+      continue;
+    }
+    if (team.track) {
+      tracks.add(team.track);
+    }
+  }
+  return Array.from(tracks);
+}
+
+function filterTournamentByTrack(data, track) {
+  const teams = (data.Teams || []).filter(
+    (team) => !team.exhibition && team.track === track
+  );
+  const teamIds = new Set(teams.map((team) => team.number));
+  const placings = (data.Placings || []).filter((placing) =>
+    teamIds.has(placing.team)
+  );
+  return {
+    Tournament: data.Tournament,
+    Events: data.Events,
+    Teams: teams,
+    Placings: placings,
+  };
 }
 
 function getSeasonFromTournament(data, filePath) {
@@ -912,6 +1026,7 @@ function updateEloForRanking(
   teamStateMap,
   importanceMultiplier,
   isStateOrNational,
+  isNationalTournament,
   scoreContext
 ) {
   if (rankedTeams.length < 2) {
@@ -1117,15 +1232,27 @@ function updateEloForRanking(
         : actualTotalScore;
     const expectedAverageScore =
       scoreContext?.type === "overall" ? expectedRanks[i] : expectedTotalScore;
-    const rawScoreDiff = expectedAverageScore - actualAverageScore;
-    const scoreDiff =
-      Math.sign(rawScoreDiff) *
-      Math.pow(Math.abs(rawScoreDiff), SCORE_DIFF_POWER);
+    const scoreDiff = expectedAverageScore - actualAverageScore;
     const normalization =
       scoreContext?.type === "overall"
         ? Math.max(1, numOpponents) * SCORE_NORMALIZATION_SCALE
         : Math.max(1, effectiveEventCount * numOpponents) * SCORE_NORMALIZATION_SCALE;
-    const baseEloChange = ELO_PERFORMANCE_SCALING_FACTOR * (scoreDiff / normalization);
+    let baseEloChange = ELO_PERFORMANCE_SCALING_FACTOR * (scoreDiff / normalization);
+    if (category === "__OVERALL__") {
+      const { attendanceCount, averageDelta } = getNationalsHistoryStats(
+        eloData,
+        stateCodes[i],
+        names[i]
+      );
+      const attendanceScale = 1 + NATIONALS_ATTENDANCE_WEIGHT * Math.min(1, attendanceCount / 5);
+      const averageDeltaNormalized = Math.max(-1, Math.min(1, averageDelta / 100));
+      if (baseEloChange < 0 && averageDeltaNormalized > 0) {
+        baseEloChange /= 1 + NATIONALS_RECENT_GAIN_WEIGHT * averageDeltaNormalized;
+      } else if (baseEloChange > 0 && averageDeltaNormalized < 0) {
+        baseEloChange /= 1 + NATIONALS_RECENT_GAIN_WEIGHT * Math.abs(averageDeltaNormalized);
+      }
+      baseEloChange /= attendanceScale;
+    }
     const scaledEloChange =
       baseEloChange *
       volatilityFactors[i] *
@@ -1136,6 +1263,23 @@ function updateEloForRanking(
     const change = scaledEloChange * dampingFactor;
     eloChanges[i] = change;
     totalEloChange += change;
+
+    if (
+      DEBUG_TOURNAMENT_FILENAMES.has(tournamentInfo.filename) &&
+      DEBUG_TEAM_NAMES.has(names[i])
+    ) {
+      console.log(
+        `[Debug Elo] ${tournamentInfo.filename} ${names[i]} expected=${expectedAverageScore.toFixed(
+          2
+        )} actual=${actualAverageScore.toFixed(2)} diff=${scoreDiff.toFixed(
+          2
+        )} base=${baseEloChange.toFixed(2)} vol=${volatilityFactors[i].toFixed(
+          3
+        )} comp=${competitivenessMultiplier.toFixed(3)} imp=${importanceMultiplier.toFixed(
+          2
+        )} change=${change.toFixed(2)}`
+      );
+    }
 
   }
 
@@ -1298,7 +1442,24 @@ function updateEloForRanking(
       const scoreDiff = expectedTotalScore - actualTotalScore;
       const normalization =
         Math.max(1, eventCount * recalculatedNumOpponents) * SCORE_NORMALIZATION_SCALE;
-      const baseEloChange = ELO_PERFORMANCE_SCALING_FACTOR * (scoreDiff / normalization);
+      let baseEloChange = ELO_PERFORMANCE_SCALING_FACTOR * (scoreDiff / normalization);
+      if (category === "__OVERALL__") {
+        const stateCode = teamStateMap[convertedNames[i]] || stateCodes[i];
+        const { attendanceCount, averageDelta } = getNationalsHistoryStats(
+          eloData,
+          stateCode,
+          convertedNames[i]
+        );
+        const attendanceScale =
+          1 + NATIONALS_ATTENDANCE_WEIGHT * Math.min(1, attendanceCount / 5);
+        const averageDeltaNormalized = Math.max(-1, Math.min(1, averageDelta / 100));
+        if (baseEloChange < 0 && averageDeltaNormalized > 0) {
+          baseEloChange /= 1 + NATIONALS_RECENT_GAIN_WEIGHT * averageDeltaNormalized;
+        } else if (baseEloChange > 0 && averageDeltaNormalized < 0) {
+          baseEloChange /= 1 + NATIONALS_RECENT_GAIN_WEIGHT * Math.abs(averageDeltaNormalized);
+        }
+        baseEloChange /= attendanceScale;
+      }
       const scaledEloChange =
         baseEloChange *
         recalculatedVolatilityFactors[i] *
@@ -1352,6 +1513,7 @@ function updateEloForRanking(
         t: tournamentId,
         p: convertedPlaces[i],
         e: roundedElo,
+        c: recalculatedEloChanges[i],
         l: resultLink,
         n: teamsToConvertSet.has(originalName)
           ? "Converted from Varsity due to large ELO drop"
@@ -1387,6 +1549,7 @@ function updateEloForRanking(
         t: tournamentId,
         p: places[i],
         e: roundedElo,
+        c: eloChanges[i],
         l: resultLink,
       });
 
@@ -1657,6 +1820,47 @@ function calculateMomentumVolatility(history) {
   const scaled = avg / MOMENTUM_VOLATILITY_SCALE;
   const clamped = Math.min(scaled, MAX_MOMENTUM_VOLATILITY - 1);
   return 1 + Math.max(0, clamped);
+}
+
+function getNationalsHistoryStats(eloData, stateCode, teamName) {
+  const team = eloData?.[stateCode]?.[teamName];
+  if (!team?.seasons) {
+    return { attendanceCount: 0, averageDelta: 0 };
+  }
+
+  const nationalHistory = [];
+  for (const season of Object.keys(team.seasons)) {
+    const history = team.seasons[season]?.events?.__OVERALL__?.history || [];
+    for (const entry of history) {
+      if (nationalTournamentIds.has(entry.t) && Number.isFinite(entry.c)) {
+        nationalHistory.push(entry);
+      }
+    }
+  }
+
+  if (nationalHistory.length === 0) {
+    return { attendanceCount: 0, averageDelta: 0 };
+  }
+
+  nationalHistory.sort((a, b) => {
+    const aTime = a.d ? new Date(a.d).getTime() : 0;
+    const bTime = b.d ? new Date(b.d).getTime() : 0;
+    return aTime - bTime;
+  });
+
+  const attendanceCount = nationalHistory.length;
+  if (attendanceCount < 3) {
+    return { attendanceCount, averageDelta: 0 };
+  }
+  const recent = nationalHistory.slice(-3);
+  let sum = 0;
+  for (const entry of recent) {
+    sum += entry.c;
+  }
+  return {
+    attendanceCount,
+    averageDelta: sum / recent.length,
+  };
 }
 
 function getOrInitializeTeam(eloData, teamName, season, category, stateCode) {
