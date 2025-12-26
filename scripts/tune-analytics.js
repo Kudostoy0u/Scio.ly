@@ -5,7 +5,8 @@ const { spawnSync } = require("node:child_process");
 const PARAMS_PATH = path.join(__dirname, "..", "PARAMS.json");
 const DEFAULT_EPOCHS = 50;
 const MUTATION_RATE = 0.4;
-const MUTATION_SCALE = 0.08;
+const MIN_MUTATION = 0.005;
+const MAX_MUTATION = 0.01;
 
 function readParams() {
   if (!fs.existsSync(PARAMS_PATH)) {
@@ -46,32 +47,30 @@ function toFlagArgs(params) {
   return args;
 }
 
-function mutateParams(base) {
-  const next = { ...base };
-  for (const [key, value] of Object.entries(base)) {
-    if (key === "seasons") {
-      continue;
-    }
-    if (typeof value !== "number") {
-      continue;
-    }
-    if (
-      key === "loss-weight-power" ||
-      key === "top-weight-scale" ||
-      key === "top-rank-weight" ||
-      key === "surprise-weight" ||
-      key === "surprise-sharpness"
-    ) {
-      continue;
-    }
-    if (Math.random() > MUTATION_RATE) {
-      continue;
-    }
-    const delta = (Math.random() * 2 - 1) * MUTATION_SCALE;
-    const mutated = value * (1 + delta);
-    next[key] = Number.isFinite(mutated) ? mutated : value;
+function shouldSkipParam(key, value) {
+  if (key === "seasons") {
+    return true;
   }
-  return next;
+  if (typeof value !== "number") {
+    return true;
+  }
+  return (
+    key === "loss-weight-power" ||
+    key === "top-weight-scale" ||
+    key === "top-rank-weight" ||
+    key === "surprise-weight" ||
+    key === "surprise-sharpness"
+  );
+}
+
+function applyDelta(value, delta) {
+  if (!Number.isFinite(value)) {
+    return value;
+  }
+  if (value === 0) {
+    return delta;
+  }
+  return value * (1 + delta);
 }
 
 function parseLoss(output) {
@@ -117,10 +116,27 @@ function main() {
   let bestParams = sanitizeParams(paramsFile.params || {});
 
   for (let epoch = 1; epoch <= epochs; epoch++) {
-    const candidate = mutateParams(bestParams);
+    let improvedInEpoch = false;
+    const keys = Object.keys(bestParams);
+    const candidate = { ...bestParams };
+
+    for (const key of keys) {
+      const baseValue = bestParams[key];
+      if (shouldSkipParam(key, baseValue)) {
+        continue;
+      }
+      if (Math.random() > MUTATION_RATE) {
+        continue;
+      }
+      const step =
+        MIN_MUTATION + Math.random() * (MAX_MUTATION - MIN_MUTATION);
+      const direction = Math.random() < 0.5 ? -1 : 1;
+      candidate[key] = applyDelta(baseValue, direction * step);
+    }
+
     const { loss, output } = runAnalytics(candidate);
     if (!Number.isFinite(loss)) {
-      console.log(`Epoch ${epoch}: no loss parsed`);
+      console.log(`Epoch ${epoch}: loss=NA`);
       if (output) {
         console.log(output);
       }
@@ -134,6 +150,11 @@ function main() {
       bestParams = sanitizeParams(candidate);
       writeParams({ bestLoss, params: bestParams });
       console.log(`New best loss: ${bestLoss.toFixed(2)}`);
+      improvedInEpoch = true;
+    }
+
+    if (!improvedInEpoch) {
+      console.log(`Epoch ${epoch}: no improvement`);
     }
   }
 }
