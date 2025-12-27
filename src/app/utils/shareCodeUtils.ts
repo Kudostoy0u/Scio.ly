@@ -61,6 +61,8 @@ export interface ShareCodeResult {
 	encryptedQuotes?: QuoteData[];
 	adjustedTimeRemaining?: number;
 	createdAtMs?: number;
+	timeSync?: boolean;
+	serverNowMs?: number;
 	error?: string;
 }
 
@@ -98,6 +100,8 @@ export const loadSharedTestCode = async (
 					encryptedQuotes: data.data.quotes,
 					adjustedTimeRemaining: data.data.timeRemainingSeconds,
 					createdAtMs: data.data.createdAtMs,
+					timeSync: data.data.timeSync,
+					serverNowMs: data.data.serverNowMs,
 				};
 			}
 		}
@@ -144,6 +148,8 @@ export const loadSharedTestCode = async (
 									questions: questionsData.data,
 									adjustedTimeRemaining: data.data.timeRemainingSeconds,
 									createdAtMs: data.data.createdAtMs,
+									timeSync: data.data.timeSync,
+									serverNowMs: data.data.serverNowMs,
 								};
 							}
 						}
@@ -159,6 +165,8 @@ export const loadSharedTestCode = async (
 					questions: [],
 					adjustedTimeRemaining: data.data.timeRemainingSeconds,
 					createdAtMs: data.data.createdAtMs,
+					timeSync: data.data.timeSync,
+					serverNowMs: data.data.serverNowMs,
 				};
 			}
 		}
@@ -230,18 +238,32 @@ export const handleShareCodeRedirect = async (
 			: null;
 	const createdAt =
 		typeof result.createdAtMs === "number" ? result.createdAtMs : null;
+	const serverNow =
+		typeof result.serverNowMs === "number" ? result.serverNowMs : null;
+	const shouldSync = result.timeSync !== false;
+	const syncBufferSeconds = 3;
 
 	let sharedTimeRemaining: number | undefined;
-	if (baseRemaining !== null && createdAt !== null) {
-		const now = Date.now();
-		const elapsedSeconds = Math.floor((now - createdAt) / 1000);
-		sharedTimeRemaining = Math.max(0, baseRemaining - elapsedSeconds);
-	} else if (baseRemaining !== null) {
-		sharedTimeRemaining = baseRemaining;
-	} else if (createdAt !== null) {
-		const now = Date.now();
-		const elapsedSeconds = Math.floor((now - createdAt) / 1000);
-		sharedTimeRemaining = Math.max(0, timeLimit * 60 - elapsedSeconds);
+	if (shouldSync) {
+		const nowMs = serverNow ?? Date.now();
+		if (baseRemaining !== null && createdAt !== null) {
+			const elapsedSeconds = Math.floor((nowMs - createdAt) / 1000);
+			sharedTimeRemaining = Math.max(
+				0,
+				baseRemaining - elapsedSeconds + syncBufferSeconds,
+			);
+		} else if (baseRemaining !== null) {
+			sharedTimeRemaining = baseRemaining + syncBufferSeconds;
+		} else if (createdAt !== null) {
+			const elapsedSeconds = Math.floor((nowMs - createdAt) / 1000);
+			sharedTimeRemaining = Math.max(
+				0,
+				timeLimit * 60 - elapsedSeconds + syncBufferSeconds,
+			);
+		}
+		if (sharedTimeRemaining !== undefined) {
+			sharedTimeRemaining = Math.min(timeLimit * 60, sharedTimeRemaining);
+		}
 	}
 
 	initializeTestSession(

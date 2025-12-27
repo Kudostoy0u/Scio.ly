@@ -48,6 +48,7 @@ export interface ShareCodeRequest extends Record<string, unknown> {
 	idQuestionIds?: string[];
 	testParamsRaw: Record<string, unknown>;
 	timeRemainingSeconds?: number;
+	timeSync?: boolean;
 	code?: string;
 }
 
@@ -68,6 +69,8 @@ export interface ShareCodeData {
 		testParamsRaw: Record<string, unknown>;
 		timeRemainingSeconds?: number;
 		createdAtMs: number;
+		timeSync?: boolean;
+		serverNowMs?: number;
 	};
 	error?: string;
 }

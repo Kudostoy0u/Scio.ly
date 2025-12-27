@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
 			eventName: "Codebusters",
 			testParams: body.testParams || {},
 			timeRemainingSeconds: body.timeRemainingSeconds || null,
+			timeSync: body.timeSync !== false,
 			createdAtMs: Date.now(),
 		};
 

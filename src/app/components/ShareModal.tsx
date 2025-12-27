@@ -42,6 +42,7 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(
 		const [shareCode, setShareCode] = useState<string | null>(null);
 		const [isGenerating, setIsGenerating] = useState(false);
 		const [isOffline, setIsOffline] = useState(false);
+		const [isTimeSyncEnabled, setIsTimeSyncEnabled] = useState(true);
 		const hasGeneratedRef = useRef(false);
 		const generationRequestId = useRef(0);
 		const currentEncryptedQuotesRef = useRef<
@@ -154,6 +155,7 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(
 						shareData: shareData,
 						testParams: testParams,
 						timeRemainingSeconds: currentTimeLeftLocal,
+						timeSync: isTimeSyncEnabled,
 					}),
 				});
 
@@ -205,6 +207,7 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(
 						idQuestionIds,
 						testParamsRaw: testParams,
 						timeRemainingSeconds: currentTimeLeftLocal || null,
+						timeSync: isTimeSyncEnabled,
 					}),
 				});
 
@@ -242,7 +245,7 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(
 				setIsGenerating(false);
 				setLoadingGenerate(false);
 			}
-		}, [timeLeft, isGenerating]);
+		}, [timeLeft, isGenerating, isTimeSyncEnabled]);
 
 		const copyCodeToClipboard = async () => {
 			try {
@@ -302,6 +305,7 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(
 				setShareCode(null);
 				setIsGenerating(false);
 				setLoadingGenerate(false);
+				setIsTimeSyncEnabled(true);
 
 				generationRequestId.current++;
 
@@ -361,6 +365,27 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(
 
 			return renderGenerateButton();
 		};
+
+		const getTimeLimitMinutes = (): number => {
+			try {
+				const raw = SyncLocalStorage.getItem("testParams");
+				if (raw) {
+					const parsed = JSON.parse(raw) as { timeLimit?: string | number };
+					const limit =
+						typeof parsed.timeLimit === "number"
+							? parsed.timeLimit
+							: Number.parseInt(parsed.timeLimit || "", 10);
+					if (Number.isFinite(limit) && limit > 0) {
+						return limit;
+					}
+				}
+			} catch {
+				// Fallback to default
+			}
+			return 30;
+		};
+
+		const timeLimitMinutes = getTimeLimitMinutes();
 
 		// Helper function to render load shared test section
 		const renderLoadSharedTestSection = () => (
@@ -444,7 +469,54 @@ const ShareModal: React.FC<ShareModalProps> = React.memo(
 					<h3 className="text-lg font-semibold mb-4">Share Test</h3>
 
 					<div className="mb-4">
-						<h4 className="font-semibold mb-2">Share Code</h4>
+						<div className="flex items-center justify-between mb-2">
+							<h4 className="font-semibold">Share Code</h4>
+							<div className="relative group">
+								<button
+									type="button"
+									onClick={() => setIsTimeSyncEnabled((prev) => !prev)}
+									className={`px-2 py-1 rounded-md text-xs font-medium border transition-colors ${
+										isTimeSyncEnabled
+											? "border-green-500 text-green-600 hover:bg-green-50"
+											: "border-red-500 text-red-600 hover:bg-red-50"
+									} ${
+										darkMode
+											? isTimeSyncEnabled
+												? "hover:bg-green-900/10"
+												: "hover:bg-red-900/10"
+											: ""
+									}`}
+								>
+									Time Sync: {isTimeSyncEnabled ? "On" : "Off"}
+								</button>
+								<div
+									className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-sm text-center whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${
+										darkMode
+											? "bg-gray-800 text-white border border-gray-700"
+											: "bg-white text-gray-900 border border-gray-200 shadow-lg"
+									}`}
+								>
+									{isTimeSyncEnabled ? (
+										<>
+											The person who loads your share code
+											<br />
+											will end at the same time as you.
+										</>
+									) : (
+										<>
+											The person who uses your join code will load in
+											<br />
+											with {timeLimitMinutes} minutes to take this test.
+										</>
+									)}
+									<div
+										className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent ${
+											darkMode ? "border-t-gray-800" : "border-t-white"
+										}`}
+									/>
+								</div>
+							</div>
+						</div>
 						{renderShareCodeSection()}
 					</div>
 

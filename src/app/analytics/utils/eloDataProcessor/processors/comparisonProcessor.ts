@@ -65,9 +65,12 @@ export const DIVISION_C_EVENTS_2026 = [
 	"Experimental Design",
 ];
 
+const ELO_PROBABILITY_DIVISOR = 180;
+
 export const calculateWinProbability = (elo1: number, elo2: number): number => {
 	const eloDifference = elo1 - elo2;
-	return 1 / (1 + 10 ** (-eloDifference / 400));
+	// Use a tighter divisor to reflect more decisive gaps in our Elo scale.
+	return 1 / (1 + 10 ** (-eloDifference / ELO_PROBABILITY_DIVISOR));
 };
 
 function getMaxOverallElo(

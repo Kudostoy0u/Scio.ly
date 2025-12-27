@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
 			code,
 			idQuestionIds,
 			timeRemainingSeconds,
+			timeSync,
 		} = validation.data;
 
 		if (questionIds.length === 0) {
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
 			idQuestionIds: idQuestionIds || [],
 			testParamsRaw,
 			timeRemainingSeconds: timeRemainingSeconds || null,
+			timeSync: timeSync !== false,
 			createdAtMs: Date.now(),
 		};
 

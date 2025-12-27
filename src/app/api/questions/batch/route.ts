@@ -23,6 +23,11 @@ type IdEventTableRow = QuestionTableRow & {
 	images?: unknown;
 };
 
+const BASE52_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const BASE52_BASE = BASE52_ALPHABET.length;
+const BASE52_CORE_LENGTH = 4;
+const BASE52_MOD = 52 ** BASE52_CORE_LENGTH;
+
 const BatchRequestSchema = z.object({
 	ids: z.array(z.string()).min(1),
 });
@@ -76,6 +81,31 @@ const pickRandomImage = (value: unknown): string | undefined => {
 	return images[Math.floor(Math.random() * images.length)];
 };
 
+const encodeBase52Core = (index: number): string => {
+	let n = index;
+	let out = "";
+	for (let i = 0; i < BASE52_CORE_LENGTH; i++) {
+		out = BASE52_ALPHABET[n % BASE52_BASE] + out;
+		n = Math.floor(n / BASE52_BASE);
+	}
+	return out;
+};
+
+const hashIdToBase52Code = (
+	id: string,
+	table: "questions" | "idEvents",
+): string => {
+	let hash = 0;
+	for (let i = 0; i < id.length; i++) {
+		const char = id.charCodeAt(i);
+		hash = (hash << 5) - hash + char;
+		hash |= 0;
+	}
+	const core = encodeBase52Core(Math.abs(hash) % BASE52_MOD);
+	const suffix = table === "idEvents" ? "P" : "S";
+	return `${core}${suffix}`;
+};
+
 export async function POST(request: NextRequest) {
 	try {
 		const body = await request.json();
@@ -105,8 +135,8 @@ export async function POST(request: NextRequest) {
 			questionsParams,
 		);
 
-		const foundQuestionIds = questionRows.map((row) => row.id);
-		const remainingIds = ids.filter((id) => !foundQuestionIds.includes(id));
+		const foundQuestionIds = new Set(questionRows.map((row) => row.id));
+		const remainingIds = ids.filter((id) => !foundQuestionIds.has(id));
 
 		let idEventRows: IdEventTableRow[] = [];
 		if (remainingIds.length > 0) {
@@ -129,26 +159,6 @@ export async function POST(request: NextRequest) {
 
 		const allQuestions: Question[] = [];
 
-		const { generateQuestionCodes } = await import(
-			"@/lib/utils/assessments/base52"
-		);
-
-		const regularQuestionCodes =
-			questionRows.length > 0
-				? await generateQuestionCodes(
-						questionRows.map((row) => row.id),
-						"questions",
-					)
-				: new Map<string, string>();
-
-		const idQuestionCodes =
-			idEventRows.length > 0
-				? await generateQuestionCodes(
-						idEventRows.map((row) => row.id),
-						"idEvents",
-					)
-				: new Map<string, string>();
-
 		for (const row of questionRows) {
 			allQuestions.push({
 				id: row.id,
@@ -160,7 +170,7 @@ export async function POST(request: NextRequest) {
 				subtopics: parseStringArray(row.subtopics),
 				difficulty: normalizeDifficulty(row.difficulty),
 				event: row.event,
-				base52: regularQuestionCodes.get(row.id),
+				base52: hashIdToBase52Code(row.id, "questions"),
 				created_at: formatTimestamp(row.createdAt ?? row.created_at),
 				updated_at: formatTimestamp(row.updatedAt ?? row.updated_at),
 			});
@@ -178,7 +188,7 @@ export async function POST(request: NextRequest) {
 				difficulty: normalizeDifficulty(row.difficulty),
 				event: row.event,
 				imageData: pickRandomImage(row.images),
-				base52: idQuestionCodes.get(row.id),
+				base52: hashIdToBase52Code(row.id, "idEvents"),
 				created_at: formatTimestamp(row.createdAt ?? row.created_at),
 				updated_at: formatTimestamp(row.updatedAt ?? row.updated_at),
 			});

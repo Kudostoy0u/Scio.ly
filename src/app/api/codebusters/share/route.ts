@@ -10,6 +10,7 @@ interface TestParamsRaw {
 	testParams?: Record<string, unknown>;
 	timeRemainingSeconds?: number | null;
 	createdAtMs?: number;
+	timeSync?: boolean;
 }
 
 interface ShareDataResult {
@@ -164,13 +165,16 @@ export async function GET(request: NextRequest) {
 				difficulty: quote.difficulty || Math.random() * 0.8 + 0.2,
 			}));
 
+			const serverNowMs = Date.now();
 			return NextResponse.json({
 				success: true,
 				data: {
 					quotes: finalProcessedQuotes,
 					testParams: testParams,
 					timeRemainingSeconds: testParamsRaw.timeRemainingSeconds,
-					createdAtMs: testParamsRaw.createdAtMs || Date.now(),
+					createdAtMs: testParamsRaw.createdAtMs || serverNowMs,
+					timeSync: testParamsRaw.timeSync !== false,
+					serverNowMs,
 				},
 			});
 		} catch (_error) {

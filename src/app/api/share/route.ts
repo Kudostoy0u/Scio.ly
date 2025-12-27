@@ -11,6 +11,7 @@ interface TestParamsRaw {
 	testParamsRaw?: Record<string, unknown>;
 	timeRemainingSeconds?: number | null;
 	createdAtMs?: number;
+	timeSync?: boolean;
 }
 
 export async function GET(request: NextRequest) {
@@ -77,6 +78,7 @@ export async function GET(request: NextRequest) {
 				expiresAt: shareData.expiresAt,
 			});
 
+			const serverNowMs = Date.now();
 			const response: ShareCodeData = {
 				success: true,
 				data: {
@@ -84,7 +86,9 @@ export async function GET(request: NextRequest) {
 					idQuestionIds: testParamsRaw.idQuestionIds || [],
 					testParamsRaw: testParamsRaw.testParamsRaw || {},
 					timeRemainingSeconds: testParamsRaw.timeRemainingSeconds ?? undefined,
-					createdAtMs: testParamsRaw.createdAtMs || Date.now(),
+					createdAtMs: testParamsRaw.createdAtMs || serverNowMs,
+					timeSync: testParamsRaw.timeSync !== false,
+					serverNowMs,
 				},
 			};
 

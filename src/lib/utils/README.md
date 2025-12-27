@@ -16,7 +16,7 @@
 - Teams: `getTeamAccess`, `hasLeadershipAccess`, `resolveTeamSlugToUnits`, `hashObject`, `teamCache`
 - Storage: `StorageService`, `LocalStorageCache`, `globalApiCache`
 - Content: `generateDisplayName`, `stripTrailingParenthetical`, `normalizeMath`, `slugifyText`, `extractToc`
-- Assessments: `encodeBase52`, `decodeBase52`, `generateQuestionCode`, `getEventCapabilities`, `getLetterGradeFromPercentage`
+- Assessments: `encodeBase52`, `decodeBase52`, `getEventCapabilities`, `getLetterGradeFromPercentage`
 - Network/Auth/Media: `fetchOnce`, `withAuthRetry`, `preloadImage`
 
 ## Tests
