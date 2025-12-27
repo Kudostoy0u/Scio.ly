@@ -4,11 +4,13 @@ import {
 	teamMemberships,
 	teamRoster,
 	teamSubteams,
+	teamTournamentRosters,
 	users,
 } from "@/lib/db/schema";
 import { TRPCError } from "@trpc/server";
 import { and, eq, inArray } from "drizzle-orm";
 import { touchSubteamCacheManifest } from "./cache-manifest";
+import { ensureActiveTournamentRoster } from "./roster";
 import {
 	assertCaptainAccess,
 	assertTeamAccess,
@@ -367,8 +369,51 @@ export async function getRoster(
 	teamSlug: string,
 	subteamId: string | null,
 	userId: string,
+	rosterId?: string | null,
 ) {
-	const { team } = await assertTeamAccess(teamSlug, userId);
+	const { team, membership } = await assertTeamAccess(teamSlug, userId);
+	const activeRoster = await ensureActiveTournamentRoster(team.id, userId);
+
+	let resolvedRosterId = activeRoster.id;
+	if (membership.role === "captain" || membership.role === "admin") {
+		if (rosterId) {
+			const [candidate] = await dbPg
+				.select({
+					id: teamTournamentRosters.id,
+					status: teamTournamentRosters.status,
+					isPublic: teamTournamentRosters.isPublic,
+				})
+				.from(teamTournamentRosters)
+				.where(
+					and(
+						eq(teamTournamentRosters.teamId, team.id),
+						eq(teamTournamentRosters.id, rosterId),
+					),
+				)
+				.limit(1);
+			if (candidate) {
+				resolvedRosterId = candidate.id;
+			}
+		}
+	} else if (rosterId) {
+		const [candidate] = await dbPg
+			.select({
+				id: teamTournamentRosters.id,
+				status: teamTournamentRosters.status,
+				isPublic: teamTournamentRosters.isPublic,
+			})
+			.from(teamTournamentRosters)
+			.where(
+				and(
+					eq(teamTournamentRosters.teamId, team.id),
+					eq(teamTournamentRosters.id, rosterId),
+				),
+			)
+			.limit(1);
+		if (candidate?.status === "archived" && candidate.isPublic) {
+			resolvedRosterId = candidate.id;
+		}
+	}
 
 	const rosterResult = await dbPg
 		.select({
@@ -381,6 +426,7 @@ export async function getRoster(
 		.where(
 			and(
 				eq(teamRoster.teamId, team.id),
+				eq(teamRoster.tournamentRosterId, resolvedRosterId),
 				subteamId ? eq(teamRoster.subteamId, subteamId) : undefined,
 			),
 		);
@@ -404,6 +450,7 @@ export async function getRosterLinkStatus(
 	userId: string,
 ) {
 	const { team } = await assertTeamAccess(teamSlug, userId);
+	const activeRoster = await ensureActiveTournamentRoster(team.id, userId);
 
 	// Build where conditions for team units
 	const teamUnitsWhere = [eq(teamSubteams.teamId, team.id)];
@@ -443,7 +490,10 @@ export async function getRosterLinkStatus(
 		);
 
 	// Get roster data if it exists
-	const rosterWhere = [inArray(teamRoster.subteamId, teamUnitIds)];
+	const rosterWhere = [
+		inArray(teamRoster.subteamId, teamUnitIds),
+		eq(teamRoster.tournamentRosterId, activeRoster.id),
+	];
 	if (subteamId) {
 		rosterWhere.push(eq(teamRoster.subteamId, subteamId));
 	}

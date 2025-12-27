@@ -42,14 +42,16 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
 		? "opacity-100"
 		: "opacity-0 md:opacity-0";
 	const labelVisibilityClass = showCompactLayout
-		? "max-h-0 opacity-0 md:max-h-6 md:opacity-100"
+		? "hidden"
 		: "max-h-6 opacity-100";
 
 	return (
-		<div className={`${cardBase} ${cardPadding} relative`}>
+		<div
+			className={`${cardBase} ${cardPadding} ${showCompactLayout ? "flex items-center justify-center gap-1.5" : "relative"}`}
+		>
 			{item.icon && (
 				<div
-					className={`absolute left-1 md:left-2 top-1/2 -translate-y-1/2 transition-opacity duration-300 md:transition-none ${iconOpacityClass}`}
+					className={`${showCompactLayout ? "relative" : "absolute left-1 md:left-2 top-1/2 -translate-y-1/2"} transition-opacity duration-300 md:transition-none ${iconOpacityClass}`}
 				>
 					{React.createElement(item.icon, {
 						className: `w-3 h-3 md:w-4 md:h-4 ${item.valueClassName || ""}`,
@@ -79,7 +81,9 @@ export default function SummaryGrid({
 		? "py-1.5 px-2 md:py-2 md:px-6"
 		: "py-2 md:py-2"; // more padding in compact mode
 	const labelClass = `${darkMode ? "text-gray-300" : "text-gray-600"} text-xs md:text-sm`;
-	const valueClassBase = "font-bold text-base md:text-xl"; // smaller on mobile
+	const valueClassBase = showCompactLayout
+		? "font-bold text-base md:text-xl" // compact layout
+		: "font-bold text-lg md:text-xl"; // non-compact layout - larger text
 
 	return (
 		<div

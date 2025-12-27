@@ -253,6 +253,9 @@ export default function TeamsPageClient() {
 				];
 				return { teams: nextTeams };
 			});
+			if (typeof window !== "undefined") {
+				localStorage.setItem(`roster-edit-mode-${result.slug}`, "true");
+			}
 			toast.success("Team created");
 			router.push(`/teams/${result.slug}`);
 		} catch (error) {

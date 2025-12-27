@@ -7,6 +7,7 @@ import {
 } from "@/lib/db/schema";
 import { generateCodebustersQuestions } from "@/lib/server/codebusters/generation";
 import { touchTeamCacheManifest } from "@/lib/server/teams/cache-manifest";
+import { ensureActiveTournamentRoster } from "@/lib/server/teams/roster";
 import { assertCaptainAccess } from "@/lib/server/teams/shared";
 import { TRPCError } from "@trpc/server";
 import { and, eq, inArray, or } from "drizzle-orm";
@@ -103,10 +104,13 @@ export const resolveRosterMembers = async (
 	subteamId: string | null,
 	eventName: string,
 	rosterMembers: Array<z.infer<typeof RosterMemberSchema>>,
+	actorId: string,
 ): Promise<RosterMemberPayload[]> => {
 	if (rosterMembers.length === 0) {
 		return [];
 	}
+
+	const activeRoster = await ensureActiveTournamentRoster(teamId, actorId);
 
 	const entries = rosterMembers.map((member) => {
 		if (typeof member === "string") {
@@ -132,6 +136,7 @@ export const resolveRosterMembers = async (
 	if (unresolvedNames.length > 0) {
 		const baseConditions = [
 			eq(teamRoster.teamId, teamId),
+			eq(teamRoster.tournamentRosterId, activeRoster.id),
 			or(
 				inArray(teamRoster.displayName, unresolvedNames),
 				inArray(teamRoster.studentName, unresolvedNames),
@@ -335,6 +340,7 @@ export async function createCodebustersAssignment(
 		subteamId,
 		eventName,
 		input.roster_members || [],
+		userId,
 	);
 	if (rosterMembers.length > 0) {
 		await dbPg.insert(teamAssignmentRoster).values(

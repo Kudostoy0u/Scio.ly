@@ -329,6 +329,7 @@ export default function Header({
 						{/* Mobile menu button */}
 						{!hideMobileNav && (
 							<div className="md:hidden flex items-center space-x-2">
+								{isTeamsPage && <AuthButton />}
 								<ThemeToggleButton
 									darkMode={darkMode}
 									shouldBeTransparent={shouldBeTransparent}

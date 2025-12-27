@@ -8,6 +8,7 @@ import {
 	teamSubteams,
 } from "@/lib/db/schema";
 import { and, desc, eq } from "drizzle-orm";
+import { ensureActiveTournamentRoster } from "./roster";
 import {
 	type TeamFullData,
 	type TeamMember,
@@ -46,6 +47,7 @@ export async function getTeamFullBySlug(
 	userId: string,
 ): Promise<TeamFullData> {
 	const { team, membership } = await assertTeamAccess(teamSlug, userId);
+	const activeRoster = await ensureActiveTournamentRoster(team.id, userId);
 
 	const subteams = await dbPg
 		.select({
@@ -90,7 +92,12 @@ export async function getTeamFullBySlug(
 					slotIndex: teamRoster.slotIndex,
 				})
 				.from(teamRoster)
-				.where(eq(teamRoster.teamId, team.id)),
+				.where(
+					and(
+						eq(teamRoster.teamId, team.id),
+						eq(teamRoster.tournamentRosterId, activeRoster.id),
+					),
+				),
 			dbPg
 				.select({
 					id: teamAssignments.id,

@@ -222,6 +222,69 @@ export function useTeamCacheInvalidation(teamSlug: string) {
 			prefetch: () => utils.teams.assignments.prefetch({ teamSlug }),
 		});
 
+		const canSeeTournamentRosters =
+			manifest.tournamentRostersUpdatedAt !== null &&
+			manifest.tournamentRostersUpdatedAt !== undefined;
+		const canSeePublicTournamentRosters =
+			manifest.publicTournamentRostersUpdatedAt !== null &&
+			manifest.publicTournamentRostersUpdatedAt !== undefined;
+
+		if (manifest.tournamentRostersUpdatedAt) {
+			compareCache({
+				label: "teams.listTournamentRosters",
+				manifestUpdatedAt: toTimestamp(manifest.tournamentRostersUpdatedAt),
+				queryKey: getQueryKey(
+					trpc.teams.listTournamentRosters,
+					{ teamSlug },
+					"query",
+				),
+				invalidate: () =>
+					utils.teams.listTournamentRosters.invalidate({ teamSlug }),
+				prefetch: () =>
+					utils.teams.listTournamentRosters.prefetch({ teamSlug }),
+			});
+		}
+
+		if (manifest.publicTournamentRostersUpdatedAt) {
+			compareCache({
+				label: "teams.listPublicTournamentRosters",
+				manifestUpdatedAt: toTimestamp(
+					manifest.publicTournamentRostersUpdatedAt,
+				),
+				queryKey: getQueryKey(
+					trpc.teams.listPublicTournamentRosters,
+					{ teamSlug },
+					"query",
+				),
+				invalidate: () =>
+					utils.teams.listPublicTournamentRosters.invalidate({ teamSlug }),
+				prefetch: () =>
+					utils.teams.listPublicTournamentRosters.prefetch({ teamSlug }),
+			});
+		}
+
+		if (canSeeTournamentRosters || canSeePublicTournamentRosters) {
+			const rosterUpdatedAt = toTimestamp(manifest.rosterUpdatedAt);
+			const rosterQueries = queryClient
+				.getQueryCache()
+				.findAll({ queryKey: getQueryKey(trpc.teams.getRoster) });
+
+			for (const query of rosterQueries) {
+				const queryKey = query.queryKey as Array<unknown>;
+				const input = (queryKey[1] as { input?: { teamSlug?: string } })?.input;
+				if (!input || input.teamSlug !== teamSlug) {
+					continue;
+				}
+				const cachedUpdatedAt = query.state.dataUpdatedAt ?? 0;
+				if (rosterUpdatedAt > cachedUpdatedAt) {
+					staleFlags.push("teams.getRoster");
+					invalidations.push(
+						queryClient.invalidateQueries({ queryKey: query.queryKey }),
+					);
+				}
+			}
+		}
+
 		for (const subteam of manifest.subteams ?? []) {
 			const subteamId = subteam.subteamId;
 

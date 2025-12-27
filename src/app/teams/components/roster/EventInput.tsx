@@ -18,6 +18,8 @@ interface EventInputProps {
 	onCreateAssignment: (eventName: string) => void;
 	onRemoveEvent: (eventName: string, conflictBlock: string) => void;
 	conflictBlock: string;
+	stackInputs?: boolean;
+	inputColumns?: 1 | 2 | 3;
 }
 
 function formatNames(names: string[]): string {
@@ -49,6 +51,8 @@ export default function EventInput({
 	onCreateAssignment,
 	onRemoveEvent,
 	conflictBlock,
+	stackInputs = false,
+	inputColumns = 3,
 }: EventInputProps) {
 	const max = getEventMaxSlots(eventName);
 	const base = roster[eventName] || [];
@@ -121,7 +125,15 @@ export default function EventInput({
 					</button>
 				)}
 			</div>
-			<div className="grid grid-cols-3 gap-2">
+			<div
+				className={`grid gap-2 ${
+					stackInputs
+						? "grid-cols-1"
+						: inputColumns === 2
+							? "grid-cols-2"
+							: "grid-cols-3"
+				}`}
+			>
 				{[...new Array(max)].map((_, i) => (
 					<input
 						key={i.toString()}

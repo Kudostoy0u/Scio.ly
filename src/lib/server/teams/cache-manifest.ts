@@ -23,6 +23,8 @@ export type TeamCacheManifest = {
 	fullUpdatedAt: string;
 	assignmentsUpdatedAt: string;
 	rosterUpdatedAt: string;
+	tournamentRostersUpdatedAt?: string | null;
+	publicTournamentRostersUpdatedAt?: string | null;
 	membersUpdatedAt: string;
 	subteamsUpdatedAt: string;
 	calendarUpdatedAt: string;
@@ -53,6 +55,8 @@ export async function touchTeamCacheManifest(
 		full?: boolean;
 		assignments?: boolean;
 		roster?: boolean;
+		tournamentRosters?: boolean;
+		publicTournamentRosters?: boolean;
 		members?: boolean;
 		subteams?: boolean;
 		calendar?: boolean;
@@ -70,6 +74,12 @@ export async function touchTeamCacheManifest(
 	}
 	if (updates.roster) {
 		set.rosterUpdatedAt = now;
+	}
+	if (updates.tournamentRosters) {
+		set.tournamentRostersUpdatedAt = now;
+	}
+	if (updates.publicTournamentRosters) {
+		set.publicTournamentRostersUpdatedAt = now;
 	}
 	if (updates.members) {
 		set.membersUpdatedAt = now;
@@ -171,7 +181,7 @@ export async function getTeamCacheManifest(
 	teamSlug: string,
 	userId: string,
 ): Promise<TeamCacheManifest> {
-	const { team } = await assertTeamAccess(teamSlug, userId);
+	const { team, membership } = await assertTeamAccess(teamSlug, userId);
 
 	logger.dev.structured("debug", "[TeamCache] Fetch manifest", {
 		teamId: team.id,
@@ -186,6 +196,9 @@ export async function getTeamCacheManifest(
 			fullUpdatedAt: teamCacheManifests.fullUpdatedAt,
 			assignmentsUpdatedAt: teamCacheManifests.assignmentsUpdatedAt,
 			rosterUpdatedAt: teamCacheManifests.rosterUpdatedAt,
+			tournamentRostersUpdatedAt: teamCacheManifests.tournamentRostersUpdatedAt,
+			publicTournamentRostersUpdatedAt:
+				teamCacheManifests.publicTournamentRostersUpdatedAt,
 			membersUpdatedAt: teamCacheManifests.membersUpdatedAt,
 			subteamsUpdatedAt: teamCacheManifests.subteamsUpdatedAt,
 			calendarUpdatedAt: teamCacheManifests.calendarUpdatedAt,
@@ -232,6 +245,11 @@ export async function getTeamCacheManifest(
 			fullUpdatedAt: fallback,
 			assignmentsUpdatedAt: fallback,
 			rosterUpdatedAt: fallback,
+			tournamentRostersUpdatedAt:
+				membership.role === "captain" || membership.role === "admin"
+					? fallback
+					: null,
+			publicTournamentRostersUpdatedAt: fallback,
 			membersUpdatedAt: fallback,
 			subteamsUpdatedAt: fallback,
 			calendarUpdatedAt: fallback,
@@ -250,6 +268,13 @@ export async function getTeamCacheManifest(
 		fullUpdatedAt: String(manifest.fullUpdatedAt),
 		assignmentsUpdatedAt: String(manifest.assignmentsUpdatedAt),
 		rosterUpdatedAt: String(manifest.rosterUpdatedAt),
+		tournamentRostersUpdatedAt:
+			membership.role === "captain" || membership.role === "admin"
+				? String(manifest.tournamentRostersUpdatedAt)
+				: null,
+		publicTournamentRostersUpdatedAt: String(
+			manifest.publicTournamentRostersUpdatedAt,
+		),
 		membersUpdatedAt: String(manifest.membersUpdatedAt),
 		subteamsUpdatedAt: String(manifest.subteamsUpdatedAt),
 		calendarUpdatedAt: String(manifest.calendarUpdatedAt),

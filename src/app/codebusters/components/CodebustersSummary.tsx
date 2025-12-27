@@ -2,7 +2,7 @@
 import type { QuoteData } from "@/app/codebusters/types";
 import { calculateCipherGrade } from "@/app/codebusters/utils/gradingUtils";
 import SummaryGrid, { type SummaryItem } from "@/app/components/SummaryGrid";
-import { CheckCircle, Hash, Target, Trophy } from "lucide-react";
+import { BowArrow, CheckCircle, Hash, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface CodebustersSummaryProps {
@@ -117,7 +117,7 @@ function MobileCompactCodebustersSummary({
 	darkMode: boolean;
 }) {
 	return (
-		<div className="fixed top-4 left-1/2 transform -translate-x-1/2 w-4/5 z-50">
+		<div className="fixed top-4 left-1/2 transform -translate-x-1/2 w-[90%] z-50">
 			<div
 				className={`rounded-lg shadow-lg p-3 md:p-5 ${darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"} border ${darkMode ? "border-gray-600" : "border-gray-200"}`}
 			>
@@ -199,7 +199,7 @@ export default function CodebustersSummary({
 					? `${accuracyPercentage}%`
 					: accuracyPercentage,
 			valueClassName: darkMode ? "text-yellow-400" : "text-yellow-600",
-			icon: Target,
+			icon: BowArrow,
 		},
 		{
 			label: "Grade",

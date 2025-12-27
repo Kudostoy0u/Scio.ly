@@ -9,15 +9,21 @@
 
 import Modal from "@/app/components/Modal";
 import { useTheme } from "@/app/contexts/ThemeContext";
+import { db } from "@/app/utils/db";
 import { useInvalidateTeam, useTeamRosterCacheOnly } from "@/lib/hooks/useTeam";
 import type { TeamFullData, TeamMember } from "@/lib/server/teams/shared";
 import { trpc } from "@/lib/trpc/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { getQueryKey } from "@trpc/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import AssignmentCreator from "./EnhancedAssignmentCreator";
 import ConflictBlock from "./roster/ConflictBlock";
 import RosterHeader from "./roster/RosterHeader";
 import SubteamSelector from "./roster/SubteamSelector";
+import TournamentRosterSelector, {
+	type TournamentRoster,
+} from "./roster/TournamentRosterSelector";
 import {
 	type Conflict,
 	DIVISION_B_GROUPS,
@@ -55,18 +61,71 @@ export default function RosterTabUnified({
 	const { darkMode } = useTheme();
 	const { invalidateTeam, updateTeamData } = useInvalidateTeam();
 	const utils = trpc.useUtils();
+	const queryClient = useQueryClient();
 	const saveRosterMutation = trpc.teams.saveRoster.useMutation();
+	const tournamentRostersQuery = trpc.teams.listTournamentRosters.useQuery(
+		{ teamSlug: team.slug },
+		{ enabled: isCaptain },
+	);
+	const publicTournamentRostersQuery =
+		trpc.teams.listPublicTournamentRosters.useQuery(
+			{ teamSlug: team.slug },
+			{ enabled: !isCaptain },
+		);
+	const createRosterMutation = trpc.teams.createTournamentRoster.useMutation();
+	const renameRosterMutation = trpc.teams.renameTournamentRoster.useMutation();
+	const promoteRosterMutation =
+		trpc.teams.promoteTournamentRoster.useMutation();
+	const archiveRosterMutation =
+		trpc.teams.archiveTournamentRoster.useMutation();
+	const restoreRosterMutation =
+		trpc.teams.restoreTournamentRoster.useMutation();
+	const deleteRosterMutation = trpc.teams.deleteTournamentRoster.useMutation();
+	const setRosterVisibilityMutation =
+		trpc.teams.setTournamentRosterVisibility.useMutation();
 	const updateRemovedEventsMutation =
 		trpc.teams.updateRemovedEvents.useMutation();
 	const restoreRemovedEventsMutation =
 		trpc.teams.restoreRemovedEvents.useMutation();
 	const updateRosterNotesMutation = trpc.teams.updateRosterNotes.useMutation();
+	const [selectedRosterId, setSelectedRosterId] = useState<string | null>(null);
 
-	// Get roster data from shared cache
-	const { data: rosterData, isLoading } = useTeamRosterCacheOnly(
-		team.slug,
-		activeSubteamId || "",
+	const rosterSource = isCaptain
+		? tournamentRostersQuery.data
+		: publicTournamentRostersQuery.data;
+	const activeRosterId = rosterSource?.activeRosterId ?? null;
+	const rosterList: TournamentRoster[] = rosterSource?.rosters ?? [];
+	const archivedRosters: TournamentRoster[] =
+		rosterSource?.archivedRosters ?? [];
+
+	// Get roster data from shared cache (members) or server (captains)
+	const cachedRoster = useTeamRosterCacheOnly(team.slug, activeSubteamId || "");
+	const rosterQuery = trpc.teams.getRoster.useQuery(
+		{
+			teamSlug: team.slug,
+			subteamId: activeSubteamId || undefined,
+			rosterId: selectedRosterId || undefined,
+		},
+		{
+			enabled:
+				!!activeSubteamId &&
+				(isCaptain ||
+					(!!selectedRosterId && selectedRosterId !== activeRosterId)),
+			staleTime: 5 * 60 * 1000,
+			gcTime: 60 * 60 * 1000,
+			refetchOnWindowFocus: false,
+			refetchOnReconnect: false,
+		},
 	);
+
+	const shouldUseCachedRoster =
+		!isCaptain && !!selectedRosterId && selectedRosterId === activeRosterId;
+	const rosterData =
+		isCaptain || !shouldUseCachedRoster ? rosterQuery.data : cachedRoster.data;
+	const isLoading =
+		isCaptain || !shouldUseCachedRoster
+			? rosterQuery.isLoading
+			: cachedRoster.isLoading;
 
 	const [roster, setRoster] = useState<Record<string, string[]>>({});
 	const [isSaving, setIsSaving] = useState(false);
@@ -74,12 +133,19 @@ export default function RosterTabUnified({
 	const rosterRef = useRef<Record<string, string[]>>({});
 	const saveInFlightRef = useRef(false);
 	const saveQueuedRef = useRef(false);
+	const keepRosterSelectionRef = useRef<string | null>(null);
+	const preferredRosterIdRef = useRef<string | null>(null);
+	const preferredSubteamIdRef = useRef<string | null>(null);
 
 	const [showAssignmentCreator, setShowAssignmentCreator] = useState(false);
 	const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
 	const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
 		new Set(),
 	);
+	const [tournamentRostersCollapsed, setTournamentRostersCollapsed] =
+		useState(false);
+	const [subteamsCollapsed, setSubteamsCollapsed] = useState(false);
+	const [prefsLoaded, setPrefsLoaded] = useState(false);
 	const [blockOverrides, setBlockOverrides] = useState<
 		Record<string, { added: string[]; removed: string[] }>
 	>({});
@@ -93,6 +159,24 @@ export default function RosterTabUnified({
 	const [isSavingNotes, setIsSavingNotes] = useState(false);
 	const notesSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+	const rosterIds = useMemo(
+		() => [...rosterList, ...archivedRosters].map((roster) => roster.id),
+		[archivedRosters, rosterList],
+	);
+	const subteamIds = useMemo(
+		() => subteams.map((subteam) => subteam.id),
+		[subteams],
+	);
+	const selectedRoster = useMemo(
+		() =>
+			rosterList.find((roster) => roster.id === selectedRosterId) ??
+			archivedRosters.find((roster) => roster.id === selectedRosterId) ??
+			null,
+		[archivedRosters, rosterList, selectedRosterId],
+	);
+	const isRosterArchived = selectedRoster?.status === "archived";
+	const isRosterEditable = !isRosterArchived;
+
 	// Edit/view mode state with localStorage persistence
 	// Non-captains always see view mode
 	const [isEditMode, setIsEditMode] = useState(() => {
@@ -103,10 +187,14 @@ export default function RosterTabUnified({
 		return saved === "true";
 	});
 
+	const canEditRoster = isCaptain && isRosterEditable;
 	// Ensure non-captains always see view mode
-	const effectiveEditMode = isCaptain ? isEditMode : false;
+	const effectiveEditMode = canEditRoster ? isEditMode : false;
 
 	const toggleEditMode = () => {
+		if (!canEditRoster) {
+			return;
+		}
 		const newMode = !isEditMode;
 		setIsEditMode(newMode);
 		if (isCaptain && typeof window !== "undefined") {
@@ -129,6 +217,106 @@ export default function RosterTabUnified({
 			return { ...group, events };
 		});
 	}, [groups, blockOverrides]);
+
+	const collapsedGroupList = useMemo(
+		() => Array.from(collapsedGroups),
+		[collapsedGroups],
+	);
+
+	useEffect(() => {
+		let isActive = true;
+		const loadPrefs = async () => {
+			try {
+				const prefs = await db.teamRosterPrefs.get(team.slug);
+				if (!isActive || !prefs) {
+					return;
+				}
+				setTournamentRostersCollapsed(!!prefs.tournamentRostersCollapsed);
+				setSubteamsCollapsed(!!prefs.subteamsCollapsed);
+				setCollapsedGroups(new Set(prefs.collapsedConflictGroups ?? []));
+				preferredRosterIdRef.current = prefs.selectedRosterId ?? null;
+				preferredSubteamIdRef.current = prefs.selectedSubteamId ?? null;
+			} finally {
+				if (isActive) {
+					setPrefsLoaded(true);
+				}
+			}
+		};
+		void loadPrefs();
+		return () => {
+			isActive = false;
+		};
+	}, [team.slug]);
+
+	useEffect(() => {
+		if (!prefsLoaded) {
+			return;
+		}
+		if (preferredRosterIdRef.current || preferredSubteamIdRef.current) {
+			return;
+		}
+		const hasRosterSelection = !!selectedRosterId || rosterList.length === 0;
+		const hasSubteamSelection = !!activeSubteamId || subteams.length === 0;
+		if (!hasRosterSelection || !hasSubteamSelection) {
+			return;
+		}
+		void db.teamRosterPrefs.put({
+			teamSlug: team.slug,
+			tournamentRostersCollapsed,
+			subteamsCollapsed,
+			collapsedConflictGroups: collapsedGroupList,
+			selectedRosterId: selectedRosterId ?? null,
+			selectedSubteamId: activeSubteamId ?? null,
+			updatedAt: Date.now(),
+		});
+	}, [
+		collapsedGroupList,
+		activeSubteamId,
+		prefsLoaded,
+		rosterList.length,
+		selectedRosterId,
+		subteamsCollapsed,
+		subteams.length,
+		team.slug,
+		tournamentRostersCollapsed,
+	]);
+
+	const orderedGroups = useMemo(() => {
+		const withIndex = effectiveGroups.map((group, index) => ({
+			group,
+			index,
+			collapsed: collapsedGroups.has(group.label),
+		}));
+		withIndex.sort((a, b) => {
+			if (a.collapsed === b.collapsed) {
+				return a.index - b.index;
+			}
+			return a.collapsed ? 1 : -1;
+		});
+		return withIndex.map((item) => item.group);
+	}, [collapsedGroups, effectiveGroups]);
+
+	const { expandedGroups, collapsedOnlyGroups } = useMemo(() => {
+		const expanded: typeof effectiveGroups = [];
+		const collapsedOnly: typeof effectiveGroups = [];
+		for (const group of effectiveGroups) {
+			const isCollapsed = collapsedGroups.has(group.label);
+			if (isCollapsed) {
+				collapsedOnly.push(group);
+			} else {
+				expanded.push(group);
+			}
+		}
+		return { expandedGroups: expanded, collapsedOnlyGroups: collapsedOnly };
+	}, [collapsedGroups, effectiveGroups]);
+
+	const groupIndexByLabel = useMemo(() => {
+		const next = new Map<string, number>();
+		effectiveGroups.forEach((group, index) => {
+			next.set(group.label, index);
+		});
+		return next;
+	}, [effectiveGroups]);
 
 	useEffect(() => {
 		if (!activeSubteamId) return;
@@ -172,6 +360,115 @@ export default function RosterTabUnified({
 		}
 		setBlockOverrides({});
 	}, [activeSubteamId, subteams]);
+
+	useEffect(() => {
+		if (rosterIds.length === 0 || subteamIds.length === 0) {
+			return;
+		}
+
+		const prefetches: Promise<unknown>[] = [];
+		for (const rosterId of rosterIds) {
+			for (const subteamId of subteamIds) {
+				const queryKey = getQueryKey(
+					trpc.teams.getRoster,
+					{ teamSlug: team.slug, subteamId, rosterId },
+					"query",
+				);
+				const hasCache = !!queryClient.getQueryState(queryKey)?.data;
+				if (!hasCache) {
+					prefetches.push(
+						utils.teams.getRoster.prefetch({
+							teamSlug: team.slug,
+							subteamId,
+							rosterId,
+						}),
+					);
+				}
+			}
+		}
+
+		if (prefetches.length > 0) {
+			void Promise.all(prefetches);
+		}
+	}, [queryClient, rosterIds, subteamIds, team.slug, utils]);
+
+	useEffect(() => {
+		if (!activeRosterId) {
+			return;
+		}
+		const hasSelected =
+			rosterList.some((roster) => roster.id === selectedRosterId) ||
+			archivedRosters.some((roster) => roster.id === selectedRosterId);
+		const keepSelectionId = keepRosterSelectionRef.current;
+		if (keepSelectionId) {
+			const keepExists =
+				rosterList.some((roster) => roster.id === keepSelectionId) ||
+				archivedRosters.some((roster) => roster.id === keepSelectionId);
+			if (keepExists) {
+				setSelectedRosterId(keepSelectionId);
+				keepRosterSelectionRef.current = null;
+			}
+			return;
+		}
+		if (!selectedRosterId || !hasSelected) {
+			setSelectedRosterId(activeRosterId);
+		}
+	}, [activeRosterId, archivedRosters, rosterList, selectedRosterId]);
+
+	useEffect(() => {
+		if (!prefsLoaded) {
+			return;
+		}
+		const preferredRosterId = preferredRosterIdRef.current;
+		if (!preferredRosterId) {
+			return;
+		}
+		const preferredExists =
+			rosterList.some((roster) => roster.id === preferredRosterId) ||
+			archivedRosters.some((roster) => roster.id === preferredRosterId);
+		if (
+			preferredExists &&
+			(!selectedRosterId || selectedRosterId === activeRosterId)
+		) {
+			setSelectedRosterId(preferredRosterId);
+		}
+		preferredRosterIdRef.current = null;
+	}, [
+		activeRosterId,
+		archivedRosters,
+		prefsLoaded,
+		rosterList,
+		selectedRosterId,
+	]);
+
+	useEffect(() => {
+		if (!prefsLoaded || !onSubteamChange) {
+			return;
+		}
+		const preferredSubteamId = preferredSubteamIdRef.current;
+		if (!preferredSubteamId) {
+			return;
+		}
+		if (activeSubteamId === preferredSubteamId) {
+			preferredSubteamIdRef.current = null;
+			return;
+		}
+		const exists = subteams.some(
+			(subteam) => subteam.id === preferredSubteamId,
+		);
+		if (!exists) {
+			preferredSubteamIdRef.current = null;
+			return;
+		}
+		preferredSubteamIdRef.current = null;
+		onSubteamChange(preferredSubteamId);
+	}, [activeSubteamId, onSubteamChange, prefsLoaded, subteams]);
+
+	useEffect(() => {
+		if (isRosterArchived && isEditMode) {
+			setIsEditMode(false);
+		}
+	}, [isEditMode, isRosterArchived]);
 
 	// Update local roster when query data changes
 	useEffect(() => {
@@ -233,6 +530,10 @@ export default function RosterTabUnified({
 		if (!activeSubteamId) {
 			return;
 		}
+		if (isCaptain && isRosterArchived) {
+			toast.error("Archived rosters are read-only.");
+			return;
+		}
 
 		if (saveInFlightRef.current) {
 			saveQueuedRef.current = true;
@@ -257,9 +558,13 @@ export default function RosterTabUnified({
 				}
 			}
 
+			const resolvedRosterId = isCaptain
+				? selectedRosterId || activeRosterId
+				: null;
 			const result = await saveRosterMutation.mutateAsync({
 				teamSlug: team.slug,
 				subteamId: activeSubteamId,
+				rosterId: resolvedRosterId ?? undefined,
 				entries: rosterEntries,
 			});
 
@@ -288,6 +593,26 @@ export default function RosterTabUnified({
 
 			setRoster(normalizedRoster);
 			rosterRef.current = normalizedRoster;
+
+			if (resolvedRosterId) {
+				utils.teams.getRoster.setData(
+					{
+						teamSlug: team.slug,
+						subteamId: activeSubteamId,
+						rosterId: resolvedRosterId,
+					},
+					(prev) => ({
+						roster: normalizedRoster,
+						removedEvents: prev?.removedEvents ?? [],
+					}),
+				);
+			}
+
+			const isActiveRosterSelected =
+				!isCaptain || (!!activeRosterId && selectedRosterId === activeRosterId);
+			if (!isActiveRosterSelected) {
+				return;
+			}
 
 			updateTeamData(team.slug, (prev) => {
 				if (!prev) return prev;
@@ -444,6 +769,127 @@ export default function RosterTabUnified({
 				saveQueuedRef.current = false;
 				void saveRoster();
 			}
+		}
+	};
+
+	const refreshTournamentRosters = async () => {
+		await utils.teams.listTournamentRosters.invalidate({ teamSlug: team.slug });
+	};
+
+	const handleCreateRoster = async () => {
+		try {
+			const created = await createRosterMutation.mutateAsync({
+				teamSlug: team.slug,
+			});
+			await refreshTournamentRosters();
+			if (created?.id) {
+				setSelectedRosterId(created.id);
+			}
+			toast.success("Tournament roster created.");
+		} catch (error) {
+			console.error("[RosterTabUnified] createRoster failed:", error);
+			toast.error("Failed to create tournament roster.");
+		}
+	};
+
+	const handleRenameRoster = async (rosterId: string, name: string) => {
+		const existing = [...rosterList, ...archivedRosters].find(
+			(roster) => roster.id === rosterId,
+		);
+		if (existing && existing.name === name) {
+			return;
+		}
+		try {
+			await renameRosterMutation.mutateAsync({
+				teamSlug: team.slug,
+				rosterId,
+				name,
+			});
+			await refreshTournamentRosters();
+			toast.success("Roster renamed.");
+		} catch (error) {
+			console.error("[RosterTabUnified] renameRoster failed:", error);
+			toast.error("Failed to rename roster.");
+		}
+	};
+
+	const handlePromoteRoster = async (rosterId: string) => {
+		try {
+			await promoteRosterMutation.mutateAsync({
+				teamSlug: team.slug,
+				rosterId,
+			});
+			await refreshTournamentRosters();
+			await invalidateTeam(team.slug);
+			setSelectedRosterId(rosterId);
+			toast.success("Roster is now active.");
+		} catch (error) {
+			console.error("[RosterTabUnified] promoteRoster failed:", error);
+			toast.error("Failed to promote roster.");
+		}
+	};
+
+	const handleArchiveRoster = async (rosterId: string) => {
+		try {
+			keepRosterSelectionRef.current = selectedRosterId;
+			await archiveRosterMutation.mutateAsync({
+				teamSlug: team.slug,
+				rosterId,
+			});
+			await refreshTournamentRosters();
+			toast.success("Roster archived.");
+		} catch (error) {
+			console.error("[RosterTabUnified] archiveRoster failed:", error);
+			toast.error("Failed to archive roster.");
+		}
+	};
+
+	const handleRestoreRoster = async (rosterId: string) => {
+		try {
+			await restoreRosterMutation.mutateAsync({
+				teamSlug: team.slug,
+				rosterId,
+			});
+			await refreshTournamentRosters();
+			setSelectedRosterId(rosterId);
+			toast.success("Roster restored.");
+		} catch (error) {
+			console.error("[RosterTabUnified] restoreRoster failed:", error);
+			toast.error("Failed to restore roster.");
+		}
+	};
+
+	const handleDeleteRoster = async (rosterId: string) => {
+		try {
+			await deleteRosterMutation.mutateAsync({
+				teamSlug: team.slug,
+				rosterId,
+			});
+			await refreshTournamentRosters();
+			toast.success("Roster deleted.");
+		} catch (error) {
+			console.error("[RosterTabUnified] deleteRoster failed:", error);
+			toast.error("Failed to delete roster.");
+		}
+	};
+
+	const handleSetRosterPublic = async (rosterId: string, isPublic: boolean) => {
+		try {
+			const result = await setRosterVisibilityMutation.mutateAsync({
+				teamSlug: team.slug,
+				rosterId,
+				isPublic,
+			});
+			if ((result as { updated?: boolean }).updated === false) {
+				return;
+			}
+			await refreshTournamentRosters();
+			toast.success(
+				isPublic ? "Roster is now public." : "Roster is now hidden.",
+			);
+		} catch (error) {
+			console.error("[RosterTabUnified] setRosterPublic failed:", error);
+			toast.error("Failed to update roster visibility.");
 		}
 	};
 
@@ -629,6 +1075,14 @@ export default function RosterTabUnified({
 		});
 	};
 
+	const toggleTournamentRostersCollapsed = () => {
+		setTournamentRostersCollapsed((prev) => !prev);
+	};
+
+	const toggleSubteamsCollapsed = () => {
+		setSubteamsCollapsed((prev) => !prev);
+	};
+
 	const saveRosterNotes = async (notes: string) => {
 		if (!activeSubteamId) {
 			return;
@@ -706,6 +1160,46 @@ export default function RosterTabUnified({
 		);
 	}
 
+	const tournamentRosterCard = (
+		<TournamentRosterSelector
+			darkMode={darkMode}
+			rosters={rosterList}
+			archivedRosters={archivedRosters}
+			selectedRosterId={selectedRosterId}
+			onSelectRoster={setSelectedRosterId}
+			onCreateRoster={isCaptain ? handleCreateRoster : undefined}
+			onRenameRoster={isCaptain ? handleRenameRoster : undefined}
+			onPromoteRoster={isCaptain ? handlePromoteRoster : undefined}
+			onArchiveRoster={isCaptain ? handleArchiveRoster : undefined}
+			onRestoreRoster={isCaptain ? handleRestoreRoster : undefined}
+			onDeleteRoster={isCaptain ? handleDeleteRoster : undefined}
+			onSetRosterPublic={isCaptain ? handleSetRosterPublic : undefined}
+			readOnly={!isCaptain}
+			showHelperText={isCaptain}
+			showCreate={isCaptain}
+			defaultShowArchived={!isCaptain}
+			showPublicBadge={!isCaptain}
+			collapsed={tournamentRostersCollapsed}
+			onToggleCollapsed={toggleTournamentRostersCollapsed}
+		/>
+	);
+
+	const subteamCard = (
+		<SubteamSelector
+			darkMode={darkMode}
+			subteams={subteams}
+			activeSubteamId={activeSubteamId}
+			isCaptain={isCaptain}
+			onSubteamChange={onSubteamChange}
+			onCreateSubteam={onCreateSubteam ? () => onCreateSubteam() : undefined}
+			onEditSubteam={onEditSubteam}
+			onDeleteSubteam={onDeleteSubteam}
+			onReorderSubteams={onReorderSubteams}
+			collapsed={subteamsCollapsed}
+			onToggleCollapsed={toggleSubteamsCollapsed}
+		/>
+	);
+
 	return (
 		<div className="space-y-6">
 			<RosterHeader
@@ -717,54 +1211,180 @@ export default function RosterTabUnified({
 				onToggleMode={toggleEditMode}
 			/>
 
-			<SubteamSelector
-				darkMode={darkMode}
-				subteams={subteams}
-				activeSubteamId={activeSubteamId}
-				isCaptain={isCaptain}
-				onSubteamChange={onSubteamChange}
-				onCreateSubteam={onCreateSubteam ? () => onCreateSubteam() : undefined}
-				onEditSubteam={onEditSubteam}
-				onDeleteSubteam={onDeleteSubteam}
-				onReorderSubteams={onReorderSubteams}
-			/>
-
-			{isLoading ? (
-				<div className="flex justify-center py-12">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-				</div>
-			) : (
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-					{effectiveGroups.map((group, index) => {
-						const isLastGroup = index === effectiveGroups.length - 1;
-						const overrides = blockOverrides[group.label] ?? {
-							added: [],
-							removed: [],
-						};
-						const showReset =
-							overrides.added.length > 0 || overrides.removed.length > 0;
-						return (
-							<ConflictBlock
-								key={group.label}
-								darkMode={darkMode}
-								group={group}
-								roster={roster}
-								isCaptain={isCaptain}
-								isEditMode={effectiveEditMode}
-								collapsedGroups={collapsedGroups}
-								isLastGroup={isLastGroup}
-								onToggleGroupCollapse={toggleGroupCollapse}
-								onUpdateRoster={updateEventRoster}
-								onCreateAssignment={handleCreateAssignment}
-								onRemoveEvent={handleRemoveEvent}
-								onResetBlock={handleResetBlock}
-								onAddEvent={openAddEventModal}
-								showReset={showReset}
-							/>
-						);
-					})}
+			{!tournamentRostersCollapsed && tournamentRosterCard}
+			{isCaptain && isRosterArchived && (
+				<div
+					className={`rounded-lg border px-4 py-3 text-sm ${
+						darkMode
+							? "border-yellow-600/40 bg-yellow-900/20 text-yellow-200"
+							: "border-yellow-300 bg-yellow-50 text-yellow-800"
+					}`}
+				>
+					Archived rosters are read-only. Restore to inactive to edit.
 				</div>
 			)}
+
+			{!subteamsCollapsed && subteamCard}
+
+			{(() => {
+				const collapsedCount = collapsedGroups.size;
+				const anyCollapsed = collapsedCount > 0;
+				const evenCollapsed = anyCollapsed && collapsedCount % 2 === 0;
+				const isBlockSevenCollapsed = collapsedGroups.has("Conflict Block 7");
+				const collapsedIndices = Array.from(collapsedGroups)
+					.map((label) => groupIndexByLabel.get(label))
+					.filter((index): index is number => typeof index === "number");
+				const minCollapsedIndex =
+					collapsedIndices.length > 0 ? Math.min(...collapsedIndices) : null;
+				const inlineRow =
+					minCollapsedIndex === null
+						? null
+						: Math.floor(minCollapsedIndex / 2) + 1;
+				const inlineCol =
+					minCollapsedIndex === null ? null : (minCollapsedIndex % 2) + 1;
+				const inlinePlacementKey =
+					inlineRow && inlineCol ? `${inlineRow}-${inlineCol}` : null;
+				const inlinePlacementClasses: Record<string, string> = {
+					"1-1": "lg:col-start-1 lg:row-start-1",
+					"1-2": "lg:col-start-2 lg:row-start-1",
+					"2-1": "lg:col-start-1 lg:row-start-2",
+					"2-2": "lg:col-start-2 lg:row-start-2",
+					"3-1": "lg:col-start-1 lg:row-start-3",
+					"3-2": "lg:col-start-2 lg:row-start-3",
+					"4-1": "lg:col-start-1 lg:row-start-4",
+					"4-2": "lg:col-start-2 lg:row-start-4",
+				};
+				const groupsToRender = evenCollapsed ? expandedGroups : orderedGroups;
+				const blockSevenHalfWidth =
+					anyCollapsed && (!evenCollapsed || isBlockSevenCollapsed);
+				const showInlineCollapsed =
+					evenCollapsed &&
+					isBlockSevenCollapsed &&
+					collapsedOnlyGroups.length > 0 &&
+					inlinePlacementKey !== null;
+				const inlinePlacementClass = inlinePlacementKey
+					? (inlinePlacementClasses[inlinePlacementKey] ?? "")
+					: "";
+				const inlineCollapsedGroups = showInlineCollapsed
+					? collapsedOnlyGroups.slice(0, 2)
+					: [];
+				const remainingCollapsedGroups = showInlineCollapsed
+					? collapsedOnlyGroups.slice(2)
+					: collapsedOnlyGroups;
+
+				return isLoading ? (
+					<div className="flex justify-center py-12">
+						<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+					</div>
+				) : (
+					<>
+						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+							{showInlineCollapsed && (
+								<div className={`space-y-6 ${inlinePlacementClass}`}>
+									{inlineCollapsedGroups.map((group) => {
+										const isBlockSeven = group.label === "Conflict Block 7";
+										const overrides = blockOverrides[group.label] ?? {
+											added: [],
+											removed: [],
+										};
+										const showReset =
+											overrides.added.length > 0 ||
+											overrides.removed.length > 0;
+										return (
+											<ConflictBlock
+												key={group.label}
+												darkMode={darkMode}
+												group={group}
+												roster={roster}
+												isCaptain={isCaptain}
+												isEditMode={effectiveEditMode}
+												collapsedGroups={collapsedGroups}
+												isBlockSeven={isBlockSeven}
+												blockSevenHalfWidth={blockSevenHalfWidth}
+												onToggleGroupCollapse={toggleGroupCollapse}
+												onUpdateRoster={updateEventRoster}
+												onCreateAssignment={handleCreateAssignment}
+												onRemoveEvent={handleRemoveEvent}
+												onResetBlock={handleResetBlock}
+												onAddEvent={openAddEventModal}
+												showReset={showReset}
+											/>
+										);
+									})}
+								</div>
+							)}
+							{groupsToRender.map((group) => {
+								const isBlockSeven = group.label === "Conflict Block 7";
+								const overrides = blockOverrides[group.label] ?? {
+									added: [],
+									removed: [],
+								};
+								const showReset =
+									overrides.added.length > 0 || overrides.removed.length > 0;
+								return (
+									<ConflictBlock
+										key={group.label}
+										darkMode={darkMode}
+										group={group}
+										roster={roster}
+										isCaptain={isCaptain}
+										isEditMode={effectiveEditMode}
+										collapsedGroups={collapsedGroups}
+										isBlockSeven={isBlockSeven}
+										blockSevenHalfWidth={blockSevenHalfWidth}
+										onToggleGroupCollapse={toggleGroupCollapse}
+										onUpdateRoster={updateEventRoster}
+										onCreateAssignment={handleCreateAssignment}
+										onRemoveEvent={handleRemoveEvent}
+										onResetBlock={handleResetBlock}
+										onAddEvent={openAddEventModal}
+										showReset={showReset}
+									/>
+								);
+							})}
+						</div>
+						{(() => {
+							if (!evenCollapsed || remainingCollapsedGroups.length === 0) {
+								return null;
+							}
+							return (
+								<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+									{remainingCollapsedGroups.map((group) => {
+										const isBlockSeven = group.label === "Conflict Block 7";
+										const overrides = blockOverrides[group.label] ?? {
+											added: [],
+											removed: [],
+										};
+										const showReset =
+											overrides.added.length > 0 ||
+											overrides.removed.length > 0;
+										return (
+											<ConflictBlock
+												key={group.label}
+												darkMode={darkMode}
+												group={group}
+												roster={roster}
+												isCaptain={isCaptain}
+												isEditMode={effectiveEditMode}
+												collapsedGroups={collapsedGroups}
+												isBlockSeven={isBlockSeven}
+												blockSevenHalfWidth={blockSevenHalfWidth}
+												onToggleGroupCollapse={toggleGroupCollapse}
+												onUpdateRoster={updateEventRoster}
+												onCreateAssignment={handleCreateAssignment}
+												onRemoveEvent={handleRemoveEvent}
+												onResetBlock={handleResetBlock}
+												onAddEvent={openAddEventModal}
+												showReset={showReset}
+											/>
+										);
+									})}
+								</div>
+							);
+						})()}
+					</>
+				);
+			})()}
 
 			{/* Additional stuff section */}
 			{!isLoading && (
@@ -810,6 +1430,13 @@ export default function RosterTabUnified({
 							Saving...
 						</div>
 					)}
+				</div>
+			)}
+
+			{(tournamentRostersCollapsed || subteamsCollapsed) && (
+				<div className="space-y-6">
+					{tournamentRostersCollapsed && tournamentRosterCard}
+					{subteamsCollapsed && subteamCard}
 				</div>
 			)}
 

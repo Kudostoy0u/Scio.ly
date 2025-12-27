@@ -8,6 +8,7 @@ import {
 } from "@/lib/db/schema";
 import { and, eq, ilike, isNull } from "drizzle-orm";
 import { touchTeamCacheManifest } from "./cache-manifest";
+import { ensureActiveTournamentRoster } from "./roster";
 import { assertCaptainAccess, bumpTeamVersion } from "./shared";
 
 export async function createLinkInvitation(input: {
@@ -160,6 +161,11 @@ export async function acceptLinkInvitation(
 				userProfile?.email ||
 				`User ${userId.slice(0, 8)}`);
 
+	const activeRoster = await ensureActiveTournamentRoster(
+		linkInvite.teamId,
+		userId,
+	);
+
 	await dbPg.transaction(async (tx) => {
 		await tx
 			.update(teamRoster)
@@ -171,6 +177,7 @@ export async function acceptLinkInvitation(
 			.where(
 				and(
 					eq(teamRoster.teamId, linkInvite.teamId),
+					eq(teamRoster.tournamentRosterId, activeRoster.id),
 					eq(teamRoster.displayName, linkInvite.rosterDisplayName),
 					isNull(teamRoster.userId),
 				),

@@ -13,7 +13,8 @@ interface ConflictBlockProps {
 	isCaptain: boolean;
 	isEditMode: boolean;
 	collapsedGroups: Set<string>;
-	isLastGroup: boolean;
+	isBlockSeven: boolean;
+	blockSevenHalfWidth: boolean;
 	onToggleGroupCollapse: (groupLabel: string) => void;
 	onUpdateRoster: (eventName: string, index: number, value: string) => void;
 	onCreateAssignment: (eventName: string) => void;
@@ -30,7 +31,8 @@ export default function ConflictBlock({
 	isCaptain,
 	isEditMode,
 	collapsedGroups,
-	isLastGroup,
+	isBlockSeven,
+	blockSevenHalfWidth,
 	onToggleGroupCollapse,
 	onUpdateRoster,
 	onCreateAssignment,
@@ -43,12 +45,13 @@ export default function ConflictBlock({
 
 	const colors = getGroupColors(darkMode, group.colorKey);
 	const isCollapsed = collapsedGroups.has(group.label);
+	const isCompact = isCollapsed && isBlockSeven;
+	const isHalfWidth = isBlockSeven && blockSevenHalfWidth;
+	const inputColumns = isHalfWidth ? 2 : 3;
+	const showContent = !isCollapsed;
 
 	const handleGroupClick = () => {
-		// Only make collapsible on mobile
-		if (window.innerWidth < 768) {
-			onToggleGroupCollapse(group.label);
-		}
+		onToggleGroupCollapse(group.label);
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -58,22 +61,24 @@ export default function ConflictBlock({
 		}
 	};
 
-	if (isLastGroup) {
+	if (isBlockSeven) {
 		return (
 			<div
-				className={`rounded-lg border-2 p-4 lg:col-span-2 ${colors.bg} ${colors.border}`}
+				className={`rounded-lg border-2 p-4 ${
+					blockSevenHalfWidth ? "" : "lg:col-span-2"
+				} ${colors.bg} ${colors.border}`}
 			>
 				<div className="flex items-center justify-between mb-4">
 					<button
 						type="button"
-						className="flex items-center gap-2 cursor-pointer md:cursor-default text-left"
+						className="flex items-center gap-2 cursor-pointer text-left"
 						onClick={handleGroupClick}
 						onKeyDown={handleKeyDown}
 					>
 						<h3 className={`text-lg font-semibold ${colors.text}`}>
 							{group.label}
 						</h3>
-						<div className="md:hidden">
+						<div>
 							{isCollapsed ? (
 								<ChevronRight className="w-5 h-5 text-gray-400" />
 							) : (
@@ -116,50 +121,56 @@ export default function ConflictBlock({
 						)}
 					</div>
 				</div>
-				<div
-					className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${isCollapsed ? "hidden md:grid" : ""}`}
-				>
-					<div className="space-y-3">
-						{group.events
-							.slice(0, Math.ceil(group.events.length / 2))
-							.map((evt) => (
-								<EventInput
-									key={evt}
-									darkMode={darkMode}
-									eventName={evt}
-									roster={roster}
-									isCaptain={isCaptain}
-									isEditMode={isEditMode}
-									colorKey={group.colorKey}
-									colors={colors}
-									onUpdateRoster={onUpdateRoster}
-									onCreateAssignment={onCreateAssignment}
-									onRemoveEvent={onRemoveEvent}
-									conflictBlock={group.label}
-								/>
-							))}
+				{showContent && (
+					<div
+						className={`grid grid-cols-1 lg:grid-cols-2 gap-4 ${
+							isCompact ? "opacity-95" : ""
+						}`}
+					>
+						<div className={isCompact ? "space-y-2" : "space-y-3"}>
+							{group.events
+								.slice(0, Math.ceil(group.events.length / 2))
+								.map((evt) => (
+									<EventInput
+										key={evt}
+										darkMode={darkMode}
+										eventName={evt}
+										roster={roster}
+										isCaptain={isCaptain}
+										isEditMode={isEditMode}
+										colorKey={group.colorKey}
+										colors={colors}
+										onUpdateRoster={onUpdateRoster}
+										onCreateAssignment={onCreateAssignment}
+										onRemoveEvent={onRemoveEvent}
+										conflictBlock={group.label}
+										inputColumns={inputColumns}
+									/>
+								))}
+						</div>
+						<div className={isCompact ? "space-y-2" : "space-y-3"}>
+							{group.events
+								.slice(Math.ceil(group.events.length / 2))
+								.map((evt) => (
+									<EventInput
+										key={evt}
+										darkMode={darkMode}
+										eventName={evt}
+										roster={roster}
+										isCaptain={isCaptain}
+										isEditMode={isEditMode}
+										colorKey={group.colorKey}
+										colors={colors}
+										onUpdateRoster={onUpdateRoster}
+										onCreateAssignment={onCreateAssignment}
+										onRemoveEvent={onRemoveEvent}
+										conflictBlock={group.label}
+										inputColumns={inputColumns}
+									/>
+								))}
+						</div>
 					</div>
-					<div className="space-y-3">
-						{group.events
-							.slice(Math.ceil(group.events.length / 2))
-							.map((evt) => (
-								<EventInput
-									key={evt}
-									darkMode={darkMode}
-									eventName={evt}
-									roster={roster}
-									isCaptain={isCaptain}
-									isEditMode={isEditMode}
-									colorKey={group.colorKey}
-									colors={colors}
-									onUpdateRoster={onUpdateRoster}
-									onCreateAssignment={onCreateAssignment}
-									onRemoveEvent={onRemoveEvent}
-									conflictBlock={group.label}
-								/>
-							))}
-					</div>
-				</div>
+				)}
 			</div>
 		);
 	}
@@ -169,14 +180,14 @@ export default function ConflictBlock({
 			<div className="flex items-center justify-between mb-4">
 				<button
 					type="button"
-					className="flex items-center gap-2 cursor-pointer md:cursor-default text-left"
+					className="flex items-center gap-2 cursor-pointer text-left"
 					onClick={handleGroupClick}
 					onKeyDown={handleKeyDown}
 				>
 					<h3 className={`text-lg font-semibold ${colors.text}`}>
 						{group.label}
 					</h3>
-					<div className="md:hidden">
+					<div>
 						{isCollapsed ? (
 							<ChevronRight className="w-5 h-5 text-gray-400" />
 						) : (
@@ -219,24 +230,27 @@ export default function ConflictBlock({
 					)}
 				</div>
 			</div>
-			<div className={`space-y-3 ${isCollapsed ? "hidden md:block" : ""}`}>
-				{group.events.map((evt) => (
-					<EventInput
-						key={evt}
-						darkMode={darkMode}
-						eventName={evt}
-						roster={roster}
-						isCaptain={isCaptain}
-						isEditMode={isEditMode}
-						colorKey={group.colorKey}
-						colors={colors}
-						onUpdateRoster={onUpdateRoster}
-						onCreateAssignment={onCreateAssignment}
-						onRemoveEvent={onRemoveEvent}
-						conflictBlock={group.label}
-					/>
-				))}
-			</div>
+			{showContent && (
+				<div className="space-y-3">
+					{group.events.map((evt) => (
+						<EventInput
+							key={evt}
+							darkMode={darkMode}
+							eventName={evt}
+							roster={roster}
+							isCaptain={isCaptain}
+							isEditMode={isEditMode}
+							colorKey={group.colorKey}
+							colors={colors}
+							onUpdateRoster={onUpdateRoster}
+							onCreateAssignment={onCreateAssignment}
+							onRemoveEvent={onRemoveEvent}
+							conflictBlock={group.label}
+							inputColumns={inputColumns}
+						/>
+					))}
+				</div>
+			)}
 		</div>
 	);
 }

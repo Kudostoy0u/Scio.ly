@@ -3,6 +3,7 @@ import {
 	teamMemberships,
 	teamRoster,
 	teamSubteams,
+	teamTournamentRosters,
 	teams,
 	users,
 } from "@/lib/db/schema";
@@ -320,6 +321,7 @@ export async function createTeamWithDefaultSubteam(input: {
 		const teamId = crypto.randomUUID();
 		const subteamId = crypto.randomUUID();
 		const membershipId = crypto.randomUUID();
+		const tournamentRosterId = crypto.randomUUID();
 		const memberCode = generateJoinCode(8);
 		const captainCode = generateJoinCode(10);
 
@@ -360,6 +362,14 @@ export async function createTeamWithDefaultSubteam(input: {
 				displayOrder: 0,
 				createdBy: input.createdBy,
 				settings: {},
+			});
+
+			await tx.insert(teamTournamentRosters).values({
+				id: tournamentRosterId,
+				teamId,
+				name: "Tournament 1",
+				status: "active",
+				createdBy: input.createdBy,
 			});
 
 			logger.dev.db("INSERT", "team_memberships", "Creating admin membership", [

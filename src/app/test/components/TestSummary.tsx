@@ -2,7 +2,7 @@
 import SummaryGrid, { type SummaryItem } from "@/app/components/SummaryGrid";
 import type { Question } from "@/app/utils/geminiService";
 import { getLetterGradeFromPercentage } from "@/lib/utils/assessments/grade";
-import { CheckCircle, MessageCircle, Target, Trophy } from "lucide-react";
+import { BowArrow, CheckCircle, MessageCircle, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface TestSummaryProps {
@@ -25,7 +25,7 @@ function NonCompactSummary({
 	darkMode: boolean;
 }) {
 	return (
-		<div className="sticky top-4 z-10 w-full max-w-3xl mx-auto mb-6">
+		<div className="sticky top-4 z-10 w-[90%] md:w-full max-w-3xl mx-auto mb-6">
 			<div
 				className={`rounded-lg shadow-lg p-4 md:p-5 ${darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"} border ${darkMode ? "border-gray-600" : "border-gray-200"}`}
 			>
@@ -96,7 +96,7 @@ function MobileCompactSummary({
 	darkMode: boolean;
 }) {
 	return (
-		<div className="fixed top-4 left-1/2 transform -translate-x-1/2 w-4/5 z-50">
+		<div className="fixed top-4 left-1/2 transform -translate-x-1/2 w-[90%] z-50">
 			<div
 				className={`rounded-lg shadow-lg p-3 md:p-5 ${darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"} border ${darkMode ? "border-gray-600" : "border-gray-200"}`}
 			>
@@ -141,9 +141,12 @@ export default function TestSummary({
 	const accuracyPercentage =
 		totalQuestions > 0
 			? Math.round((correctQuestions / totalQuestions) * 100)
-			: 0;
+			: "N/A";
 
-	const grade = getLetterGradeFromPercentage(accuracyPercentage);
+	const grade =
+		totalQuestions > 0
+			? getLetterGradeFromPercentage(accuracyPercentage)
+			: "N/A";
 
 	const allSubtopics = data.flatMap((question) => {
 		if (question.subtopics && Array.isArray(question.subtopics)) {
@@ -191,9 +194,12 @@ export default function TestSummary({
 		},
 		{
 			label: "Accuracy",
-			value: `${accuracyPercentage}%`,
+			value:
+				typeof accuracyPercentage === "number"
+					? `${accuracyPercentage}%`
+					: accuracyPercentage,
 			valueClassName: darkMode ? "text-yellow-400" : "text-yellow-600",
-			icon: Target,
+			icon: BowArrow,
 		},
 		{
 			label: "Grade",

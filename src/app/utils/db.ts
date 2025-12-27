@@ -34,6 +34,26 @@ export interface AssignmentTimeEntry {
 }
 
 /**
+ * Team roster preferences stored locally.
+ */
+export interface TeamRosterPrefs {
+	/** Team slug */
+	teamSlug: string;
+	/** Whether tournament rosters are collapsed */
+	tournamentRostersCollapsed: boolean;
+	/** Whether subteams are collapsed */
+	subteamsCollapsed: boolean;
+	/** Collapsed conflict block labels */
+	collapsedConflictGroups: string[];
+	/** Last selected tournament roster */
+	selectedRosterId?: string | null;
+	/** Last selected subteam */
+	selectedSubteamId?: string | null;
+	/** Timestamp when prefs were last updated */
+	updatedAt: number;
+}
+
+/**
  * ScioDatabase class for offline question storage
  * Extends Dexie to provide offline question access
  */
@@ -42,6 +62,8 @@ export class ScioDatabase extends Dexie {
 	questions!: Table<QuestionEntry, string>;
 	/** Assignment time table for session storage */
 	assignmentTime!: Table<AssignmentTimeEntry, string>;
+	/** Team roster preferences */
+	teamRosterPrefs!: Table<TeamRosterPrefs, string>;
 
 	/**
 	 * Initialize the offline database
@@ -59,6 +81,20 @@ export class ScioDatabase extends Dexie {
 		this.version(2).stores({
 			questions: "&eventSlug, updatedAt",
 			assignmentTime: "&assignmentId, updatedAt",
+		});
+
+		// Add team roster preferences in version 3
+		this.version(3).stores({
+			questions: "&eventSlug, updatedAt",
+			assignmentTime: "&assignmentId, updatedAt",
+			teamRosterPrefs: "&teamSlug, updatedAt",
+		});
+
+		// Add roster selection fields in version 4
+		this.version(4).stores({
+			questions: "&eventSlug, updatedAt",
+			assignmentTime: "&assignmentId, updatedAt",
+			teamRosterPrefs: "&teamSlug, updatedAt",
 		});
 	}
 }

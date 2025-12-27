@@ -1,14 +1,482 @@
 import { dbPg } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { teamMemberships, teamRoster } from "@/lib/db/schema";
+import {
+	teamMemberships,
+	teamRoster,
+	teamTournamentRosters,
+} from "@/lib/db/schema";
 import logger from "@/lib/utils/logging/logger";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { touchTeamCacheManifest } from "./cache-manifest";
 import { getMembershipForUser } from "./shared";
+
+type TournamentRosterStatus = "active" | "inactive" | "archived";
+
+const isCaptainRole = (role?: string | null) =>
+	role === "captain" || role === "admin";
+
+async function getNextTournamentRosterName(teamId: string): Promise<string> {
+	const existing = await dbPg
+		.select({ name: teamTournamentRosters.name })
+		.from(teamTournamentRosters)
+		.where(eq(teamTournamentRosters.teamId, teamId));
+
+	let maxNumber = 0;
+	for (const row of existing) {
+		const match = row.name.match(/Tournament\s+(\d+)/i);
+		const matchNumber = match?.[1];
+		if (matchNumber) {
+			const parsed = Number.parseInt(matchNumber, 10);
+			if (!Number.isNaN(parsed)) {
+				maxNumber = Math.max(maxNumber, parsed);
+			}
+		}
+	}
+
+	return `Tournament ${maxNumber + 1}`;
+}
+
+async function hydrateRosterEntriesForTeam(teamId: string, rosterId: string) {
+	await dbPg
+		.update(teamRoster)
+		.set({ tournamentRosterId: rosterId })
+		.where(
+			and(eq(teamRoster.teamId, teamId), isNull(teamRoster.tournamentRosterId)),
+		);
+}
+
+export async function ensureActiveTournamentRoster(
+	teamId: string,
+	actorId: string,
+) {
+	const [active] = await dbPg
+		.select({
+			id: teamTournamentRosters.id,
+			name: teamTournamentRosters.name,
+			status: teamTournamentRosters.status,
+		})
+		.from(teamTournamentRosters)
+		.where(
+			and(
+				eq(teamTournamentRosters.teamId, teamId),
+				eq(teamTournamentRosters.status, "active"),
+			),
+		)
+		.limit(1);
+
+	if (active) {
+		await hydrateRosterEntriesForTeam(teamId, active.id);
+		return active;
+	}
+
+	const rosterId = crypto.randomUUID();
+	const name = await getNextTournamentRosterName(teamId);
+	const now = new Date().toISOString();
+	await dbPg.insert(teamTournamentRosters).values({
+		id: rosterId,
+		teamId,
+		name,
+		status: "active",
+		createdBy: actorId,
+		createdAt: now,
+		updatedAt: now,
+	});
+
+	await hydrateRosterEntriesForTeam(teamId, rosterId);
+
+	return { id: rosterId, name, status: "active" as TournamentRosterStatus };
+}
+
+async function getRosterForTeam(
+	teamId: string,
+	rosterId: string,
+): Promise<{
+	id: string;
+	status: TournamentRosterStatus;
+	name: string;
+}> {
+	const [row] = await dbPg
+		.select({
+			id: teamTournamentRosters.id,
+			status: teamTournamentRosters.status,
+			name: teamTournamentRosters.name,
+		})
+		.from(teamTournamentRosters)
+		.where(
+			and(
+				eq(teamTournamentRosters.teamId, teamId),
+				eq(teamTournamentRosters.id, rosterId),
+			),
+		)
+		.limit(1);
+
+	if (!row) {
+		throw new Error("Tournament roster not found");
+	}
+
+	return {
+		id: row.id,
+		status: row.status as TournamentRosterStatus,
+		name: row.name,
+	};
+}
+
+export async function listTournamentRosters(teamId: string, actorId: string) {
+	const membership = await getMembershipForUser(teamId, actorId);
+	if (!membership || !isCaptainRole(membership.role)) {
+		throw new Error("Only captains can view tournament rosters");
+	}
+
+	const active = await ensureActiveTournamentRoster(teamId, actorId);
+	const rows = await dbPg
+		.select({
+			id: teamTournamentRosters.id,
+			name: teamTournamentRosters.name,
+			status: teamTournamentRosters.status,
+			isPublic: teamTournamentRosters.isPublic,
+			createdAt: teamTournamentRosters.createdAt,
+			updatedAt: teamTournamentRosters.updatedAt,
+			archivedAt: teamTournamentRosters.archivedAt,
+		})
+		.from(teamTournamentRosters)
+		.where(eq(teamTournamentRosters.teamId, teamId))
+		.orderBy(teamTournamentRosters.createdAt);
+
+	const rosters = rows
+		.filter((row) => row.status !== "archived")
+		.map((row) => ({
+			...row,
+			status: row.status as TournamentRosterStatus,
+			isPublic: Boolean(row.isPublic),
+		}));
+	const archivedRosters = rows
+		.filter((row) => row.status === "archived")
+		.map((row) => ({
+			...row,
+			status: row.status as TournamentRosterStatus,
+			isPublic: Boolean(row.isPublic),
+		}));
+
+	return { activeRosterId: active.id, rosters, archivedRosters };
+}
+
+export async function listPublicTournamentRosters(
+	teamId: string,
+	actorId: string,
+) {
+	const membership = await getMembershipForUser(teamId, actorId);
+	if (!membership) {
+		throw new Error("Access denied");
+	}
+
+	const active = await ensureActiveTournamentRoster(teamId, actorId);
+	const rows = await dbPg
+		.select({
+			id: teamTournamentRosters.id,
+			name: teamTournamentRosters.name,
+			status: teamTournamentRosters.status,
+			isPublic: teamTournamentRosters.isPublic,
+			createdAt: teamTournamentRosters.createdAt,
+			updatedAt: teamTournamentRosters.updatedAt,
+			archivedAt: teamTournamentRosters.archivedAt,
+		})
+		.from(teamTournamentRosters)
+		.where(
+			and(
+				eq(teamTournamentRosters.teamId, teamId),
+				or(
+					eq(teamTournamentRosters.status, "active"),
+					and(
+						eq(teamTournamentRosters.status, "archived"),
+						eq(teamTournamentRosters.isPublic, true),
+					),
+				),
+			),
+		)
+		.orderBy(teamTournamentRosters.createdAt);
+
+	const rosters = rows
+		.filter((row) => row.status !== "archived")
+		.map((row) => ({
+			...row,
+			status: row.status as TournamentRosterStatus,
+			isPublic: Boolean(row.isPublic),
+		}));
+	const archivedRosters = rows
+		.filter((row) => row.status === "archived")
+		.map((row) => ({
+			...row,
+			status: row.status as TournamentRosterStatus,
+			isPublic: Boolean(row.isPublic),
+		}));
+
+	return { activeRosterId: active.id, rosters, archivedRosters };
+}
+
+export async function createTournamentRoster(
+	teamId: string,
+	actorId: string,
+	name?: string | null,
+) {
+	const membership = await getMembershipForUser(teamId, actorId);
+	if (!membership || !isCaptainRole(membership.role)) {
+		throw new Error("Only captains can create tournament rosters");
+	}
+
+	await ensureActiveTournamentRoster(teamId, actorId);
+
+	const rosterId = crypto.randomUUID();
+	const rosterName =
+		typeof name === "string" && name.trim()
+			? name.trim()
+			: await getNextTournamentRosterName(teamId);
+	const now = new Date().toISOString();
+
+	await dbPg.insert(teamTournamentRosters).values({
+		id: rosterId,
+		teamId,
+		name: rosterName,
+		status: "inactive",
+		isPublic: false,
+		createdBy: actorId,
+		createdAt: now,
+		updatedAt: now,
+	});
+
+	await touchTeamCacheManifest(teamId, {
+		tournamentRosters: true,
+		publicTournamentRosters: true,
+	});
+
+	return {
+		id: rosterId,
+		name: rosterName,
+		status: "inactive" as TournamentRosterStatus,
+		isPublic: false,
+		createdAt: now,
+		updatedAt: now,
+		archivedAt: null,
+	};
+}
+
+export async function setTournamentRosterVisibility(
+	teamId: string,
+	actorId: string,
+	rosterId: string,
+	isPublic: boolean,
+) {
+	const membership = await getMembershipForUser(teamId, actorId);
+	if (!membership || !isCaptainRole(membership.role)) {
+		throw new Error("Only captains can update roster visibility");
+	}
+
+	const [existing] = await dbPg
+		.select({
+			id: teamTournamentRosters.id,
+			status: teamTournamentRosters.status,
+			isPublic: teamTournamentRosters.isPublic,
+		})
+		.from(teamTournamentRosters)
+		.where(
+			and(
+				eq(teamTournamentRosters.teamId, teamId),
+				eq(teamTournamentRosters.id, rosterId),
+			),
+		)
+		.limit(1);
+
+	if (!existing) {
+		throw new Error("Tournament roster not found");
+	}
+
+	if (existing.status !== "archived") {
+		throw new Error("Only archived rosters can be made public");
+	}
+
+	if (Boolean(existing.isPublic) === isPublic) {
+		return { ok: true, updated: false };
+	}
+
+	await dbPg
+		.update(teamTournamentRosters)
+		.set({
+			isPublic,
+			updatedAt: new Date().toISOString(),
+		})
+		.where(eq(teamTournamentRosters.id, rosterId));
+
+	await touchTeamCacheManifest(teamId, {
+		tournamentRosters: true,
+		publicTournamentRosters: true,
+	});
+
+	return { ok: true, updated: true };
+}
+
+export async function renameTournamentRoster(
+	teamId: string,
+	actorId: string,
+	rosterId: string,
+	name: string,
+) {
+	const membership = await getMembershipForUser(teamId, actorId);
+	if (!membership || !isCaptainRole(membership.role)) {
+		throw new Error("Only captains can rename tournament rosters");
+	}
+
+	const trimmed = name.trim();
+	if (!trimmed) {
+		throw new Error("Roster name cannot be empty");
+	}
+
+	await getRosterForTeam(teamId, rosterId);
+
+	await dbPg
+		.update(teamTournamentRosters)
+		.set({ name: trimmed, updatedAt: new Date().toISOString() })
+		.where(eq(teamTournamentRosters.id, rosterId));
+
+	await touchTeamCacheManifest(teamId, {
+		tournamentRosters: true,
+		publicTournamentRosters: true,
+	});
+
+	return { ok: true };
+}
+
+export async function promoteTournamentRosterToActive(
+	teamId: string,
+	actorId: string,
+	rosterId: string,
+) {
+	const membership = await getMembershipForUser(teamId, actorId);
+	if (!membership || !isCaptainRole(membership.role)) {
+		throw new Error("Only captains can promote tournament rosters");
+	}
+
+	const roster = await getRosterForTeam(teamId, rosterId);
+	if (roster.status === "archived") {
+		throw new Error("Archived rosters must be restored before activation");
+	}
+
+	const now = new Date().toISOString();
+
+	await dbPg.transaction(async (tx) => {
+		await tx
+			.update(teamTournamentRosters)
+			.set({ status: "inactive", updatedAt: now })
+			.where(
+				and(
+					eq(teamTournamentRosters.teamId, teamId),
+					eq(teamTournamentRosters.status, "active"),
+				),
+			);
+
+		await tx
+			.update(teamTournamentRosters)
+			.set({ status: "active", updatedAt: now, archivedAt: null })
+			.where(eq(teamTournamentRosters.id, rosterId));
+	});
+
+	await touchTeamCacheManifest(teamId, {
+		roster: true,
+		full: true,
+		tournamentRosters: true,
+		publicTournamentRosters: true,
+	});
+	return { ok: true };
+}
+
+export async function archiveTournamentRoster(
+	teamId: string,
+	actorId: string,
+	rosterId: string,
+) {
+	const membership = await getMembershipForUser(teamId, actorId);
+	if (!membership || !isCaptainRole(membership.role)) {
+		throw new Error("Only captains can archive tournament rosters");
+	}
+
+	const roster = await getRosterForTeam(teamId, rosterId);
+	if (roster.status === "active") {
+		throw new Error("Active rosters must be demoted before archiving");
+	}
+
+	await dbPg
+		.update(teamTournamentRosters)
+		.set({
+			status: "archived",
+			archivedAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		})
+		.where(eq(teamTournamentRosters.id, rosterId));
+
+	await touchTeamCacheManifest(teamId, {
+		tournamentRosters: true,
+		publicTournamentRosters: true,
+	});
+
+	return { ok: true };
+}
+
+export async function restoreTournamentRoster(
+	teamId: string,
+	actorId: string,
+	rosterId: string,
+) {
+	const membership = await getMembershipForUser(teamId, actorId);
+	if (!membership || !isCaptainRole(membership.role)) {
+		throw new Error("Only captains can restore tournament rosters");
+	}
+
+	await dbPg
+		.update(teamTournamentRosters)
+		.set({
+			status: "inactive",
+			archivedAt: null,
+			updatedAt: new Date().toISOString(),
+		})
+		.where(eq(teamTournamentRosters.id, rosterId));
+
+	await touchTeamCacheManifest(teamId, {
+		tournamentRosters: true,
+		publicTournamentRosters: true,
+	});
+
+	return { ok: true };
+}
+
+export async function deleteTournamentRoster(
+	teamId: string,
+	actorId: string,
+	rosterId: string,
+) {
+	const membership = await getMembershipForUser(teamId, actorId);
+	if (!membership || !isCaptainRole(membership.role)) {
+		throw new Error("Only captains can delete tournament rosters");
+	}
+
+	const roster = await getRosterForTeam(teamId, rosterId);
+	if (roster.status !== "archived") {
+		throw new Error("Only archived rosters can be deleted");
+	}
+
+	await dbPg
+		.delete(teamTournamentRosters)
+		.where(eq(teamTournamentRosters.id, rosterId));
+
+	await touchTeamCacheManifest(teamId, {
+		tournamentRosters: true,
+		publicTournamentRosters: true,
+	});
+
+	return { ok: true };
+}
 
 export async function replaceRosterEntries(
 	teamId: string,
 	subteamId: string,
+	rosterId: string | null,
 	entries: Array<{
 		eventName: string;
 		slotIndex: number;
@@ -23,6 +491,13 @@ export async function replaceRosterEntries(
 		(membership.role !== "captain" && membership.role !== "admin")
 	) {
 		throw new Error("Only captains can edit roster");
+	}
+
+	const resolvedRosterId =
+		rosterId ?? (await ensureActiveTournamentRoster(teamId, actorId)).id;
+	const roster = await getRosterForTeam(teamId, resolvedRosterId);
+	if (roster.status === "archived") {
+		throw new Error("Archived rosters cannot be edited");
 	}
 
 	// Map display names to users already on the team so new entries link instead of duplicating
@@ -67,12 +542,18 @@ export async function replaceRosterEntries(
 			displayName: teamRoster.displayName,
 		})
 		.from(teamRoster)
-		.where(eq(teamRoster.teamId, teamId));
+		.where(
+			and(
+				eq(teamRoster.teamId, teamId),
+				eq(teamRoster.tournamentRosterId, resolvedRosterId),
+			),
+		);
 
 	const conflicts = new Set<string>();
 	let insertedEntries: Array<{
 		id: string;
 		teamId: string;
+		tournamentRosterId: string;
 		subteamId: string;
 		eventName: string;
 		slotIndex: number;
@@ -84,7 +565,11 @@ export async function replaceRosterEntries(
 		await tx
 			.delete(teamRoster)
 			.where(
-				and(eq(teamRoster.teamId, teamId), eq(teamRoster.subteamId, subteamId)),
+				and(
+					eq(teamRoster.teamId, teamId),
+					eq(teamRoster.subteamId, subteamId),
+					eq(teamRoster.tournamentRosterId, resolvedRosterId),
+				),
 			);
 
 		if (entries.length === 0) return;
@@ -123,6 +608,7 @@ export async function replaceRosterEntries(
 				{
 					id: crypto.randomUUID(),
 					teamId,
+					tournamentRosterId: resolvedRosterId,
 					subteamId,
 					eventName: entry.eventName,
 					slotIndex: entry.slotIndex,
@@ -140,7 +626,10 @@ export async function replaceRosterEntries(
 		await tx.insert(teamRoster).values(resolvedEntries);
 	});
 
-	await touchTeamCacheManifest(teamId, { roster: true, full: true });
+	await touchTeamCacheManifest(teamId, {
+		roster: true,
+		full: true,
+	});
 
 	return { conflicts: Array.from(conflicts), rosterEntries: insertedEntries };
 }
@@ -148,6 +637,7 @@ export async function replaceRosterEntries(
 export async function upsertRosterEntry(
 	teamId: string,
 	subteamId: string | null,
+	rosterId: string | null,
 	payload: {
 		eventName: string;
 		slotIndex?: number;
@@ -177,6 +667,13 @@ export async function upsertRosterEntry(
 			throw new Error("Only captains can edit roster");
 		}
 
+		const resolvedRosterId =
+			rosterId ?? (await ensureActiveTournamentRoster(teamId, actorId)).id;
+		const roster = await getRosterForTeam(teamId, resolvedRosterId);
+		if (roster.status === "archived") {
+			throw new Error("Archived rosters cannot be edited");
+		}
+
 		const existingEntries = await dbPg
 			.select({
 				id: teamRoster.id,
@@ -191,6 +688,7 @@ export async function upsertRosterEntry(
 					subteamId
 						? eq(teamRoster.subteamId, subteamId)
 						: isNull(teamRoster.subteamId),
+					eq(teamRoster.tournamentRosterId, resolvedRosterId),
 					eq(teamRoster.eventName, payload.eventName),
 				),
 			)
@@ -247,6 +745,7 @@ export async function upsertRosterEntry(
 				.values({
 					id: crypto.randomUUID(),
 					teamId,
+					tournamentRosterId: resolvedRosterId,
 					subteamId,
 					eventName: payload.eventName,
 					slotIndex,
@@ -257,6 +756,7 @@ export async function upsertRosterEntry(
 					target: [
 						teamRoster.teamId,
 						teamRoster.subteamId,
+						teamRoster.tournamentRosterId,
 						teamRoster.eventName,
 						teamRoster.slotIndex,
 					],
@@ -268,7 +768,10 @@ export async function upsertRosterEntry(
 				});
 		});
 
-		await touchTeamCacheManifest(teamId, { roster: true, full: true });
+		await touchTeamCacheManifest(teamId, {
+			roster: true,
+			full: true,
+		});
 
 		logger.info("[upsertRosterEntry] Success");
 	} catch (error) {
@@ -286,6 +789,7 @@ export async function removeRosterEntry(
 	actorId: string,
 	options: {
 		subteamId?: string | null;
+		rosterId?: string | null;
 		eventName?: string;
 		slotIndex?: number;
 		deleteAllForMember?: boolean;
@@ -301,6 +805,14 @@ export async function removeRosterEntry(
 		throw new Error("Only captains can edit roster");
 	}
 
+	const resolvedRosterId =
+		options.rosterId ??
+		(await ensureActiveTournamentRoster(teamId, actorId)).id;
+	const roster = await getRosterForTeam(teamId, resolvedRosterId);
+	if (roster.status === "archived") {
+		throw new Error("Archived rosters cannot be edited");
+	}
+
 	if (options.deleteAllForMember) {
 		const deletions: Promise<unknown>[] = [];
 
@@ -311,6 +823,7 @@ export async function removeRosterEntry(
 					.where(
 						and(
 							eq(teamRoster.teamId, teamId),
+							eq(teamRoster.tournamentRosterId, resolvedRosterId),
 							eq(teamRoster.userId, options.userId),
 							options.subteamId
 								? eq(teamRoster.subteamId, options.subteamId)
@@ -327,6 +840,7 @@ export async function removeRosterEntry(
 					.where(
 						and(
 							eq(teamRoster.teamId, teamId),
+							eq(teamRoster.tournamentRosterId, resolvedRosterId),
 							isNull(teamRoster.userId),
 							eq(teamRoster.displayName, options.displayName),
 							options.subteamId
@@ -338,7 +852,10 @@ export async function removeRosterEntry(
 		}
 
 		await Promise.all(deletions);
-		await touchTeamCacheManifest(teamId, { roster: true, full: true });
+		await touchTeamCacheManifest(teamId, {
+			roster: true,
+			full: true,
+		});
 		return;
 	}
 
@@ -348,6 +865,7 @@ export async function removeRosterEntry(
 
 	const predicates = [
 		eq(teamRoster.teamId, teamId),
+		eq(teamRoster.tournamentRosterId, resolvedRosterId),
 		options.subteamId
 			? eq(teamRoster.subteamId, options.subteamId)
 			: isNull(teamRoster.subteamId),
@@ -369,7 +887,10 @@ export async function removeRosterEntry(
 						: sql`TRUE`,
 				),
 			);
-		await touchTeamCacheManifest(teamId, { roster: true, full: true });
+		await touchTeamCacheManifest(teamId, {
+			roster: true,
+			full: true,
+		});
 		return;
 	}
 
@@ -379,5 +900,8 @@ export async function removeRosterEntry(
 		.where(
 			and(...predicates, eq(teamRoster.slotIndex, options.slotIndex ?? 0)),
 		);
-	await touchTeamCacheManifest(teamId, { roster: true, full: true });
+	await touchTeamCacheManifest(teamId, {
+		roster: true,
+		full: true,
+	});
 }

@@ -5,6 +5,7 @@ import logger from "@/lib/utils/logging/logger";
 // Image and Link are used within UserDropdown/AuthModal
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
+import { db } from "@/app/utils/db";
 import { resetTeamsClientCache } from "@/lib/query/resetTeamsClientCache";
 import { preloadImage } from "@/lib/utils/media/preloadImage";
 import type { User } from "@supabase/supabase-js";
@@ -396,6 +397,7 @@ export default function AuthButton() {
 
 	const handleSignOut = async () => {
 		try {
+			await db.teamRosterPrefs.clear().catch(() => undefined);
 			await resetTeamsClientCache().catch(() => undefined);
 			await client.auth.signOut({ scope: "local" }).catch(() => undefined);
 

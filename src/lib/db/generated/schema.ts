@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
 	bool,
 	char,
+	cockroachSchema,
 	cockroachTable,
 	decimal,
 	float,
@@ -14,6 +15,17 @@ import {
 	uuid,
 	varchar,
 } from "drizzle-orm/cockroach-core";
+
+export const drizzle = cockroachSchema("drizzle");
+
+export const drizzleMigrationsInDrizzle = drizzle.table(
+	"__drizzle_migrations",
+	{
+		id: int8({ mode: "number" }).generatedAlwaysAsIdentity(),
+		hash: string().notNull(),
+		createdAt: int8("created_at", { mode: "number" }),
+	},
+);
 
 export const apiKeyGenerations = cockroachTable(
 	"api_key_generations",
@@ -566,6 +578,21 @@ export const teamCacheManifests = cockroachTable("team_cache_manifests", {
 	})
 		.defaultNow()
 		.notNull(),
+	tournamentRostersUpdatedAt: timestamp("tournament_rosters_updated_at", {
+		mode: "string",
+		withTimezone: true,
+	})
+		.defaultNow()
+		.notNull(),
+	publicTournamentRostersUpdatedAt: timestamp(
+		"public_tournament_rosters_updated_at",
+		{
+			mode: "string",
+			withTimezone: true,
+		},
+	)
+		.defaultNow()
+		.notNull(),
 	membersUpdatedAt: timestamp("members_updated_at", {
 		mode: "string",
 		withTimezone: true,
@@ -914,12 +941,14 @@ export const teamRoster = cockroachTable(
 		updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
 			.defaultNow()
 			.notNull(),
+		tournamentRosterId: uuid("tournament_roster_id"),
 	},
 	(table) => [
 		uniqueIndex("team_roster_unique").using(
 			"btree",
 			table.teamId.asc(),
 			table.subteamId.asc(),
+			table.tournamentRosterId.asc(),
 			table.eventName.asc(),
 			table.slotIndex.asc(),
 		),
@@ -1073,6 +1102,22 @@ export const teamSubteams = cockroachTable(
 		),
 	],
 );
+
+export const teamTournamentRosters = cockroachTable("team_tournament_rosters", {
+	id: uuid().defaultRandom().primaryKey(),
+	teamId: uuid("team_id").notNull(),
+	name: varchar({ length: 255 }).notNull(),
+	status: varchar({ length: 20 }).default("inactive").notNull(),
+	isPublic: bool("is_public").default(false),
+	createdBy: uuid("created_by").notNull(),
+	createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+		.defaultNow()
+		.notNull(),
+	updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+		.defaultNow()
+		.notNull(),
+	archivedAt: timestamp("archived_at", { mode: "string", withTimezone: true }),
+});
 
 export const teams = cockroachTable(
 	"teams",

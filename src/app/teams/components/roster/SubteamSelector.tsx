@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { useRef, useState } from "react";
 import type React from "react";
+import { createPortal } from "react-dom";
 import type { Subteam } from "./rosterUtils";
 
 interface SubteamSelectorProps {
@@ -14,6 +16,8 @@ interface SubteamSelectorProps {
 	onEditSubteam?: (subteamId: string, newName: string) => void;
 	onDeleteSubteam?: (subteamId: string, subteamName: string) => void;
 	onReorderSubteams?: (subteamIds: string[]) => void;
+	collapsed?: boolean;
+	onToggleCollapsed?: () => void;
 }
 
 export default function SubteamSelector({
@@ -26,6 +30,8 @@ export default function SubteamSelector({
 	onEditSubteam,
 	onDeleteSubteam,
 	onReorderSubteams,
+	collapsed = false,
+	onToggleCollapsed,
 }: SubteamSelectorProps) {
 	const [editingSubteamId, setEditingSubteamId] = useState<string | null>(null);
 	const [editingSubteamName, setEditingSubteamName] = useState("");
@@ -37,6 +43,80 @@ export default function SubteamSelector({
 	if (subteams.length === 0) {
 		return null;
 	}
+
+	const IconTooltipButton = ({
+		label,
+		onClick,
+		className,
+		disabled,
+		children,
+	}: {
+		label: string;
+		onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+		className: string;
+		disabled?: boolean;
+		children: React.ReactNode;
+	}) => {
+		const buttonRef = useRef<HTMLButtonElement | null>(null);
+		const [tooltip, setTooltip] = useState<{
+			x: number;
+			y: number;
+			visible: boolean;
+		}>({ x: 0, y: 0, visible: false });
+
+		const showTooltip = () => {
+			if (!buttonRef.current) return;
+			const rect = buttonRef.current.getBoundingClientRect();
+			setTooltip({
+				x: rect.left - 8,
+				y: rect.top + rect.height / 2,
+				visible: true,
+			});
+		};
+
+		const hideTooltip = () =>
+			setTooltip((prev) => ({ ...prev, visible: false }));
+
+		return (
+			<>
+				<button
+					ref={buttonRef}
+					type="button"
+					onClick={onClick}
+					onMouseEnter={showTooltip}
+					onMouseLeave={hideTooltip}
+					onFocus={showTooltip}
+					onBlur={hideTooltip}
+					className={className}
+					aria-label={label}
+					title={label}
+					disabled={disabled}
+				>
+					{children}
+				</button>
+				{tooltip.visible &&
+					typeof document !== "undefined" &&
+					createPortal(
+						<div
+							className={`fixed z-50 -translate-x-full -translate-y-1/2 px-3 py-2 rounded-lg text-xs whitespace-nowrap pointer-events-none ${
+								darkMode
+									? "bg-gray-800 text-white border border-gray-700"
+									: "bg-white text-gray-900 border border-gray-200 shadow-lg"
+							}`}
+							style={{ left: tooltip.x, top: tooltip.y }}
+						>
+							{label}
+							<div
+								className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-full w-0 h-0 border-y-4 border-y-transparent border-l-4 ${
+									darkMode ? "border-l-gray-800" : "border-l-white"
+								}`}
+							/>
+						</div>,
+						document.body,
+					)}
+			</>
+		);
+	};
 
 	// Drag and drop handlers
 	const handleDragStart = (e: React.DragEvent, subteamId: string) => {
@@ -171,8 +251,8 @@ export default function SubteamSelector({
 						}}
 						className={getInputClasses(subteam.id)}
 					/>
-					<button
-						type="button"
+					<IconTooltipButton
+						label="Confirm edit"
 						onClick={() => {
 							if (editingSubteamName.trim() && onEditSubteam) {
 								onEditSubteam(editingSubteamId, editingSubteamName.trim());
@@ -196,7 +276,6 @@ export default function SubteamSelector({
 							fill="none"
 							stroke="currentColor"
 							viewBox="0 0 24 24"
-							aria-label="Confirm edit"
 						>
 							<title>Confirm edit</title>
 							<path
@@ -206,9 +285,9 @@ export default function SubteamSelector({
 								d="M5 13l4 4L19 7"
 							/>
 						</svg>
-					</button>
-					<button
-						type="button"
+					</IconTooltipButton>
+					<IconTooltipButton
+						label="Cancel edit"
 						onClick={() => {
 							setEditingSubteamId(null);
 							setEditingSubteamName("");
@@ -224,7 +303,6 @@ export default function SubteamSelector({
 							fill="none"
 							stroke="currentColor"
 							viewBox="0 0 24 24"
-							aria-label="Cancel edit"
 						>
 							<title>Cancel edit</title>
 							<path
@@ -234,7 +312,7 @@ export default function SubteamSelector({
 								d="M6 18L18 6M6 6l12 12"
 							/>
 						</svg>
-					</button>
+					</IconTooltipButton>
 				</div>
 			);
 		}
@@ -244,19 +322,22 @@ export default function SubteamSelector({
 				<span className="font-medium">{subteam.name}</span>
 				{isCaptain && (
 					<div className="flex items-center space-x-1">
-						<button
-							type="button"
+						<IconTooltipButton
+							label="Edit subteam"
 							onClick={(e) => {
 								e.stopPropagation();
 								setEditingSubteamId(subteam.id);
 								setEditingSubteamName(subteam.name);
 							}}
-							className={`p-1 rounded hover:bg-opacity-20 transition-colors ${
+							className={`p-1 rounded transition-colors ${
 								activeSubteamId === subteam.id
-									? "hover:bg-blue-400"
-									: "hover:bg-gray-400"
+									? darkMode
+										? "hover:bg-blue-500/20 text-blue-200"
+										: "hover:bg-blue-100 text-blue-700"
+									: darkMode
+										? "hover:bg-gray-700 text-gray-300"
+										: "hover:bg-gray-100 text-gray-700"
 							}`}
-							title="Edit subteam"
 						>
 							<svg
 								className="w-4 h-4"
@@ -272,20 +353,23 @@ export default function SubteamSelector({
 									d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
 								/>
 							</svg>
-						</button>
+						</IconTooltipButton>
 						{subteams.length > 1 && (
-							<button
-								type="button"
+							<IconTooltipButton
+								label="Delete subteam"
 								onClick={(e) => {
 									e.stopPropagation();
 									onDeleteSubteam?.(subteam.id, subteam.name);
 								}}
-								className={`p-1 rounded hover:bg-opacity-20 transition-colors ${
+								className={`p-1 rounded transition-colors ${
 									activeSubteamId === subteam.id
-										? "hover:bg-red-400"
-										: "hover:bg-red-400"
+										? darkMode
+											? "text-blue-200 hover:text-red-400 hover:bg-blue-500/20"
+											: "text-blue-700 hover:text-red-600 hover:bg-blue-100"
+										: darkMode
+											? "text-gray-300 hover:text-red-400 hover:bg-gray-700"
+											: "text-gray-600 hover:text-red-600 hover:bg-gray-100"
 								}`}
-								title="Delete subteam"
 							>
 								<svg
 									className="w-4 h-4"
@@ -301,7 +385,7 @@ export default function SubteamSelector({
 										d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
 									/>
 								</svg>
-							</button>
+							</IconTooltipButton>
 						)}
 					</div>
 				)}
@@ -311,7 +395,7 @@ export default function SubteamSelector({
 
 	return (
 		<div
-			className={`mb-6 py-3 px-4 rounded-lg border-2 flex items-center ${
+			className={`relative mb-6 py-3 px-4 rounded-lg border-2 flex items-center ${
 				darkMode
 					? "bg-gray-800/50 border-gray-700"
 					: "bg-gray-100/50 border-gray-300"
@@ -384,6 +468,28 @@ export default function SubteamSelector({
 					</button>
 				)}
 			</div>
+			{onToggleCollapsed && (
+				<div className="absolute bottom-3 right-3">
+					<IconTooltipButton
+						label={collapsed ? "Move to top" : "Move to bottom"}
+						onClick={(event) => {
+							event.stopPropagation();
+							onToggleCollapsed();
+						}}
+						className={`inline-flex items-center justify-center rounded-md p-1 ${
+							darkMode
+								? "text-gray-300 hover:bg-gray-800"
+								: "text-gray-600 hover:bg-gray-100"
+						}`}
+					>
+						<ChevronDown
+							className={`h-4 w-4 transition-transform ${
+								collapsed ? "rotate-180" : ""
+							}`}
+						/>
+					</IconTooltipButton>
+				</div>
+			)}
 		</div>
 	);
 }

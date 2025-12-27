@@ -1,7 +1,9 @@
 "use client";
+import { db } from "@/app/utils/db";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type React from "react";
 
 interface NavigationLinksProps {
@@ -17,6 +19,8 @@ export function DesktopNavLinks({
 	darkMode,
 	pathname,
 }: { darkMode: boolean; pathname: string }) {
+	const router = useRouter();
+
 	const getLinkStyles = (path: string) => {
 		// For teams, check if pathname starts with /teams to include all team pages
 		const isActive =
@@ -33,6 +37,18 @@ export function DesktopNavLinks({
 		return `${baseStyles} ${activeStyles}`;
 	};
 
+	const handleTeamsClick = async (
+		event: React.MouseEvent<HTMLAnchorElement>,
+	) => {
+		event.preventDefault();
+		const latest = await db.teamRosterPrefs.orderBy("updatedAt").last();
+		if (latest?.teamSlug) {
+			router.push(`/teams/${latest.teamSlug}`);
+		} else {
+			router.push("/teams");
+		}
+	};
+
 	return (
 		<>
 			<Link href="/practice" className={getLinkStyles("/practice")}>
@@ -41,7 +57,11 @@ export function DesktopNavLinks({
 			<Link href="/dashboard" className={getLinkStyles("/dashboard")}>
 				Dashboard
 			</Link>
-			<Link href="/teams" className={getLinkStyles("/teams")}>
+			<Link
+				href="/teams"
+				className={getLinkStyles("/teams")}
+				onClick={handleTeamsClick}
+			>
 				Teams
 			</Link>
 			<Link href="/analytics" className={getLinkStyles("/analytics")}>
@@ -135,6 +155,8 @@ export function MobileNavLinks({
 	pathname: string;
 	onClose: () => void;
 }) {
+	const router = useRouter();
+
 	const mobileLinkStyles = (path: string) => {
 		// For teams, check if pathname starts with /teams to include all team pages
 		const isActive =
@@ -148,6 +170,19 @@ export function MobileNavLinks({
 				? "text-gray-300 hover:text-white"
 				: "text-gray-700 hover:text-gray-900";
 		return `${baseMobile} ${activeStyles}`;
+	};
+
+	const handleTeamsClick = async (
+		event: React.MouseEvent<HTMLAnchorElement>,
+	) => {
+		event.preventDefault();
+		const latest = await db.teamRosterPrefs.orderBy("updatedAt").last();
+		if (latest?.teamSlug) {
+			router.push(`/teams/${latest.teamSlug}`);
+		} else {
+			router.push("/teams");
+		}
+		onClose();
 	};
 
 	return (
@@ -169,7 +204,7 @@ export function MobileNavLinks({
 			<Link
 				href="/teams"
 				className={mobileLinkStyles("/teams")}
-				onClick={onClose}
+				onClick={handleTeamsClick}
 			>
 				Teams
 			</Link>

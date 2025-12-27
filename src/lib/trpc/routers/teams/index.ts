@@ -4,6 +4,7 @@ import {
 	addComment,
 	addTimer,
 	archiveTeam,
+	archiveTournamentRoster,
 	cancelLinkInvitation,
 	cancelPendingInvite,
 	createAssignment,
@@ -13,6 +14,7 @@ import {
 	createStreamPost,
 	createSubteam,
 	createTeamWithDefaultSubteam,
+	createTournamentRoster,
 	declineInvite,
 	declineLinkInvitation,
 	deleteAssignment,
@@ -20,6 +22,7 @@ import {
 	deleteComment,
 	deleteStreamPost,
 	deleteSubteam,
+	deleteTournamentRoster,
 	getActiveTimers,
 	getAssignmentAnalytics,
 	getAssignmentDetails,
@@ -42,15 +45,21 @@ import {
 	listPendingInvitesForUser,
 	listPendingLinkInvitesForUser,
 	listPersonalCalendarEvents,
+	listPublicTournamentRosters,
 	listTeamCalendarEvents,
 	listTeamsForUser,
 	listTeamsWithSubteamsForUser,
+	listTournamentRosters,
 	promoteToRole,
+	promoteTournamentRosterToActive,
 	removeRosterEntry,
 	removeTimer,
 	renameSubteam,
+	renameTournamentRoster,
 	replaceRosterEntries,
 	restoreRemovedEvents,
+	restoreTournamentRoster,
+	setTournamentRosterVisibility,
 	skipCalendarOccurrence,
 	updateCalendarEvent,
 	updateRemovedEvents,
@@ -784,11 +793,126 @@ export const teamsRouter = router({
 			return archiveTeam(input.teamSlug, ctx.user.id);
 		}),
 
+	listTournamentRosters: protectedProcedure
+		.input(z.object({ teamSlug: z.string().min(1) }))
+		.query(async ({ ctx, input }) => {
+			const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
+			return listTournamentRosters(meta.teamId, ctx.user.id);
+		}),
+
+	listPublicTournamentRosters: protectedProcedure
+		.input(z.object({ teamSlug: z.string().min(1) }))
+		.query(async ({ ctx, input }) => {
+			const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
+			return listPublicTournamentRosters(meta.teamId, ctx.user.id);
+		}),
+
+	createTournamentRoster: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				name: z.string().optional().nullable(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
+			return createTournamentRoster(meta.teamId, ctx.user.id, input.name);
+		}),
+
+	renameTournamentRoster: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				rosterId: z.uuid(),
+				name: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
+			return renameTournamentRoster(
+				meta.teamId,
+				ctx.user.id,
+				input.rosterId,
+				input.name,
+			);
+		}),
+
+	promoteTournamentRoster: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				rosterId: z.uuid(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
+			return promoteTournamentRosterToActive(
+				meta.teamId,
+				ctx.user.id,
+				input.rosterId,
+			);
+		}),
+
+	archiveTournamentRoster: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				rosterId: z.uuid(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
+			return archiveTournamentRoster(meta.teamId, ctx.user.id, input.rosterId);
+		}),
+
+	restoreTournamentRoster: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				rosterId: z.uuid(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
+			return restoreTournamentRoster(meta.teamId, ctx.user.id, input.rosterId);
+		}),
+
+	deleteTournamentRoster: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				rosterId: z.uuid(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
+			return deleteTournamentRoster(meta.teamId, ctx.user.id, input.rosterId);
+		}),
+
+	setTournamentRosterVisibility: protectedProcedure
+		.input(
+			z.object({
+				teamSlug: z.string().min(1),
+				rosterId: z.uuid(),
+				isPublic: z.boolean(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
+			return setTournamentRosterVisibility(
+				meta.teamId,
+				ctx.user.id,
+				input.rosterId,
+				input.isPublic,
+			);
+		}),
+
 	saveRoster: protectedProcedure
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
 				subteamId: z.uuid(),
+				rosterId: z.uuid().optional().nullable(),
 				entries: z.array(rosterEntrySchema),
 			}),
 		)
@@ -804,6 +928,7 @@ export const teamsRouter = router({
 				const result = await replaceRosterEntries(
 					meta.teamId,
 					input.subteamId,
+					input.rosterId ?? null,
 					input.entries.map((entry) => ({
 						eventName: entry.eventName,
 						slotIndex: entry.slotIndex ?? 0,
@@ -828,6 +953,7 @@ export const teamsRouter = router({
 			z.object({
 				teamSlug: z.string().min(1),
 				subteamId: z.uuid().nullable(),
+				rosterId: z.uuid().optional().nullable(),
 				entry: rosterEntrySchema,
 			}),
 		)
@@ -846,6 +972,7 @@ export const teamsRouter = router({
 				await upsertRosterEntry(
 					meta.teamId,
 					input.subteamId,
+					input.rosterId ?? null,
 					{
 						eventName: input.entry.eventName,
 						slotIndex: input.entry.slotIndex,
@@ -871,6 +998,7 @@ export const teamsRouter = router({
 		.input(
 			z.object({
 				teamSlug: z.string().min(1),
+				rosterId: z.uuid().optional().nullable(),
 				subteamId: z.uuid().nullable(),
 				eventName: z.string().min(1).optional(),
 				slotIndex: z.number().int().nonnegative().default(0),
@@ -901,6 +1029,7 @@ export const teamsRouter = router({
 
 				const meta = await getTeamMetaBySlug(input.teamSlug, ctx.user.id);
 				await removeRosterEntry(meta.teamId, ctx.user.id, {
+					rosterId: input.rosterId ?? null,
 					subteamId: input.subteamId,
 					eventName: input.eventName,
 					slotIndex: input.slotIndex,
@@ -1384,10 +1513,16 @@ export const teamsRouter = router({
 			z.object({
 				teamSlug: z.string().min(1),
 				subteamId: z.uuid().nullable().optional(),
+				rosterId: z.uuid().nullable().optional(),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
-			return getRoster(input.teamSlug, input.subteamId ?? null, ctx.user.id);
+			return getRoster(
+				input.teamSlug,
+				input.subteamId ?? null,
+				ctx.user.id,
+				input.rosterId ?? null,
+			);
 		}),
 
 	getRosterLinkStatus: protectedProcedure

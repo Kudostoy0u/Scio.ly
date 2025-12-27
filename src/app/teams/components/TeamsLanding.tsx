@@ -67,6 +67,7 @@ export default function TeamsLanding({
 	}, [searchParams]);
 	const [showLinkInviteModal, setShowLinkInviteModal] = useState(false);
 	const [shouldFetchLinkInvites, setShouldFetchLinkInvites] = useState(false);
+	const dismissedLinkInviteIdsRef = useRef<Set<string>>(new Set());
 	const hasMountedRef = useRef(false);
 	const queryClient = useQueryClient();
 	const acceptLinkInvite = trpc.teams.acceptLinkInvite.useMutation();
@@ -106,20 +107,21 @@ export default function TeamsLanding({
 	const { data: fetchedLinkInvitesData } =
 		trpc.teams.pendingLinkInvites.useQuery(undefined, {
 			enabled: shouldFetchLinkInvites && !isPreviewMode,
+			staleTime: 0,
+			refetchOnMount: "always",
+			refetchOnWindowFocus: false,
 		});
 
 	// Use fetched data if available, otherwise fall back to cached data
 	const linkInvitesData = fetchedLinkInvitesData ?? cachedLinkInvitesData;
+	const visibleLinkInvites = linkInvitesData?.linkInvites?.filter(
+		(invite) => !dismissedLinkInviteIdsRef.current.has(invite.id),
+	);
 
 	// Show modal if there are pending link invites
 	useEffect(() => {
-		if (
-			linkInvitesData?.linkInvites &&
-			linkInvitesData.linkInvites.length > 0
-		) {
-			setShowLinkInviteModal(true);
-		}
-	}, [linkInvitesData]);
+		setShowLinkInviteModal((visibleLinkInvites?.length ?? 0) > 0);
+	}, [visibleLinkInvites]);
 
 	// Check if user is a captain of any team
 	const isCaptain = userTeams.some((team) =>
@@ -418,10 +420,10 @@ export default function TeamsLanding({
 
 			{/* Link Invite Modal */}
 			{showLinkInviteModal &&
-				linkInvitesData?.linkInvites &&
-				linkInvitesData.linkInvites.length > 0 && (
+				visibleLinkInvites &&
+				visibleLinkInvites.length > 0 && (
 					<TeamInvitationModal
-						invites={linkInvitesData.linkInvites.map(
+						invites={visibleLinkInvites.map(
 							(invite: LinkInvite): TeamInvitationModalInvite => ({
 								id: invite.id,
 								teamSlug: invite.slug,
@@ -433,6 +435,7 @@ export default function TeamsLanding({
 						)}
 						onClose={() => setShowLinkInviteModal(false)}
 						onAccept={async (invite) => {
+							dismissedLinkInviteIdsRef.current.add(invite.id);
 							const snapshotInvites = linkInvitesData;
 							const snapshotTeams = utils.teams.listUserTeams.getData();
 							utils.teams.pendingLinkInvites.setData(undefined, (prev) => {
@@ -482,6 +485,7 @@ export default function TeamsLanding({
 							setShowLinkInviteModal(false);
 						}}
 						onDecline={async (invite) => {
+							dismissedLinkInviteIdsRef.current.add(invite.id);
 							const snapshotInvites = linkInvitesData;
 							utils.teams.pendingLinkInvites.setData(undefined, (prev) => {
 								const nextInvites =

@@ -5,6 +5,7 @@ import logger from "@/lib/utils/logging/logger";
 import Header from "@/app/components/Header";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
+import { db } from "@/app/utils/db";
 import type { Database } from "@/lib/types/database";
 import { generateDisplayName } from "@/lib/utils/content/displayNameUtils";
 import type { User } from "@supabase/supabase-js";
@@ -227,6 +228,7 @@ export default function ProfilePage() {
 			}
 
 			// Sign out and redirect
+			await db.teamRosterPrefs.clear().catch(() => undefined);
 			await client.auth.signOut();
 			toast.success("Account deleted successfully");
 			router.push("/");

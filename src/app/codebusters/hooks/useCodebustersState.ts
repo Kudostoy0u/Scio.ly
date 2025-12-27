@@ -144,7 +144,12 @@ export const useCodebustersState = (assignmentId?: string | null) => {
 		(savedIsTestSubmitted: string | null, savedTestScore: string | null) => {
 			if (savedIsTestSubmitted) {
 				try {
-					setIsTestSubmitted(JSON.parse(savedIsTestSubmitted));
+					// Handle both JSON string and plain string "true"/"false"
+					const parsed =
+						savedIsTestSubmitted === "true" || savedIsTestSubmitted === "false"
+							? savedIsTestSubmitted === "true"
+							: JSON.parse(savedIsTestSubmitted);
+					setIsTestSubmitted(parsed);
 				} catch {
 					// Ignore parse errors for saved test submitted state
 				}
@@ -295,9 +300,23 @@ export const useCodebustersState = (assignmentId?: string | null) => {
 				setTimeLeft(session.timeState.timeLeft);
 				setIsTimeSynchronized(session.timeState.isTimeSynchronized);
 				setSyncTimestamp(session.timeState.syncTimestamp);
-				if (!savedIsTestSubmitted) {
+				// Check if test is submitted in localStorage
+				// This prevents unsubmitting a test that was already submitted
+				const isTestSubmittedInStorage =
+					savedIsTestSubmitted === "true" ||
+					(savedIsTestSubmitted &&
+						(savedIsTestSubmitted === '"true"' ||
+							JSON.parse(savedIsTestSubmitted) === true));
+				// If localStorage says the test is submitted, always preserve that
+				// Otherwise, use the session's submitted state
+				if (isTestSubmittedInStorage) {
+					setIsTestSubmitted(true);
+				} else if (!savedIsTestSubmitted) {
+					// Only use session state if we don't have a saved state
 					setIsTestSubmitted(session.isSubmitted);
 				}
+				// If savedIsTestSubmitted exists but is not "true", don't override
+				// (it might be "false" or some other value, preserve current state)
 			}
 		},
 		[],
@@ -385,6 +404,17 @@ export const useCodebustersState = (assignmentId?: string | null) => {
 			localStorage.setItem("codebustersTestScore", JSON.stringify(testScore));
 		}
 	}, [quotes, testScore]);
+
+	// Save isTestSubmitted to localStorage when it changes
+	useEffect(() => {
+		if (hasAttemptedLoad) {
+			// Only save after initial load to avoid overwriting during load
+			localStorage.setItem(
+				"codebustersIsTestSubmitted",
+				String(isTestSubmitted),
+			);
+		}
+	}, [isTestSubmitted, hasAttemptedLoad]);
 
 	return {
 		quotes,

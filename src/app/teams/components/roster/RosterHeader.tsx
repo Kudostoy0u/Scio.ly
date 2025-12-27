@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Eye, Pencil } from "lucide-react";
+import { AlertTriangle, Pencil } from "lucide-react";
 import type { Conflict } from "./rosterUtils";
 
 interface RosterHeaderProps {
@@ -35,19 +35,15 @@ export default function RosterHeader({
 						className={`p-1.5 rounded-lg border-2 transition-colors ${
 							darkMode
 								? isEditMode
-									? "bg-blue-600 border-blue-500 text-white hover:bg-blue-700"
+									? "bg-blue-600/10 border-blue-400 text-blue-200 hover:bg-blue-600/20"
 									: "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"
 								: isEditMode
-									? "bg-blue-600 border-blue-500 text-white hover:bg-blue-700"
+									? "bg-blue-50 border-blue-500 text-blue-700 hover:bg-blue-100"
 									: "bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200"
 						}`}
 						title={isEditMode ? "Switch to view mode" : "Switch to edit mode"}
 					>
-						{isEditMode ? (
-							<Pencil className="w-4 h-4" />
-						) : (
-							<Eye className="w-4 h-4" />
-						)}
+						<Pencil className="w-4 h-4" />
 					</button>
 				)}
 				{conflicts.length > 0 && (
